@@ -1,0 +1,72 @@
+  738  mkdir epiomix
+  739  cd epiomix/
+  740  ls
+  741  git init
+  742  git status
+  743  git remote add origin https://khanghoj@bitbucket.org/khanghoj/epiomix.git
+  744  git status
+  745  git push
+  746   git config --global push.default simple
+  747  git push
+  748  mkdir methylation
+  749  mkdir nucleosome
+  750  cp ~/Dropbox/nucleomap.py nucleosome/
+  751  git add nucleosome/
+  752  git status
+  753  git commit -m "first nucleosomemap draft."
+  754  git log
+  755  git push
+  756  git push --set-upstream origin master
+  757  git push
+  758  git status
+  759  ls
+  760  vim nucleosome/nucleomap.py 
+  761  git status
+  762  git diff
+  763  git checkout nucleosome/nucleomap.py 
+  764  git diff
+  765  ls
+  766  cp ~/Desktop/nucleomap.py nucleosome/
+  767  git diff
+  768  git commit -m 'after revision with Mikkel' nucleosome/nucleomap.py 
+  769  git log
+  770  git push
+  771  git pull
+  772  ls
+  773  history>forgit
+  774  ls
+  775  git log
+  776  git diff
+  777  git push
+  778  ls
+  779  ls
+  780  mkdir trash
+  781  mv forgit trash/
+  782  git lgo
+  783  git log
+  784  git push
+  785  git commit -m 'help for git terminal commands' trash/
+  786  git commit -m 'help for git terminal commands' trash
+  787  git commit -m 'help for git terminal commands' trash/forgit 
+  788  git commit trash/forgit 
+  789  ls
+  790  history|less
+  791  git status
+  792  git add trash/
+  793  git commit -m 'help for git terminal commands' trash/forgit 
+  794  git stauts
+  795  git status
+  796  git push 
+  797  man history
+  798  man history
+  799  history
+  800  which sed
+  801  sed -n 
+  802  sed -n '739,796p' history
+  803  history > file
+  804  sed -n '739,796p' file
+  805  file
+  806  history > f
+  807  ls
+  808  rm file
+  809  history > f
