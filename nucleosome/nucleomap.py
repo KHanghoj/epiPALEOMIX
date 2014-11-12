@@ -107,7 +107,7 @@ def call_window(windows, positions, last_result, samfile, outname):
 
             # NOTE: Use getrname to get name of chromosome / contig / etc.
             chrom = samfile.getrname(position_start[0])
-            result = (chrom, position_start[1], position_end[1],
+            result = (chrom, position_start[1]+1, position_end[1]+1,
                       value, score)
             if result != last_result:  # to avoid printing duplicates
                 print(*result, file=outname)
