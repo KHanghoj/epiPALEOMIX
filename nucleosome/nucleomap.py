@@ -6,15 +6,13 @@ identical maximal depth
 from __future__ import print_function
 
 #from fileinput import inpua
-from sys import argv
+import sys
 import pysam
 import math
-import collections
-import random
-
+import argparse
 
 # NOTE: Global constants are normally written UPPERCASE, private varibles
-# starting with single underscore (__SIZE, __OFFSET, etc.)
+# starting with single underscore (_SIZE, _OFFSET, etc.)
 
 #### Constants:
 _SIZE = 147  # the window
@@ -23,7 +21,6 @@ _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
 
 # NOTE: Moved from below
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
-
 
 
 def call_max(sliceT):
@@ -112,79 +109,68 @@ def call_window(windows, positions, last_result, samfile):
             chrom = samfile.getrname(position_start[0])
             result = (chrom, position_start[1], position_end[1],
                       value, score)
-            if result != last_result:
+            if result != last_result:  # to avoid printing duplicates
                 print(*result)
-
             return result
 
-# import argparse
-#
-# def parse_args(argv):
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('name', help="...")
-#     parser.add_argument('--param', help="...")
-#     return parser.parse_args(argv)
+
+def if_empty(input_arg):
+    if input_arg is not None:
+        return int(input_arg)
+    else:
+        return None
 
 
-
-sites = 0
-windows = []  # the sum of 25+12+147+12+25=221
-last_tid = -1
-last_pos = -1
-last_result = None
-positions = []  # the chromosomal position of the nuclesome
-basecomposi = []  # single nucleotide base composition
-cnt = collections.Counter()  # this is for counting bases in basecomposi
-
-f = argv[1]
-samfile = pysam.Samfile(f, "rb")
-# result = list(x.n for x in samfile.pileup())
-
-#'22',16050360,16057100):
-for pileupcolumn in samfile.pileup('22', 11000000, 20057100):
-    if pileupcolumn.tid != last_tid:
-        last_tid = pileupcolumn.tid
-        last_pos = -1
-        windows = []
-
-    # NOTE: Do not include positions that are indels
-    bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
-             if not x.indel]
-    # NOTE: Don't assume that base 0 is the consensus
-    # get the consensus nucleotide at each site
-    # TODO: Handle deletions by checking if bases is empty
-    # base = random.choice(bases)
-    s_depth = len(bases)  # get the depth
-
-    shift_window(pileupcolumn, windows, positions, last_pos, s_depth)
-    last_pos = pileupcolumn.pos
-    if len(windows) == _TOTAL_WIN_LENGTH:
-        last_result = call_window(windows, positions, last_result, samfile)
-
-samfile.close()
+def parse_args(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('name', help="...")
+    parser.add_argument('--chrom', help="...")
+    parser.add_argument('--start', help="...")
+    parser.add_argument('--end', help="...")
+    return parser.parse_args(argv)
 
 
+def main(argv):
+    args = parse_args(argv)
+    print(args.name, args.chrom, args.start, args.end)
+    chrom = args.chrom
+    st = if_empty(args.start)
+    en = if_empty(args.end)
+
+    windows = []  # the sum of 25+12+147+12+25=221
+    last_tid = -1
+    last_pos = -1
+    last_result = None
+    positions = []  # the chromosomal position of the nuclesome
+
+    samfile = pysam.Samfile(args.name, "rb")
+    # result = list(x.n for x in samfile.pileup())
+
+    #'22',16050360,16057100):
+    for pileupcolumn in samfile.pileup(chrom, st, en):
+        if pileupcolumn.tid != last_tid:
+            last_tid = pileupcolumn.tid
+            last_pos = -1
+            windows = []
+
+        # NOTE: Do not include positions that are indels
+
+        # bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
+        #          if not x.indel]
+        # NOTE: Don't assume that base 0 is the consensus
+        # get the consensus nucleotide at each site
+        # TODO: Handle deletions by checking if bases is empty
+        # base = random.choice(bases)
+        # s_depth = len(bases)  # get the depth
+        s_depth = int(pileupcolumn.n)
+        shift_window(pileupcolumn, windows, positions, last_pos, s_depth)
+        last_pos = pileupcolumn.pos
+        if len(windows) == _TOTAL_WIN_LENGTH:
+            last_result = call_window(windows, positions, last_result, samfile)
+
+    samfile.close()
+    return 0
 
 
-# def main(argv):
-#     args = parse_args(argv)
-#     print args.name
-#     print args.param
-
-#     return 0
-
-# if __name__ == '__main__':
-#     sys.exit(main(sys.argv[1:]))
-
-
-
-# from collections import defaultdict
-# def C(s):
-#     dinucleot = 2
-#     d = defaultdict(int)
-#     # d = {}
-#     for i in xrange(len(s)-dinucleot-1):
-#         d[s[i:i+dinucleot]] += 1
-#     return d
-
-# print(C('ACGTAGCTACGACTCGATGCATGTAGCTAGCTAGCTACGTCAGTAGCTGACTGATCGATCGTCGTAGCTGACTGATCGATCGATCGAATTCCGG'))
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
