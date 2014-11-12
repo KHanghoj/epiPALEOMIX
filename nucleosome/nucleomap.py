@@ -2,6 +2,8 @@
 '''  Object: call the nucleosome center if exists and return key=POSITION,
 value=DEPTH. It extends the values around the centre of the nucleosome if
 identical maximal depth
+Example:
+test.bam --chrom 22 --start 18500000 --end 18513769 --out dingdong
 '''
 from __future__ import print_function
 
@@ -11,48 +13,44 @@ import pysam
 import math
 import argparse
 
-# NOTE: Global constants are normally written UPPERCASE, private varibles
-# starting with single underscore (_SIZE, _OFFSET, etc.)
-
 #### Constants:
 _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
 _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
-
-# NOTE: Moved from below
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 
 
-def call_max(sliceT):
+def call_max(mainwind):
+    ''' docstring '''
     call = {}  # this is the return dic with position and depth
-    maxdepth = max(sliceT)
+    maxdepth = max(mainwind)
     if maxdepth <= 2:  # do not take maxseqdep of 2 or lower into account
         # NOTE: Return None instead of setting 'NA' = 1
         return None
-    center_index = (len(sliceT)-1)/2
+    center_index = (len(mainwind)-1)/2
 
-    if sliceT[center_index] == maxdepth:
-        call[center_index] = sliceT[center_index]
+    if mainwind[center_index] == maxdepth:
+        call[center_index] = mainwind[center_index]
         i = 1
         # NOTE: Use 'and' instead of '&' unless non-lazy evaluation is needed
-        while (sliceT[(center_index - i)] == maxdepth) and (i < center_index):
-            call[(center_index-i)] = sliceT[(center_index-i)]  # extends 5'
+        while (mainwind[(center_index - i)] == maxdepth) and (i < center_index):
+            call[(center_index-i)] = mainwind[(center_index-i)]  # extends 5'
             i += 1
 
         i = 1
-        while (sliceT[(center_index + i)] == maxdepth) and (i < center_index):
-            call[(center_index+i)] = sliceT[(center_index+i)]  # extends 3'
+        while (mainwind[(center_index + i)] == maxdepth) and (i < center_index):
+            call[(center_index+i)] = mainwind[(center_index+i)]  # extends 3'
             i += 1
 
         # for i in xrange(center_index - 1, -1, -1):
-        #     if sliceT[i] == maxdepth):
-        #         call[i] = sliceT[i]
+        #     if mainwind[i] == maxdepth):
+        #         call[i] = mainwind[i]
         #     else:
         #         break
 
-        # for i in xrange(center_index + 1, len(sliceT)):
-        #     if sliceT[i] == maxdepth):
-        #         call[i] = sliceT[i]
+        # for i in xrange(center_index + 1, len(mainwind)):
+        #     if mainwind[i] == maxdepth):
+        #         call[i] = mainwind[i]
         #     else:
         #         break
     else:
@@ -61,14 +59,16 @@ def call_max(sliceT):
     return call
 
 
-def call_flanking(sliceT):
-    maxdepth = max(sliceT)
-    center_index = (len(sliceT)-1)/2
-    if sliceT[center_index] == maxdepth:
-        return sliceT[center_index]
+def call_flanking(flankwindow):
+    ''' docstring '''
+    maxdepth = max(flankwindow)
+    center_index = (len(flankwindow)-1)/2
+    if flankwindow[center_index] == maxdepth:
+        return flankwindow[center_index]
 
 
 def shift_window(pileupcolumn, windows, positions, last_pos, s_depth):
+    ''' docstring '''
     delta_pos = pileupcolumn.pos - last_pos
     if delta_pos >= _TOTAL_WIN_LENGTH:
         windows[:] = [0] * _TOTAL_WIN_LENGTH
@@ -81,14 +81,14 @@ def shift_window(pileupcolumn, windows, positions, last_pos, s_depth):
             positions.append((pileupcolumn.tid, last_pos + pos))
     windows.append(s_depth)  # the actual windows with pileup
     positions.append((pileupcolumn.tid, pileupcolumn.pos))  # positions
-    # print(positions, delta_pos)
+
     while len(windows) > _TOTAL_WIN_LENGTH:
         windows.pop(0)
         positions.pop(0)
-    # print(positions, delta_pos)
 
 
-def call_window(windows, positions, last_result, samfile):
+def call_window(windows, positions, last_result, samfile, outname):
+    ''' docstring '''
     calls_center = call_max(windows[_NEIGHBOR + _OFFSET: _NEIGHBOR +
                                     _OFFSET+_SIZE])
 
@@ -110,11 +110,12 @@ def call_window(windows, positions, last_result, samfile):
             result = (chrom, position_start[1], position_end[1],
                       value, score)
             if result != last_result:  # to avoid printing duplicates
-                print(*result)
+                print(*result, file=outname)
             return result
 
 
 def if_empty(input_arg):
+    ''' docstring '''
     if input_arg is not None:
         return int(input_arg)
     else:
@@ -122,51 +123,45 @@ def if_empty(input_arg):
 
 
 def parse_args(argv):
+    ''' docstring '''
     parser = argparse.ArgumentParser()
     parser.add_argument('name', help="...")
-    parser.add_argument('--chrom', help="...")
-    parser.add_argument('--start', help="...")
-    parser.add_argument('--end', help="...")
+    parser.add_argument('--chrom', help="...", default=None)
+    parser.add_argument('--start', help="...", type=int, default=None)
+    parser.add_argument('--end', help="...", type=int, default=None)
+    parser.add_argument('--out', help='...', default='out_mapnucleo.txt')
     return parser.parse_args(argv)
 
 
 def main(argv):
+    ''' docstring '''
     args = parse_args(argv)
-    print(args.name, args.chrom, args.start, args.end)
+    print(args.name, args.chrom, args.start, args.end, args.out)
     chrom = args.chrom
-    st = if_empty(args.start)
-    en = if_empty(args.end)
+    start_pileup = args.start
+    end_pileup = args.end
 
-    windows = []  # the sum of 25+12+147+12+25=221
+    f_outputname = open(args.out, 'w')
+
+    windows = []
     last_tid = -1
     last_pos = -1
     last_result = None
     positions = []  # the chromosomal position of the nuclesome
 
     samfile = pysam.Samfile(args.name, "rb")
-    # result = list(x.n for x in samfile.pileup())
-
-    #'22',16050360,16057100):
-    for pileupcolumn in samfile.pileup(chrom, st, en):
+    for pileupcolumn in samfile.pileup(chrom, start_pileup, end_pileup):
         if pileupcolumn.tid != last_tid:
             last_tid = pileupcolumn.tid
             last_pos = -1
             windows = []
 
-        # NOTE: Do not include positions that are indels
-
-        # bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
-        #          if not x.indel]
-        # NOTE: Don't assume that base 0 is the consensus
-        # get the consensus nucleotide at each site
-        # TODO: Handle deletions by checking if bases is empty
-        # base = random.choice(bases)
-        # s_depth = len(bases)  # get the depth
         s_depth = int(pileupcolumn.n)
         shift_window(pileupcolumn, windows, positions, last_pos, s_depth)
         last_pos = pileupcolumn.pos
         if len(windows) == _TOTAL_WIN_LENGTH:
-            last_result = call_window(windows, positions, last_result, samfile)
+            last_result = call_window(windows, positions,
+                                      last_result, samfile, f_outputname)
 
     samfile.close()
     return 0
