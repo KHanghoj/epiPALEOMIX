@@ -114,14 +114,6 @@ def call_window(windows, positions, last_result, samfile, outname):
             return result
 
 
-def if_empty(input_arg):
-    ''' docstring '''
-    if input_arg is not None:
-        return int(input_arg)
-    else:
-        return None
-
-
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
