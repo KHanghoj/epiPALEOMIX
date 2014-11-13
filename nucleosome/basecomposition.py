@@ -63,6 +63,7 @@ def main(argv):
     singnucl_update = get_dic_fornucl(singlenucleotides)
     begin_nucl = -1
     end_nucl = -1
+    sites = 0
     with open(args.nucleosomepos, 'r') as f:
         for line in f.readlines():
             chrom, start, end = (line.rstrip('\n')).split(' ')[:3]
@@ -83,6 +84,7 @@ def main(argv):
 
                 bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
                          if not x.indel]
+                if len(set(bases))>1: print (bases) # we have some variants in the data set.
                 if not bases:
                     tempbasewin.append('N')
                 else:
@@ -92,15 +94,17 @@ def main(argv):
             if len(tempbasewin) != 147-1:  # becuase 0-based
                 continue
             print(''.join(tempbasewin))
-            print(tetranucl_update[0])
+            print(singnucl_update[0])
             print()
             singnucl_update = update_dic(tempbasewin, singlenucleotides,
                                          singnucl_update)
             dinucl_update = update_dic(tempbasewin, dinucletides, dinucl_update)
             tetranucl_update = update_dic(tempbasewin, tetranucleotides,
                                           tetranucl_update)
-            # print()
-            print(tetranucl_update[0])
+            sites += 1
+
+            print(sites)
+            print(singnucl_update[0])
             # exit('dsfdsfsd')
 
     return 0
