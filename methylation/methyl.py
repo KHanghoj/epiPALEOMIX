@@ -14,6 +14,7 @@ import argparse
 #### Constants:
 _FASTAIDX = 19000000
 
+
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -37,30 +38,26 @@ def main(argv):
     print(args.fastafile)
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = getfastafile(args.fastafile)
-    fastaread = fasta.read()
+    fastaread = fasta.read()  # this is dangerous for the big fasta file.
+                              # need to make a loop of some sort or index check
 
     for pileupcolumn in samfile.pileup(args.chrom, _FASTAIDX, args.end,
                                        truncate=True):
 
         bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
-                 if x.qpos == 0]
-                 # if not x.indel]
+                 if x.qpos == 0]  # only the first base in a read
+                 # if not x.indel]  # do not allow insertions or deletions
 
         if len(set(bases)) > 1 and fastaread[pileupcolumn.pos-_FASTAIDX] == 'C':
+            print('bases: ')
             print(bases, pileupcolumn.pos)
+            print('fasta base and position')
             print(fastaread[pileupcolumn.pos-_FASTAIDX],
-                  pileupcolumn.pos-_FASTAIDX+_FASTAIDX)
-            print()
-            print(list(x.is_head for x in pileupcolumn.pileups))
+                  pileupcolumn.pos)
+            print('head,tail,level')
+            print(list(x.is_head for x in pileupcolumn.pileups)) # do not what head,tail,level is? found somethink on samtool. see reading list.
             print(list(x.is_tail for x in pileupcolumn.pileups))
             print(list(x.level for x in pileupcolumn.pileups))
-            print(bases)
-        # sys.exit('nomore')
-    # for base in fastaread:
-        # if base == 'A':
-            # print(base)
-        # else: print('hmm')
-    # print(set(fastaread))
     return 0
 
 
