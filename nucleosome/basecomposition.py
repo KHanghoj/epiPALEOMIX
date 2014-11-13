@@ -8,6 +8,8 @@ from collections import defaultdict
 import argparse
 import sys
 import pysam
+import itertools
+
 
 # _NUCLEOSOMERANGE = range(-73, 74)
 _HALF_NUC=73
@@ -21,11 +23,29 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def C(s, length_nuc):
-    ''' dingdong '''
+# def C(s, length_nuc):
+#     ''' dingdong '''
+#     d = defaultdict(int)
+#     for i in xrange(len(s)-length_nuc-1):
+#         d[s[i:i+length_nuc]] += 1
+#     return d
+
+
+def get_dic_fornucl(n_nucl, list_len=147):
+    ''' doc '''
     d = defaultdict(int)
-    for i in xrange(len(s)-length_nuc-1):
-        d[s[i:i+length_nuc]] += 1
+    combi = ["".join(map(str, comb)) for comb
+             in itertools.product('ACGT', repeat=n_nucl)]  # a list of keys
+    for i in range(list_len-n_nucl+1):
+        d[i] = dict.fromkeys(combi, 0)
+    return d
+
+
+def update_dic(base_list, n_nucl, d):
+    ''' doc '''
+    str_tempbase = ''.join(base_list)
+    for i in range(len(str_tempbase)-n_nucl+1):
+        d[i][str_tempbase[i:i+n_nucl]] += 1
     return d
 
 
@@ -34,23 +54,33 @@ def main(argv):
     tempbasewin = []
     args = parse_args(argv)
     print(args.nucleosomepos)
-    nestbase = []
     samfile = pysam.Samfile(args.bam, "rb")
+    singlenucleotides = 1
+    dinucletides = 2
+    tetranucleotides = 4
+    dinucl_update = get_dic_fornucl(dinucletides)
+    tetranucl_update = get_dic_fornucl(tetranucleotides)
+    singnucl_update = get_dic_fornucl(singlenucleotides)
+    begin_nucl = -1
+    end_nucl = -1
     with open(args.nucleosomepos, 'r') as f:
         for line in f.readlines():
             chrom, start, end = (line.rstrip('\n')).split(' ')[:3]
+
             start = int(start)
             end = int(end)
             dyad = ((end-start)/2) + start
             del tempbasewin[:]
-
+            if ((dyad - _HALF_NUC) == begin_nucl) and ((dyad + _HALF_NUC) ==
+                                                       end_nucl):
+                continue
+            print(chrom, start, end)
             begin_nucl = dyad - _HALF_NUC
             end_nucl = dyad + _HALF_NUC
 
             for pileupcolumn in samfile.pileup(chrom, begin_nucl, end_nucl,
                                                truncate=True):
 
-                # print(pileupcolumn)
                 bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
                          if not x.indel]
                 if not bases:
@@ -58,32 +88,21 @@ def main(argv):
                 else:
                     # a = random.choice(bases)
                     tempbasewin.append(random.choice(bases))
-            # here we need to analyze the bases for the 147: position wize
-            nestbase.append(tempbasewin)
-        d = defaultdict(int)
+            print(len(tempbasewin))
+            if len(tempbasewin) != 147-1:  # becuase 0-based
+                continue
+            print(''.join(tempbasewin))
+            print(tetranucl_update[0])
+            print()
+            singnucl_update = update_dic(tempbasewin, singlenucleotides,
+                                         singnucl_update)
+            dinucl_update = update_dic(tempbasewin, dinucletides, dinucl_update)
+            tetranucl_update = update_dic(tempbasewin, tetranucleotides,
+                                          tetranucl_update)
+            # print()
+            print(tetranucl_update[0])
+            # exit('dsfdsfsd')
 
-        for i in range(10):
-            d[i] = {'A': 0, 'C': 0, 'T': 0, 'G' : 0}
-        print(d)
-
-        s = 'ACTGACTG'
-        s1 = 'ACTGACTG'[::-1]
-
-        for i,h in enumerate(s):
-            d[i][h]+=1
-
-        for i,h in enumerate(s1):
-            d[i][h]+=1
-        print(d)
-        # for index, position in enumerate(nestbase-2+1):
-            # d[position[index]] += 1
-            # print(hmm)
-            # print(tempbasewin, len(tempbasewin), sites)
-
-            # for_fetch = (x+dyad for x in _NUCLEOSOMERANGE)
-            # print(for_fetch)
-            # sys.exit('stop  :)')
-        # print(nestbase[1][:])
     return 0
 
 
