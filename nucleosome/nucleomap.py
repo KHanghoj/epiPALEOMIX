@@ -110,7 +110,7 @@ def call_window(windows, positions, last_result, samfile, outname):
             result = (chrom, position_start[1]+1, position_end[1]+1,
                       value, score)
             if result != last_result:  # to avoid printing duplicates
-                print(*result, file=outname)
+                print(*result, file=outname, sep='\t')
             return result
 
 
