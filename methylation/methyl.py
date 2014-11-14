@@ -40,14 +40,23 @@ def main(argv):
     fasta = getfastafile(args.fastafile)
     fastaread = fasta.read()  # this is dangerous for the big fasta file.
                               # need to make a loop of some sort or index check
-
+    sites=0
+    f = open('dingdong.txt','w')
     for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
                                        truncate=True):
+        sites+=1
         posi = pileupcolumn.pos-_FASTAIDX-1
         if not 'CG' in fastaread[posi:posi+2]:
             continue
-
+        not_changed = 0
+        norm_deaminated = 0
+        bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
+                 if ((x.qpos == 0) or(x.qpos == x.alignment.alen-1)) and (not x.indel)]
+        if len(bases)>0: print(bases,pileupcolumn.pos+1)
         for x in pileupcolumn.pileups:
+            # note: i want to get alle the positions not deaminated:
+
+
             if x.alignment.is_reverse:
                 # print('reversed: ', hex(x.alignment.flag))
                 # print(x.qpos, x.alignment.alen)
@@ -55,14 +64,17 @@ def main(argv):
                 #         x.alignment.seq[x.qpos-1] == 'C' and \
                 #         x.alignment.seq[x.qpos] == 'G':
 
-                if x.qpos == x.alignment.alen-1 and  \
+                if (x.qpos == x.alignment.alen-1) and  \
                         x.alignment.seq[x.qpos-1] == 'C':
                     print('reverse')
                     # print(pileupcolumn.pos+1)
                     # print(x.alignment.seq[x.qpos-1])
                     # print(x.alignment.seq[x.qpos])
-                    print(fastaread[posi:posi+2])
-                    if x.alignment.seq[x.qpos] == 'A': print('deaminated', pileupcolumn.pos+1)
+                    # print(fastaread[posi:posi+2])
+                    if x.alignment.seq[x.qpos] == 'A':  # print('deaminated', pileupcolumn.pos+1)
+                        norm_deaminated += 1
+                    if x.alignment.seq[x.qpos] == 'G': not_changed += 1
+
             else:
                 if x.qpos == 1 and  \
                         x.alignment.seq[x.qpos] == 'G':
@@ -70,10 +82,15 @@ def main(argv):
                     # print(pileupcolumn.pos+1)
                     # print(x.alignment.seq[x.qpos])
                     # print(x.alignment.seq[x.qpos-1] == 'C', 'normal')
-                    print(fastaread[posi:posi+2])
-                    if x.alignment.seq[x.qpos-1] == 'T': print('deaminated', pileupcolumn.pos+1)
+                    # print(fastaread[posi:posi+2])
+                    if x.alignment.seq[x.qpos-1] == 'T':  # print('deaminated', pileupcolumn.pos+1)
+                        norm_deaminated += 1
+                    if x.alignment.seq[x.qpos-1] == 'C': not_changed += 1
 
-
+        if not_changed > 0: print('CpG still present: ', not_changed, pileupcolumn.pos+1)
+        if norm_deaminated > 0: print('Deaminated: ', norm_deaminated, pileupcolumn.pos+1)
+        print(pileupcolumn.pos+1, not_changed, norm_deaminated, file=f, sep='\t')
+    print(sites)
 
 
 
