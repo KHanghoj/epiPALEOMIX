@@ -43,31 +43,35 @@ def main(argv):
 
     for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
                                        truncate=True):
-        posi_rev = pileupcolumn.pos-_FASTAIDX-1
-        # if 'CG' in fastaread[posi_rev:posi_rev+2]:
-        #     for x in pileupcolumn.pileups:
-        #         if x.alignment.is_reverse:
-        #             # print('reversed: ', hex(x.alignment.flag))
-        #             # print(x.qpos, x.alignment.alen)
-        #             if x.qpos == x.alignment.alen-1 and  \
-        #                     x.alignment.seq[x.qpos-1] == 'C' and \
-        #                     x.alignment.seq[x.qpos] == 'G':
-                        # print('reverse')
-                        # print(True, pileupcolumn.pos+1)
-                        # print(x.alignment.seq[x.qpos-1])
-                        # print(x.alignment.seq[x.qpos])
+        posi = pileupcolumn.pos-_FASTAIDX-1
+        if not 'CG' in fastaread[posi:posi+2]:
+            continue
 
-        posi_for = pileupcolumn.pos-_FASTAIDX-1
-        if 'CG' in fastaread[posi_for:posi_for+2]:
-            for x in pileupcolumn.pileups:
-                print(x.qpos==1,x.alignment.seq[x.qpos])
+        for x in pileupcolumn.pileups:
+            if x.alignment.is_reverse:
+                # print('reversed: ', hex(x.alignment.flag))
+                # print(x.qpos, x.alignment.alen)
+                # if x.qpos == x.alignment.alen-1 and  \
+                #         x.alignment.seq[x.qpos-1] == 'C' and \
+                #         x.alignment.seq[x.qpos] == 'G':
+
+                if x.qpos == x.alignment.alen-1 and  \
+                        x.alignment.seq[x.qpos-1] == 'C':
+                    print('reverse')
+                    # print(pileupcolumn.pos+1)
+                    # print(x.alignment.seq[x.qpos-1])
+                    # print(x.alignment.seq[x.qpos])
+                    print(fastaread[posi:posi+2])
+                    if x.alignment.seq[x.qpos] == 'A': print('deaminated', pileupcolumn.pos+1)
+            else:
                 if x.qpos == 1 and  \
                         x.alignment.seq[x.qpos] == 'G':
                     print('forward')
                     # print(pileupcolumn.pos+1)
                     # print(x.alignment.seq[x.qpos])
-                    print(x.alignment.seq[x.qpos-1] == 'C', 'normal')
-                    print(x.alignment.seq[x.qpos-1] == 'T', 'deaminated')
+                    # print(x.alignment.seq[x.qpos-1] == 'C', 'normal')
+                    print(fastaread[posi:posi+2])
+                    if x.alignment.seq[x.qpos-1] == 'T': print('deaminated', pileupcolumn.pos+1)
 
 
 
