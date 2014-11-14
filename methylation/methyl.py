@@ -2,7 +2,7 @@
 '''  Object: To find the methylation value from a region. the methylation
 score (Ms)
 start=19000000, end=20000000 of Fastafile. it just a snippet for testing
-python ~/research/projects/epiomix/methylation/methyl.py fasta_snip.fa test.bam --chrom 22 --end 19100000
+python ~/research/projects/epiomix/methylation/methyl.py fasta_snip.fa test.bam --chrom 22 --end 19100000 --out new.txt
 '''
 
 from __future__ import print_function
@@ -10,7 +10,6 @@ import sys
 import pysam
 import math
 import argparse
-import fileinput
 
 #### Constants:
 _FASTAIDX = 19000000
@@ -28,30 +27,27 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def getfastafile(file_path):
-    # return pysam.Fastafile(file_path)
-    return open(file_path, 'r')
-
-
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     print(args.fastafile)
     samfile = pysam.Samfile(args.bam, "rb")
-    fasta = getfastafile(args.fastafile)
-    fastaread = fasta.read()  # this is dangerous for the big fasta file.
+    fasta = pysam.Fastafile(args.fastafile)
+    # fastaread = fasta.read()  # this is dangerous for the big fasta file.
                               # need to make a loop of some sort or index check
     headers = 'positions not_changed C_to_T C_to_other sum'.split()
     sites = 0
-    f = open('dingdong.txt', 'w')
+    f = open(args.out, 'w')
     f.write('\t'.join(headers)+'\n')
 
     for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
                                        truncate=True):
 
         sites += 1
-        posi = pileupcolumn.pos-_FASTAIDX-1
-        if not 'CG' in fastaread[posi:posi+2]:
+        # posi = pileupcolumn.pos-_FASTAIDX-1
+        posi = pileupcolumn.pos-1
+
+        if not 'CG' in fasta.fetch(args.chrom, start=posi, end=posi+2):
             continue
         not_changed = 0
         C_to_T = 0
@@ -74,7 +70,7 @@ def main(argv):
                     if x.alignment.seq[x.qpos] in 'CT':
                         C_to_other += 1
 
-            else:
+            else:  # this is for the forward strand
                 if x.qpos == 1 and  \
                         x.alignment.seq[x.qpos] == 'G' \
                         and (not x.indel):
@@ -100,13 +96,3 @@ def main(argv):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-
-
-
-
-
-
-
-
-
-
