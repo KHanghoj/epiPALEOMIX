@@ -1,0 +1,14 @@
+Help: 
+
+GCTGTCGTATGATGCCATACCAGAGTCAGGTTGGAAAGTAAGCCACATTATACAGCGTTAACCTA  from bam file. 22:16051240. this is on the forward strand. code: 0x0. THis strand looks the same in tview. uppercase
+
+tatattttggagtaaaatactttcattttccttcagagtctgctgtcgta from bam file: 0x10 22:16051199. uncapitalized letters in tview  but shown in same direction as 0x0  same direction
+
+
+from Bio.Seq import Seq
+>>> my = Seq('ggtggcgggcgcctgtagtcccagctactcgggaggctgaggcagaagaatggcgtgaacccaggaagcacagctggcagtgagcccagatca')  # one can see it is the reverse strand as lowercase
+>>> my.reverse_complement()
+SSeq('tgatctgggctcactgccagctgtgcttcctgggttcacgccattcttctgcct...acc', Alphabet())
+>>> my1 = Seq('gggaggctgaggcagaagaatggcgtgaacccaggaagcagagctggcagtgagcccagatcg') # one can see it is the reverse strand as lowercase. but this one ends on cg, so not deaminated
+>>> my1.reverse_complement()
+Seq('cgatctgggctcactgccagctctgcttcctgggttcacgccattcttctgcct...ccc', Alphabet())
