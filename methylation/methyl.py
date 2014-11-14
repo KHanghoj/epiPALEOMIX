@@ -41,25 +41,62 @@ def main(argv):
     fastaread = fasta.read()  # this is dangerous for the big fasta file.
                               # need to make a loop of some sort or index check
 
-    for pileupcolumn in samfile.pileup(args.chrom, _FASTAIDX, args.end,
+    # for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
+                                       # truncate=True):
+    for pileupcolumn in samfile.pileup(args.chrom, 16051199, 16051199+1,
                                        truncate=True):
 
         bases = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
-                 if x.qpos == 0]  # only the first base in a read
-                 # if not x.indel]  # do not allow insertions or deletions
+                 if (x.qpos == 0) and (not x.indel)]
 
+        bases_end = [x.alignment.seq[x.qpos] for x in pileupcolumn.pileups
+                     if (x.qpos == len(x.alignment.seq)) and (not x.indel)]
+                    # only the first base in a read
+                 # if not x.indel]  # do not allow insertions or deletions 16051199
+
+        print([x.qpos for x in pileupcolumn.pileups])  # get position of the base at the given aligned read
+        print([len(x.alignment.seq) for x in pileupcolumn.pileups])  # length of each read aligned to given posisition
+        print([x.alignment.seq[x.qpos] for x in pileupcolumn.pileups])  # get aligned base at position qpos in the read
+        print([a.alignment.cigar for a in pileupcolumn.pileups])  # get cigar for the read
+        print([a.alignment.alen for a in pileupcolumn.pileups])  # alen is the number of bases at for the read
+        print([a.alignment.seq[a.alignment.alen-1] for a in pileupcolumn.pileups])  # the the final base of the read
+        print([a.alignment.flag for a in pileupcolumn.pileups])  # get the flag information. 0x0 is forward 0x10 is reversed
+        print([a.alignment.is_reverse for a in pileupcolumn.pileups])  # whether reversed or not
+        print(pileupcolumn.pos+1)  # get the actual position of the pileup
         if len(set(bases)) > 1 and fastaread[pileupcolumn.pos-_FASTAIDX] == 'C':
             print('bases: ')
             print(bases, pileupcolumn.pos)
             print('fasta base and position')
             print(fastaread[pileupcolumn.pos-_FASTAIDX],
                   pileupcolumn.pos)
-            print('head,tail,level')
-            print(list(x.is_head for x in pileupcolumn.pileups)) # do not what head,tail,level is? found somethink on samtool. see reading list.
-            print(list(x.is_tail for x in pileupcolumn.pileups))
-            print(list(x.level for x in pileupcolumn.pileups))
+            print('BREAKBREAKBREAK')
+            print(bases_end)
+            print('BREAKBREAKBREAK')
+            # '\': line continuation character
+        if len(set(bases_end)) > 1 and  \
+                fastaread[pileupcolumn.pos-_FASTAIDX] == 'C':
+            print('BREAKBREAKBREAK')
+            print('bases_end: ')
+            print(bases_end, pileupcolumn.pos)
+            print('fasta base and position')
+            print(fastaread[pileupcolumn.pos-_FASTAIDX],
+                  pileupcolumn.pos)
+            # print('head,tail,level')
+            # print(list(x.is_head for x in pileupcolumn.pileups))  # do not what head,tail,level is? found somethink on samtool. see reading list.
+            # print(list(x.is_tail for x in pileupcolumn.pileups))
+            # print(list(x.level for x in pileupcolumn.pileups))
     return 0
 
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
+
+
+
+
+
+
+
+
+
+
