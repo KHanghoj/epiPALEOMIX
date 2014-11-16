@@ -29,7 +29,7 @@ def main(argv):
     fasta = pysam.Fastafile(args.fastafile)
 
     headers = 'positions not_changed C_to_T C_to_other sum'.split()
-    f_output = open(args.out, 'w') # the output file
+    f_output = open(args.out, 'w')  # the output file
     f_output.write('\t'.join(headers)+'\n')
 
     for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
@@ -48,11 +48,11 @@ def main(argv):
 
         for pileupread in pileupcolumn.pileups:
 
-            if pileupread.alignment.is_reverse:  # check which strand read comes from
+            if pileupread.alignment.is_reverse:  # check strand read
 
                 if (pileupread.qpos == pileupread.alignment.alen-1) and  \
                         pileupread.alignment.seq[pileupread.qpos-1] == 'C' \
-                        and (not pileupread.indel):  # the read on the reverse strand
+                        and (not pileupread.indel):  # read on the rev strand
 
                     tot_CG += 1
                     if pileupread.alignment.seq[pileupread.qpos] == 'A':
