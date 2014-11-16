@@ -7,7 +7,6 @@ python ~/research/projects/epiomix/methylation/methyl.py fasta_snip.fa test.bam 
 from __future__ import print_function
 import sys
 import pysam
-import math
 import argparse
 
 
@@ -38,7 +37,8 @@ def main(argv):
 
         posi_fetch = pileupcolumn.pos-1
 
-        if not 'CG' in fasta.fetch(args.chrom, start=posi_fetch, end=posi_fetch+2):
+        if not 'CG' in fasta.fetch(args.chrom, start=posi_fetch,
+                                   end=posi_fetch+2):
                 # fetch the two bases of interest from the fasta file
             continue
         not_changed = 0
@@ -77,7 +77,7 @@ def main(argv):
                         C_to_other += 1
 
         print(pileupcolumn.pos+1, not_changed,
-              C_to_T, C_to_other, tot, file=f_output, sep='\t')
+              C_to_T, C_to_other, tot_CG, file=f_output, sep='\t')
 
     f_output.close()
     samfile.close()
