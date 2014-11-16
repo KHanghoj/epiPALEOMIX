@@ -1,7 +1,6 @@
 #!/opt/local/bin/python
 '''  Object: To find the methylation value from a region. the methylation
 score (Ms)
-start=19000000, end=20000000 of Fastafile. it just a snippet for testing
 python ~/research/projects/epiomix/methylation/methyl.py fasta_snip.fa test.bam --chrom 22 --end 19100000 --out new.txt
 '''
 
@@ -33,26 +32,24 @@ def main(argv):
     print(args.fastafile)
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = pysam.Fastafile(args.fastafile)
-    # fastaread = fasta.read()  # this is dangerous for the big fasta file.
-                              # need to make a loop of some sort or index check
+
     headers = 'positions not_changed C_to_T C_to_other sum'.split()
     sites = 0
-    f = open(args.out, 'w')
-    f.write('\t'.join(headers)+'\n')
-
+    f_output = open(args.out, 'w')
+    f_output.write('\t'.join(headers)+'\n')
+    f
     for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
                                        truncate=True):
 
-        sites += 1
-        # posi = pileupcolumn.pos-_FASTAIDX-1
-        posi = pileupcolumn.pos-1
+        posi_fetch = pileupcolumn.pos-1
 
-        if not 'CG' in fasta.fetch(args.chrom, start=posi, end=posi+2):
+        if not 'CG' in fasta.fetch(args.chrom, start=posi_fetch, end=posi_fetch+2):
+                # fetch the two bases of interest from the fasta file
             continue
         not_changed = 0
         C_to_T = 0
         C_to_other = 0
-        tot = 0
+        tot_CG = 0
 
         for x in pileupcolumn.pileups:
 
@@ -60,9 +57,9 @@ def main(argv):
 
                 if (x.qpos == x.alignment.alen-1) and  \
                         x.alignment.seq[x.qpos-1] == 'C' \
-                        and (not x.indel):
+                        and (not x.indel):  # the read on the reverse strand
 
-                    tot += 1
+                    tot_CG += 1
                     if x.alignment.seq[x.qpos] == 'A':
                         C_to_T += 1
                     if x.alignment.seq[x.qpos] == 'G':
@@ -75,7 +72,7 @@ def main(argv):
                         x.alignment.seq[x.qpos] == 'G' \
                         and (not x.indel):
 
-                    tot += 1
+                    tot_CG += 1
 
                     if x.alignment.seq[x.qpos-1] == 'T':
                         C_to_T += 1
@@ -85,10 +82,9 @@ def main(argv):
                         C_to_other += 1
 
         print(pileupcolumn.pos+1, not_changed,
-              C_to_T, C_to_other, tot, file=f, sep='\t')
-    print(sites)
+              C_to_T, C_to_other, tot, file=f_output, sep='\t')
 
-    f.close()
+    f_output.close()
     samfile.close()
     fasta.close()
     return 0
