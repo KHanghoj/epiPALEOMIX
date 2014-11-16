@@ -10,15 +10,12 @@ import pysam
 import math
 import argparse
 
-#### Constants:
-_FASTAIDX = 19000000
-
 
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
     parser.add_argument('fastafile', help="fastafile")
-    parser.add_argument('bam', help="...", default=None)
+    parser.add_argument('bam', help="...")
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
@@ -29,15 +26,13 @@ def parse_args(argv):
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
-    print(args.fastafile)
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = pysam.Fastafile(args.fastafile)
 
     headers = 'positions not_changed C_to_T C_to_other sum'.split()
-    sites = 0
-    f_output = open(args.out, 'w')
+    f_output = open(args.out, 'w') # the output file
     f_output.write('\t'.join(headers)+'\n')
-    f
+
     for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
                                        truncate=True):
 
@@ -51,34 +46,34 @@ def main(argv):
         C_to_other = 0
         tot_CG = 0
 
-        for x in pileupcolumn.pileups:
+        for pileupread in pileupcolumn.pileups:
 
-            if x.alignment.is_reverse:
+            if pileupread.alignment.is_reverse:  # check which strand read comes from
 
-                if (x.qpos == x.alignment.alen-1) and  \
-                        x.alignment.seq[x.qpos-1] == 'C' \
-                        and (not x.indel):  # the read on the reverse strand
+                if (pileupread.qpos == pileupread.alignment.alen-1) and  \
+                        pileupread.alignment.seq[pileupread.qpos-1] == 'C' \
+                        and (not pileupread.indel):  # the read on the reverse strand
 
                     tot_CG += 1
-                    if x.alignment.seq[x.qpos] == 'A':
+                    if pileupread.alignment.seq[pileupread.qpos] == 'A':
                         C_to_T += 1
-                    if x.alignment.seq[x.qpos] == 'G':
+                    if pileupread.alignment.seq[pileupread.qpos] == 'G':
                         not_changed += 1
-                    if x.alignment.seq[x.qpos] in 'CT':
+                    if pileupread.alignment.seq[pileupread.qpos] in 'CT':
                         C_to_other += 1
 
             else:  # this is for the forward strand
-                if x.qpos == 1 and  \
-                        x.alignment.seq[x.qpos] == 'G' \
-                        and (not x.indel):
+                if pileupread.qpos == 1 and  \
+                        pileupread.alignment.seq[pileupread.qpos] == 'G' \
+                        and (not pileupread.indel):
 
                     tot_CG += 1
 
-                    if x.alignment.seq[x.qpos-1] == 'T':
+                    if pileupread.alignment.seq[pileupread.qpos-1] == 'T':
                         C_to_T += 1
-                    if x.alignment.seq[x.qpos-1] == 'C':
+                    if pileupread.alignment.seq[pileupread.qpos-1] == 'C':
                         not_changed += 1
-                    if x.alignment.seq[x.qpos-1] in 'AG':
+                    if pileupread.alignment.seq[pileupread.qpos-1] in 'AG':
                         C_to_other += 1
 
         print(pileupcolumn.pos+1, not_changed,
