@@ -17,3 +17,15 @@ fasta_snip.write(y)
 x.close()
 fasta_snip.close()
 
+
+
+
+def s(stril):
+	del stril[:]
+
+sr = ['+']
+sr
+id(sr)
+s(sr)
+sr
+id(sr)
