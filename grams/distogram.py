@@ -1,7 +1,7 @@
 #!/opt/local/bin/python
 '''  Object: To calculate the distograms between mapped reads's start positions
 aligning in opposing orientation.
-python ~/research/projects/epiomix/grams/distogram.py test.bam --chrom 22 --end 19100000 --out new.txt
+~/research/projects/epiomix/grams/distogram.py test.bam --chrom 22 --start 16056601 --end 16058000
 '''
 
 from __future__ import print_function
@@ -24,79 +24,43 @@ def parse_args(argv):
 def main(argv):
     ''' docstring '''
     chrom = ''
-    delta = 25  # if pileupcolumn jump is greater than one, start over
-    startstrand_reverse = False
-    startstrand_forward = False
-    startstrand = ''
-    start_pos = -1
-    last_pos = -1
-    chrom = -1
+    currentend = -1
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
 
-    headers = 'chrom\tstart\tend\tlength\tforwardstart\treversestart'
-    
+    headers = 'chrom\tstart\tstartstrand\tend\tendstrand\tlength'
+
     f_output = open(args.out, 'w')  # the output file
     f_output.write(headers+'\n')
+    dic_start = {}
+    dic_end = {}
+    for record in samfile.fetch(args.chrom, args.start, args.end):
+        increment = record.pos + record.qend
 
-    for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
-                                       truncate=True):
+        if record.tid != chrom:  # new chromosome
+            ## print current result IMPORTANT
 
-        if (pileupcolumn.tid != chrom) or (pileupcolumn.pos - last_pos) > delta:
+            chrom = record.tid
+            currentend = increment
+            dic_start.clear()
+            dic_end.clear()
 
-            # reset all parameters, a new chromosome
-            if (last_pos - start_pos) > 0:
-                print(samfile.getrname(chrom), start_pos+1, last_pos+1,
-                      last_pos-start_pos, startstrand_forward,
-                      startstrand_reverse, file=f_output)
+        if currentend >= record.pos:  # if new read overlaps former
+            currentend = increment
+            dic_start[record.pos+1] = record.is_reverse
+            dic_end[currentend+1] = record.is_reverse
+        else:
+            start_pos = min(dic_start)
+            startstrand = dic_start[min(dic_start)]
+            end_pos = max([k for k, v in dic_end.items() if v != startstrand])
+            end_strand = dic_end[end_pos]
+            length = end_pos-start_pos
+            print(samfile.getrname(chrom), start_pos, startstrand,
+                  end_pos, end_strand, length, file=f_output, sep='\t')
 
-            chrom = pileupcolumn.tid
-            startstrand = ''
-            start_pos = -1
-            last_pos = -1
-            startstrand_reverse = False
-            startstrand_forward = False
-
-
-        chrom = pileupcolumn.tid
-        # get start positions
-        # print(startstrand_reverse,pileupcolumn.pos)
-        for pileupread in pileupcolumn.pileups:
-            # print()
-            # print(pileupcolumn.pos, 'pos')
-            # print(startstrand, pileupcolumn.pos, 'startstrand')
-            # print(pileupread.alignment.is_reverse, 'whether reverse')
-            # print(last_pos, 'lastpos')
-            # print()
-            # here i want to get started
-            # print(pileupcolumn.pos)
-            # ding =pileupcolumn.pos 
-            # if ding >= 16056783-23 and ding <= 16056783:
-            #     print(pileupread.alignment.is_reverse,
-            #           startstrand_reverse,startstrand_forward,
-            #           pileupread.alignment.seq[pileupread.qpos],pileupcolumn.pos)
-            #     print(start_pos, last_pos)
-            if pileupread.alignment.is_reverse and \
-                    (startstrand_reverse is False):  # check strand read
-                if last_pos == -1:
-                    # startstrand = '-'
-                    startstrand_reverse = True
-                    start_pos = pileupcolumn.pos
-                last_pos = pileupcolumn.pos
-                # latest_pos.append(pileupcolumn.pos)
-                # positions.append(pileupcolumn.pos)
-            elif (pileupread.alignment.is_reverse is False) and \
-                 (startstrand_forward is False):
-                if last_pos == -1:
-                    startstrand_forward = True
-                    # startstrand = '+'
-                    start_pos = pileupcolumn.pos
-                last_pos = pileupcolumn.pos
-            # elif int(pileupcolumn.n) >= 1 :
-            #     if 
-            #     # print(pileupcolumn.n)
-            #     last_pos = pileupcolumn.pos
-
+            dic_start.clear()
+            dic_end.clear()
+            chrom = ''
 
     f_output.close()
     samfile.close()
