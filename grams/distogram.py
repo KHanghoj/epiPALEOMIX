@@ -24,9 +24,9 @@ def parse_args(argv):
 def main(argv):
     ''' docstring '''
     chrom = ''
-    delta = 1  # if pileupcolumn jump is greater than one, start over
-    # reverse = False
-    # forward = False
+    delta = 25  # if pileupcolumn jump is greater than one, start over
+    startstrand_reverse = False
+    startstrand_forward = False
     startstrand = ''
     start_pos = -1
     last_pos = -1
@@ -34,74 +34,69 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
 
-    headers = 'chrom start end length '.split()
+    headers = 'chrom\tstart\tend\tlength\tforwardstart\treversestart'
+    
     f_output = open(args.out, 'w')  # the output file
-    f_output.write('\t'.join(headers)+'\n')
+    f_output.write(headers+'\n')
 
     for pileupcolumn in samfile.pileup(args.chrom, args.start, args.end,
                                        truncate=True):
 
         if (pileupcolumn.tid != chrom) or (pileupcolumn.pos - last_pos) > delta:
-            chrom = pileupcolumn.tid
-            # reset all parameters, a new chromosome
-            # del latest_pos[:]
-            if (last_pos - start_pos) != 0:
-                print(samfile.getrname(chrom), start_pos+1, last_pos+1,
-                      last_pos-start_pos, file=f_output)
 
+            # reset all parameters, a new chromosome
+            if (last_pos - start_pos) > 0:
+                print(samfile.getrname(chrom), start_pos+1, last_pos+1,
+                      last_pos-start_pos, startstrand_forward,
+                      startstrand_reverse, file=f_output)
+
+            chrom = pileupcolumn.tid
             startstrand = ''
             start_pos = -1
             last_pos = -1
+            startstrand_reverse = False
+            startstrand_forward = False
 
-        # if (pileupcolumn.pos - last_pos) > delta:
-        #     #continue  # to stop counting when out of nucleosome
-        #     # here we need to reset paramters as well and print the last known
-        #     if (last_pos - start_pos) != 0:
-        #         print(samfile.getrname(chrom), start_pos+1, last_pos+1,
-        #               last_pos-start_pos, startstrand, file=f_output)
-        #     # del latest_pos[:]
-        #     startstrand = ''
-        #     start_pos = -1
-        #     last_pos = -1
 
-            # sys.exit('out of present nucleosome')
         chrom = pileupcolumn.tid
         # get start positions
+        # print(startstrand_reverse,pileupcolumn.pos)
         for pileupread in pileupcolumn.pileups:
             # print()
             # print(pileupcolumn.pos, 'pos')
-            print(startstrand,pileupcolumn.pos, 'startstrand')
-            print(pileupread.alignment.is_reverse, 'whether reverse')
+            # print(startstrand, pileupcolumn.pos, 'startstrand')
+            # print(pileupread.alignment.is_reverse, 'whether reverse')
             # print(last_pos, 'lastpos')
             # print()
             # here i want to get started
+            # print(pileupcolumn.pos)
+            # ding =pileupcolumn.pos 
+            # if ding >= 16056783-23 and ding <= 16056783:
+            #     print(pileupread.alignment.is_reverse,
+            #           startstrand_reverse,startstrand_forward,
+            #           pileupread.alignment.seq[pileupread.qpos],pileupcolumn.pos)
+            #     print(start_pos, last_pos)
             if pileupread.alignment.is_reverse and \
-                    (startstrand is not '-'):  # check strand read
+                    (startstrand_reverse is False):  # check strand read
                 if last_pos == -1:
-                    startstrand = '-'
+                    # startstrand = '-'
+                    startstrand_reverse = True
                     start_pos = pileupcolumn.pos
                 last_pos = pileupcolumn.pos
                 # latest_pos.append(pileupcolumn.pos)
                 # positions.append(pileupcolumn.pos)
-            elif (startstrand is not '+') and (pileupread.alignment.is_reverse is False):
+            elif (pileupread.alignment.is_reverse is False) and \
+                 (startstrand_forward is False):
                 if last_pos == -1:
-                    startstrand = '+'
+                    startstrand_forward = True
+                    # startstrand = '+'
                     start_pos = pileupcolumn.pos
                 last_pos = pileupcolumn.pos
-            # else:
-                # startstrand = ''
-                # start_pos = -1
-                # last_pos = -1
-                # continue
-                # latest_pos.append(pileupcolumn.pos)
-                # positions.append(pileupcolumn.pos)
-            # else: sys.exit('something is wrong')
-        # last_pos = pileupcolumn.pos
-        # print(pileupcolumn.pos)
+            # elif int(pileupcolumn.n) >= 1 :
+            #     if 
+            #     # print(pileupcolumn.n)
+            #     last_pos = pileupcolumn.pos
 
-
-        # print(pileupcolumn.pos+1, not_changed,
-              # C_to_T, C_to_other, tot_CG, file=f_output, sep='\t')
 
     f_output.close()
     samfile.close()
