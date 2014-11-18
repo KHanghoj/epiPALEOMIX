@@ -31,7 +31,7 @@ def get_size(dic_start, dic_end, samfile, chrom, f_output):
         end_pos = max([k for k, v in dic_end.items() if v != startstrand])
         end_strand = dic_end[end_pos]
         length = end_pos-start_pos
-        print(samfile.getrname(chrom), start_pos, end_pos,
+        print(samfile.getrname(chrom), start_pos+1, end_pos+1,
               length, startstrand, end_strand, file=f_output, sep='\t')
     dic_start.clear()
     dic_end.clear()
@@ -56,21 +56,12 @@ def main(argv):
             ## print current result IMPORTANT
             chrom = record.tid
             currentend = increment
-        print(currentend, record.pos)
         if currentend >= record.pos:  # if new read overlaps former
             currentend = increment
             dic_start[record.pos] = record.is_reverse
             dic_end[currentend] = record.is_reverse
         else:
             get_size(dic_start, dic_end, samfile, chrom, f_output)
-            # start_pos = min(dic_start)
-            # print(start_pos)
-            # startstrand = dic_start[min(dic_start)]
-            # end_pos = max([k for k, v in dic_end.items() if v != startstrand])
-            # end_strand = dic_end[end_pos]
-            # length = end_pos-start_pos
-            # print(samfile.getrname(chrom), start_pos, end_pos,
-            #       length, startstrand, end_strand, file=f_output, sep='\t')
             chrom = record.tid
             currentend = increment
             dic_start[record.pos] = record.is_reverse
