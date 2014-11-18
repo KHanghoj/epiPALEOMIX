@@ -1,7 +1,7 @@
 #!/opt/local/bin/python
 '''  Object: To find the methylation value from a region. the methylation
 score (Ms)
-python ~/research/projects/epiomix/methylation/methyl.py fasta_snip.fa test.bam --chrom 22 --end 19100000 --out new.txt
+python ~/research/projects/epiomix/methylation/methyl_fetch.py fasta_snip.fa test.bam --chrom 22 --start 18100000 --end 19100000 --out new.txt
 '''
 
 from __future__ import print_function
@@ -32,12 +32,13 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = pysam.Fastafile(args.fastafile)
 
-    headers = ['positions', 'not_changed', 'C_to_T', 'C_to_other', 'sum']
+
     f_output = open(args.out, 'w')  # the output file
-    f_output.write('\t'.join(headers)+'\n')
+    # f_output.write('\t'.join(headers)+'\n')
 
 
     last_pos = -1
+    chrom = ''
     scores = {}
     # for record in samfile.fetch(args.chrom, args.start, args.end):
     #     for gammel_pos in xrange(last_pos, record.pos):
@@ -48,84 +49,110 @@ def main(argv):
 
     dic_base_forward = defaultdict(int)
     dic_base_end = defaultdict(int)
-    dic_lastpos = defaultdict(int)
-
+    # dic_lastpos = {}
+    dic_lastpos = defaultdict(lambda: defaultdict(int))
+    countz = 0
     for record in samfile.fetch(args.chrom, args.start, args.end):
         read_sequence = record.seq
         read_cigar = record.cigar
-        if record.pos in dic_lastpos:
-            dic_lastpos[record.pos]
-            pass
-        # read_alignment_end = record.aend
-        # if len(record.cigar)>1 :
-        #     print(read_cigar)
-        #     print(read_sequence)
-        #     print(len(read_sequence))
-        #     print(read_postions)
-        #     print(read_alignment_end)
 
-        #     cigar_oper_start = read_cigar[0][0]
-        #     cigarlength_start = read_cigar[0][1]
-
-
-        #     # this i need for minus strand: combine it with the record.aend
-        #     cigar_oper_end = read_cigar[-1][0]
-        #     cigarlength_end = read_cigar[-1][1]
-
-        #     if(cigar_oper_end is 0 and cigarlength_end >= 2):
-        #         print(read_cigar)
-
-        #     # sys.exit(1)
-        # if record.pos + len(read_sequence) != record.aend:
-        #     print(record.cigar)
-        #     print(record.pos)
-        #     print(record.alen)
-        #     print(record.aend, 'aend')
-        #     print(len(read_sequence))
+#        keystotest = (k for k, v in dic_lastpos if (record.pos > k) and (k > 0))
+        # if len(dic_lastpos)
+        # if record.pos > max([0], dic_lastpos.keys()) and len(dic_lastpos) >= 1:
+        #     print(dic_lastpos.keys())
         #     sys.exit()
-        # continue
+        if len(dic_lastpos) >= 1 and (max(dic_lastpos) > record.pos):
+            # print(dic_lastpos)
+            # print(record.pos)
+            for keys in dic_lastpos.keys():
+                if record.pos > keys:
+                    print('Ms: ', dic_lastpos[keys]['A']/float(dic_lastpos[keys]['G']+dic_lastpos[keys]['A']))
+                    # print(dic_lastpos[keys]['A'])
+                    dic_lastpos.pop(keys, None)
+        # print(len(dic_lastpos))
+
+        if record.tid != chrom:  # new chromosome
+            chrom = record.tid
+            last_pos = -1
+        # if countz > 500:
+        #     print(max([0],dic_lastpos.keys())>record.pos)
+        #     print(max(dic_lastpos.keys()))
+        #     print(dic_lastpos)
+        #     print(dic_lastpos.keys())
+        #     print(record.pos)
+            # sys.exit()
         if record.is_reverse:
             if read_sequence[-2:] in _MINUS_STRAND_BASES:  # last two bases ok
-                fetch_posi = record.aend-1
+                print(read_sequence[-2:])
+                fetch_posi = record.aend-2
                 if 'CG' in fasta.fetch(samfile.getrname(record.tid),
                                        start=fetch_posi, end=fetch_posi+2):
-                    if read_cigar[-1][0] == 0 and read_cigar[-1][1] >= 2:
+                    if (read_cigar[-1][0] == 0) and (read_cigar[-1][1] >= 2):
+                        print(read_cigar)
+                        print(fasta.fetch(samfile.getrname(record.tid),
+                                       start=fetch_posi, end=fetch_posi+2))
                         dic_lastpos[record.aend][read_sequence[-1]] += 1
+
 
                         # if record.aend == last_pos:
 
                         #     dic_base_end[read_sequence[-1]] += 1
                         # else:
                         #     dic_lastpos[record.aend] = dic_base_end
+                        # print(dic_lastpos[record.aend],record.aend)
             # this is the minus strand
 
-        else:
+        else: # this is for the forward strand
             if read_sequence[0:2] in _PLUS_STRAND_BASES:
-                fetch_posi = record.pos+1
+                fetch_posi = record.pos
                 if 'CG' in fasta.fetch(samfile.getrname(record.tid),
                                        start=fetch_posi, end=fetch_posi+2):
                     if read_cigar[0][0] == 0 and read_cigar[0][1] >= 2:
+
                     # if read_sequence[0:2] in _PLUS_STRAND_BASES and \
                     #         (read_cigar[0][0] == 0 and read_cigar[0][1] > 2):
+                        if last_pos == -1: last_pos = record.pos
                         if record.pos == last_pos:
                             dic_base_forward[read_sequence[0]] += 1
                             # count with defaultdic if T (N2) or C (N1)
-                            pass
+                        
                         else:
+
+                            print('hejhej')
                             tempdic_minus = dic_lastpos[last_pos]  # M1 M2
-                            top = sum(dic_base_forward['T'], tempdic_minus['A'])
-                            lower = sum(top, dic_base_forward['C'], tempdic_minus['G'])
+                            # print(tempdic_minus)
+                            print('A: ',tempdic_minus['A'],'G: ',tempdic_minus['G'])
+                            print('C: ',dic_base_forward['C'],'T: ',dic_base_forward['T'])
+                            print(read_sequence[0:2],last_pos,record.pos)
+
+                            top = dic_base_forward['T']+tempdic_minus['A']
+                            lower = top+dic_base_forward['C']+tempdic_minus['G']
+
+                            #     dic_lastpos.pop(last_pos, None)
+                            #     # returns none of last_pos key is not present
+                            #     dic_base_forward.clear()
+                            #     continue
+                            # print(last_pos, 'top: ',top, 'lower: ',lower)
+                            # print(lower,record.pos,last_pos,read_sequence,
+                                  # top)
                             M_value = top/float(lower)
-                            print(M_value)
+
+                            print('Ms cool: ',M_value)
                             dic_lastpos.pop(last_pos, None)
                                 # returns none of last_pos key is not present
                             dic_base_forward.clear()
-
+                        last_pos = record.pos
         # Sekvens = record.seq
         # Alignment = sekvens + cigar
 
+        
 
-        last_pos = record.pos
+    # tempdic_minus = dic_lastpos[last_pos]  # M1 M2
+    # top = sum(dic_base_forward['T'], tempdic_minus['A'])
+    # lower = sum(top, dic_base_forward['C'], tempdic_minus['G'])
+    # M_value = top/float(lower)
+    # print(M_value)
+
         # Starter med:
           # slut_positioner = {}
 
