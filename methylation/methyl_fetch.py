@@ -5,7 +5,6 @@ score (Ms)
  Rscript -e "a=read.table('new.txt') ;summary(a)"
         # Profiling af python script:
         # $ python -m cProfile -s cumulative script.py
-
 '''
 
 from __future__ import print_function
@@ -32,23 +31,25 @@ def parse_args(argv):
 
 
 def get_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
+    ''' docstring '''
     tempdic_minus = dic_lastpos.pop(last_pos, {})
     top = dic_base_forward['T']+tempdic_minus.get('A', 0)
     lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
-    M_value = top/float(lower)
+    ms_value = top/float(lower)
     dic_base_forward.clear()
-    print(chrom, last_pos+1, M_value,
+    print(chrom, last_pos+1, ms_value,
           file=output, sep='\t')
 
 
 def get_minus_ms(chrom, last_pos, dic_lastpos, output):
+    ''' docstring '''
     for keys in sorted(dic_lastpos.keys()):
         if last_pos > keys:
             dic_temp = dic_lastpos.pop(keys, {})
             top = dic_temp.get('A', 0)
             lower = top + dic_temp.get('G', 0)
-            M_value = top/float(lower)
-            print(chrom, keys+1, M_value,
+            ms_value = top/float(lower)
+            print(chrom, keys+1, ms_value,
                   file=output, sep='\t')
 
 
@@ -66,7 +67,7 @@ def main(argv):
     f_output = open(args.out, 'w')  # the output file
     last_pos = -1
     chrom = ''
-    fasta_last_pos = -1
+    fasta_last_pos = 0
     fasta_idx = 0
     dic_lastpos = defaultdict(lambda: defaultdict(int))
     dic_base_forward = defaultdict(int)
@@ -75,9 +76,6 @@ def main(argv):
     # handle = pysam.samfile(...)
     # for bed in mybeds:
     #    call_Ms(handle, bed)
-
-# see if i can avoid the keys thing
-
 
     for record in samfile.fetch(args.chrom, args.start, args.end):
         read_sequence = record.seq
@@ -92,7 +90,7 @@ def main(argv):
         jump = record.pos - fasta_last_pos
         fasta_idx += jump
 
-        if fasta_idx > (_FASTA_LENGTH * .9) or jump > (_FASTA_LENGTH*.8e5):
+        if fasta_idx > (_FASTA_LENGTH * .9) or jump > (_FASTA_LENGTH*.8):
             fasta_last_pos, fasta_idx, fasta_string = \
                 fetchfasta(samfile.getrname(record.tid), record.pos, fasta)
 
@@ -102,14 +100,13 @@ def main(argv):
 
         if record.is_reverse:  # the minus strand
             if read_sequence[-2:] in _MINUS_STRAND_BASES:  # last two bases ok
-                pos = fasta_idx+record.alen-2
+                pos = fasta_idx+record.alen-2  # end of read minus 2 bases
                 if 'CG' in fasta_string[pos:pos+2]:
                     cigar_op, cigar_len = read_cigar[-1]
                     if (cigar_op == 0) and (cigar_len >= 2):
                         dic_lastpos[record.aend-2][read_sequence[-1]] += 1
 
-        else:
-              # this is for the forward strand
+        else:  # this is for the forward strand
             if read_sequence[:2] in _PLUS_STRAND_BASES:  # first two bases ok
                 pos = fasta_idx
                 if 'CG' in fasta_string[pos:pos+2]:
@@ -123,8 +120,9 @@ def main(argv):
                         last_pos = record.pos
         fasta_last_pos = record.pos
 
+    # check the absolute final reads
     if len(dic_base_forward.keys()) > 0 or len(dic_lastpos.keys()) > 0:
-        get_ms(samfile.getrname(record.tid), last_pos,
+        get_ms(samfile.getrname(chrom), last_pos,
                dic_lastpos, dic_base_forward, f_output)
 
     f_output.close()
