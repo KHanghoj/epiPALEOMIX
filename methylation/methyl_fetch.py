@@ -30,6 +30,29 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
+def get_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
+    tempdic_minus = dic_lastpos.pop(last_pos, {})
+    top = dic_base_forward['T']+tempdic_minus.get('A', 0)
+    lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
+    M_value = top/float(lower)
+    dic_base_forward.clear()
+    print(chrom, last_pos+1, M_value,
+          file=output, sep='\t')
+
+
+def get_minus_ms(chrom, last_pos, dic_lastpos, output):
+    for keys in sorted(dic_lastpos.keys()):
+        if last_pos > keys:
+            dic = dic_lastpos.pop(keys, {})
+            top = dic.get('A', 0)
+            lower = top + dic.get('G',0)
+            # top = dic_lastpos[keys]['A']
+            # lower = dic_lastpos[keys]['G']+dic_lastpos[keys]['A']
+            M_value = top/float(lower)
+            print(chrom, keys+1, M_value,
+                  file=output, sep='\t')
+            # dic_lastpos.pop(keys, None)
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
@@ -61,14 +84,17 @@ def main(argv):
         read_cigar = record.cigar
 
         if len(dic_lastpos.keys()) >= 1 and (max(dic_lastpos.keys()) < last_pos): # is this keys thing a hack???
-            for keys in sorted(dic_lastpos.keys()):
-                if last_pos > keys:
-                    top = dic_lastpos[keys]['A']
-                    bottom = dic_lastpos[keys]['G']+dic_lastpos[keys]['A']
-                    out = top/float(bottom)
-                    print(samfile.getrname(record.tid), keys+1, out,
-                          file=f_output,sep='\t')
-                    dic_lastpos.pop(keys, None)
+            get_minus_ms(samfile.getrname(record.tid),
+                         last_pos, dic_lastpos, f_output)
+            # for keys in sorted(dic_lastpos.keys()):
+            #     if last_pos > keys:
+            #         top = dic_lastpos[keys]['A']
+            #         bottom = dic_lastpos[keys]['G']+dic_lastpos[keys]['A']
+            #         out = top/float(bottom)
+            #         print(samfile.getrname(record.tid), keys+1, out,
+            #               file=f_output, sep='\t')
+            #         dic_lastpos.pop(keys, None)
+
         if record.tid != chrom:  # new chromosome
             chrom = record.tid
             last_pos = -1
@@ -92,28 +118,36 @@ def main(argv):
                     if (cigar_op) == 0 and (cigar_len) >= 2:
 
                         if record.pos != last_pos and last_pos != -1:
-                            # tempdic_minus = dic_lastpos.pop(last_pos, {}) # this is mikkel stuff. see if it works the same
+                            # m_val = get_ms(last_pos, dic_lastpos,
+                            #                dic_base_forward)
+                            # print(samfile.getrname(record.tid),
+                            #       last_pos+1, m_val, file=f_output, sep='\t')
+
+                            get_ms(samfile.getrname(record.tid), last_pos,
+                                   dic_lastpos, dic_base_forward, f_output)
+                            # tempdic_minus = dic_lastpos.pop(last_pos, {})
                             # top = dic_base_forward['T']+tempdic_minus.get('A', 0)
                             # lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
-                            tempdic_minus = dic_lastpos[last_pos]
-                            # if tempdic_minus['A'] != 0: print(last_pos, tempdic_minus['A'], 'a')
-                            # if tempdic_minus['G'] != 0: print(last_pos, tempdic_minus['G'], 'g')
 
-                            top = dic_base_forward['T']+tempdic_minus['A']
-                            lower = top+dic_base_forward['C']+tempdic_minus['G']
+                            # M_value = top/float(lower)
+                            # print(samfile.getrname(record.tid),
+                            #       last_pos+1, M_value, file=f_output, sep='\t')
 
-                            M_value = top/float(lower)
-                            print(samfile.getrname(record.tid),
-                                  last_pos+1, M_value, file=f_output, sep='\t')
                             dic_base_forward.clear()
-                            dic_lastpos.pop(last_pos, None)
-                                # returns none of last_pos key is not present
-                        # count with defaultdic if T (N2) or C (N1)
                         dic_base_forward[read_sequence[0]] += 1
-                        # else:
-                            # dic_base_forward[read_sequence[0]] += 1
                         last_pos = record.pos
-        ## i need to calculate the absolute last ms value
+    if len(dic_base_forward.keys()) >= 1:
+        # m_val = get_ms(last_pos, dic_lastpos,
+        #                dic_base_forward)
+        get_ms(samfile.getrname(record.tid), last_pos,
+               dic_lastpos, dic_base_forward, f_output)
+        # tempdic_minus = dic_lastpos.pop(last_pos, {})
+        # top = dic_base_forward['T']+tempdic_minus.get('A', 0)
+        # lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
+        # M_value = top/float(lower)
+        # print(samfile.getrname(record.tid),
+        #       last_pos+1, m_val, file=f_output, sep='\t')
+    ## i need to calculate the absolute last ms value
 
     f_output.close()
     samfile.close()
