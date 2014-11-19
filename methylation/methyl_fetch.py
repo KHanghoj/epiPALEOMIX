@@ -51,6 +51,13 @@ def get_minus_ms(chrom, last_pos, dic_lastpos, output):
                   file=output, sep='\t')
 
 
+def fetchfasta(chrom, presentpos, fasta):
+    ''' docstring '''
+    start = presentpos  # get bases backward 100 b
+    end = start + 1e5  # .1 million bases
+    return fasta.fetch(chrom, start=start, end=end)
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
@@ -73,7 +80,6 @@ def main(argv):
 # i get    2578 lines in new.txt when len(dic_lastpos.keys()) >= 2
 # i get     2513 lines in new.txt len(dic_lastpos.keys()) >= 200
 
-
     for record in samfile.fetch(args.chrom, args.start, args.end):
         read_sequence = record.seq
         read_cigar = record.cigar
@@ -82,7 +88,10 @@ def main(argv):
             get_minus_ms(samfile.getrname(record.tid),
                          last_pos, dic_lastpos, f_output)
 
-        if record.tid != chrom:  # new chromosome
+        if record.tid != chrom:  # new chromosome, remember to call ms
+            if len(dic_base_forward.keys()) > 0 or len(dic_lastpos.keys()) > 0:
+                get_ms(samfile.getrname(record.tid), last_pos,
+                       dic_lastpos, dic_base_forward, f_output)
             chrom = record.tid
             last_pos = -1
 
@@ -109,7 +118,7 @@ def main(argv):
                                    dic_lastpos, dic_base_forward, f_output)
                         dic_base_forward[read_sequence[0]] += 1
                         last_pos = record.pos
-    if len(dic_base_forward.keys()) > 0 or len(last_pos.keys()) > 0:
+    if len(dic_base_forward.keys()) > 0 or len(dic_lastpos.keys()) > 0:
         get_ms(samfile.getrname(record.tid), last_pos,
                dic_lastpos, dic_base_forward, f_output)
 
