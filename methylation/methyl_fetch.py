@@ -43,24 +43,20 @@ def get_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
 def get_minus_ms(chrom, last_pos, dic_lastpos, output):
     for keys in sorted(dic_lastpos.keys()):
         if last_pos > keys:
-            dic = dic_lastpos.pop(keys, {})
-            top = dic.get('A', 0)
-            lower = top + dic.get('G',0)
-            # top = dic_lastpos[keys]['A']
-            # lower = dic_lastpos[keys]['G']+dic_lastpos[keys]['A']
+            dic_temp = dic_lastpos.pop(keys, {})
+            top = dic_temp.get('A', 0)
+            lower = top + dic_temp.get('G', 0)
             M_value = top/float(lower)
             print(chrom, keys+1, M_value,
                   file=output, sep='\t')
-            # dic_lastpos.pop(keys, None)
+
 
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = pysam.Fastafile(args.fastafile)
-
     f_output = open(args.out, 'w')  # the output file
-
     last_pos = -1
     chrom = ''
 
@@ -72,7 +68,6 @@ def main(argv):
     # for bed in mybeds:
     #    call_Ms(handle, bed)
 
-# put stuff into function
 # compare perforance with former script
 # see if i can avoid the keys thing
 # i get    2578 lines in new.txt when len(dic_lastpos.keys()) >= 2
@@ -83,23 +78,15 @@ def main(argv):
         read_sequence = record.seq
         read_cigar = record.cigar
 
-        if len(dic_lastpos.keys()) >= 1 and (max(dic_lastpos.keys()) < last_pos): # is this keys thing a hack???
+        if len(dic_lastpos.keys()) > 0 and (max(dic_lastpos.keys()) < last_pos):
             get_minus_ms(samfile.getrname(record.tid),
                          last_pos, dic_lastpos, f_output)
-            # for keys in sorted(dic_lastpos.keys()):
-            #     if last_pos > keys:
-            #         top = dic_lastpos[keys]['A']
-            #         bottom = dic_lastpos[keys]['G']+dic_lastpos[keys]['A']
-            #         out = top/float(bottom)
-            #         print(samfile.getrname(record.tid), keys+1, out,
-            #               file=f_output, sep='\t')
-            #         dic_lastpos.pop(keys, None)
 
         if record.tid != chrom:  # new chromosome
             chrom = record.tid
             last_pos = -1
 
-        if record.is_reverse:
+        if record.is_reverse:  # the minus strand
             if read_sequence[-2:] in _MINUS_STRAND_BASES:  # last two bases ok
                 fetch_posi = record.aend-2
                 if 'CG' in fasta.fetch(samfile.getrname(record.tid),
@@ -109,7 +96,7 @@ def main(argv):
                         dic_lastpos[record.aend-2][read_sequence[-1]] += 1
 
         else:  # this is for the forward strand
-            if read_sequence[:2] in _PLUS_STRAND_BASES:
+            if read_sequence[:2] in _PLUS_STRAND_BASES:  # first two bases ok
                 fetch_posi = record.pos
                 if 'CG' in fasta.fetch(samfile.getrname(record.tid),
                                        start=fetch_posi, end=fetch_posi+2):
@@ -118,36 +105,13 @@ def main(argv):
                     if (cigar_op) == 0 and (cigar_len) >= 2:
 
                         if record.pos != last_pos and last_pos != -1:
-                            # m_val = get_ms(last_pos, dic_lastpos,
-                            #                dic_base_forward)
-                            # print(samfile.getrname(record.tid),
-                            #       last_pos+1, m_val, file=f_output, sep='\t')
-
                             get_ms(samfile.getrname(record.tid), last_pos,
                                    dic_lastpos, dic_base_forward, f_output)
-                            # tempdic_minus = dic_lastpos.pop(last_pos, {})
-                            # top = dic_base_forward['T']+tempdic_minus.get('A', 0)
-                            # lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
-
-                            # M_value = top/float(lower)
-                            # print(samfile.getrname(record.tid),
-                            #       last_pos+1, M_value, file=f_output, sep='\t')
-
-                            dic_base_forward.clear()
                         dic_base_forward[read_sequence[0]] += 1
                         last_pos = record.pos
-    if len(dic_base_forward.keys()) >= 1:
-        # m_val = get_ms(last_pos, dic_lastpos,
-        #                dic_base_forward)
+    if len(dic_base_forward.keys()) > 0 or len(last_pos.keys()) > 0:
         get_ms(samfile.getrname(record.tid), last_pos,
                dic_lastpos, dic_base_forward, f_output)
-        # tempdic_minus = dic_lastpos.pop(last_pos, {})
-        # top = dic_base_forward['T']+tempdic_minus.get('A', 0)
-        # lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
-        # M_value = top/float(lower)
-        # print(samfile.getrname(record.tid),
-        #       last_pos+1, m_val, file=f_output, sep='\t')
-    ## i need to calculate the absolute last ms value
 
     f_output.close()
     samfile.close()
