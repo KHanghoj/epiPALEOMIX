@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+# !/opt/local/bin/python
 '''  Object: To find the methylation value from a region. the methylation
 score (Ms)
  python ~/research/projects/epiomix/methylation/methyl_fetch.py chrome.fa test.bam --chrom 22 --start 18100000 --end 20100000 --out new.txt
@@ -16,6 +16,7 @@ from collections import defaultdict
 
 _PLUS_STRAND_BASES = ['CG', 'TG']
 _MINUS_STRAND_BASES = ['CG', 'CA']
+_FASTA_LENGTH = 1e5
 
 
 def parse_args(argv):
@@ -53,9 +54,8 @@ def get_minus_ms(chrom, last_pos, dic_lastpos, output):
 
 def fetchfasta(chrom, presentpos, fasta):
     ''' docstring '''
-    start = presentpos  # get bases backward 100 b
-    end = start + 1e5  # .1 million bases
-    return fasta.fetch(chrom, start=start, end=end)
+    end = presentpos + _FASTA_LENGTH  # .1 million bases
+    return presentpos, 0, fasta.fetch(chrom, start=presentpos, end=end)
 
 
 def main(argv):
@@ -66,7 +66,8 @@ def main(argv):
     f_output = open(args.out, 'w')  # the output file
     last_pos = -1
     chrom = ''
-
+    fasta_last_pos = -1
+    fasta_idx = 0
     dic_lastpos = defaultdict(lambda: defaultdict(int))
     dic_base_forward = defaultdict(int)
 
@@ -75,41 +76,43 @@ def main(argv):
     # for bed in mybeds:
     #    call_Ms(handle, bed)
 
-# compare perforance with former script
 # see if i can avoid the keys thing
-# i get    2578 lines in new.txt when len(dic_lastpos.keys()) >= 2
-# i get     2513 lines in new.txt len(dic_lastpos.keys()) >= 200
+
 
     for record in samfile.fetch(args.chrom, args.start, args.end):
         read_sequence = record.seq
         read_cigar = record.cigar
 
+        if record.tid != chrom:  # new chromosome
+            chrom = record.tid
+            last_pos = -1
+            fasta_last_pos, fasta_idx, fasta_string = \
+                fetchfasta(samfile.getrname(record.tid), record.pos, fasta)
+
+        jump = record.pos - fasta_last_pos
+        fasta_idx += jump
+
+        if fasta_idx > (_FASTA_LENGTH * .9) or jump > (_FASTA_LENGTH*.8e5):
+            fasta_last_pos, fasta_idx, fasta_string = \
+                fetchfasta(samfile.getrname(record.tid), record.pos, fasta)
+
         if len(dic_lastpos.keys()) > 0 and (max(dic_lastpos.keys()) < last_pos):
             get_minus_ms(samfile.getrname(record.tid),
                          last_pos, dic_lastpos, f_output)
 
-        if record.tid != chrom:  # new chromosome, remember to call ms
-            if len(dic_base_forward.keys()) > 0 or len(dic_lastpos.keys()) > 0:
-                get_ms(samfile.getrname(record.tid), last_pos,
-                       dic_lastpos, dic_base_forward, f_output)
-            chrom = record.tid
-            last_pos = -1
-
         if record.is_reverse:  # the minus strand
             if read_sequence[-2:] in _MINUS_STRAND_BASES:  # last two bases ok
-                fetch_posi = record.aend-2
-                if 'CG' in fasta.fetch(samfile.getrname(record.tid),
-                                       start=fetch_posi, end=fetch_posi+2):
+                pos = fasta_idx+record.alen-2
+                if 'CG' in fasta_string[pos:pos+2]:
                     cigar_op, cigar_len = read_cigar[-1]
                     if (cigar_op == 0) and (cigar_len >= 2):
                         dic_lastpos[record.aend-2][read_sequence[-1]] += 1
 
-        else:  # this is for the forward strand
+        else:
+              # this is for the forward strand
             if read_sequence[:2] in _PLUS_STRAND_BASES:  # first two bases ok
-                fetch_posi = record.pos
-                if 'CG' in fasta.fetch(samfile.getrname(record.tid),
-                                       start=fetch_posi, end=fetch_posi+2):
-
+                pos = fasta_idx
+                if 'CG' in fasta_string[pos:pos+2]:
                     cigar_op, cigar_len = read_cigar[0]
                     if (cigar_op) == 0 and (cigar_len) >= 2:
 
@@ -118,6 +121,8 @@ def main(argv):
                                    dic_lastpos, dic_base_forward, f_output)
                         dic_base_forward[read_sequence[0]] += 1
                         last_pos = record.pos
+        fasta_last_pos = record.pos
+
     if len(dic_base_forward.keys()) > 0 or len(dic_lastpos.keys()) > 0:
         get_ms(samfile.getrname(record.tid), last_pos,
                dic_lastpos, dic_base_forward, f_output)
