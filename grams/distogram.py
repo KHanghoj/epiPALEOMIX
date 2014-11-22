@@ -24,8 +24,10 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def get_size(dic_start, dic_end, samfile, chrom, f_output):
-    if len(dic_end) > 1:
+def call_distance(dic_start, dic_end, samfile, chrom, f_output):
+    ''' docstring '''
+    if len(set(dic_end.values())) > 1:
+        # only if data available from both strands
         start_pos = min(dic_start)
         startstrand = dic_start[min(dic_start)]
         end_pos = max([k for k, v in dic_end.items() if v != startstrand])
@@ -37,37 +39,38 @@ def get_size(dic_start, dic_end, samfile, chrom, f_output):
     dic_end.clear()
 
 
+def update_dics(dic_start, dic_end, beginpos, endpos, strand):
+    ''' docstring '''
+    dic_start[beginpos] = strand
+    dic_end[endpos] = strand
+
+
 def main(argv):
     ''' docstring '''
-    chrom = ''
-    currentend = -1
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    headers = 'chrom\tstart\tend\tlength\tstarts_reverse'
     f_output = open(args.out, 'w')  # the output file
-    f_output.write(headers+'\n')
+    chrom = ''
+    last_end_pos = -1
+
     dic_start = {}
     dic_end = {}
     for record in samfile.fetch(args.chrom, args.start, args.end):
-        increment = record.pos + record.qend
-
-        if record.tid != chrom:  # new chromosome
-            get_size(dic_start, dic_end, samfile, chrom, f_output)
-            ## print current result IMPORTANT
+        strand = record.is_reverse
+        if record.tid != chrom:  # new chromosome or first read
+            call_distance(dic_start, dic_end, samfile, chrom, f_output)
             chrom = record.tid
-            currentend = increment
-        if currentend >= record.pos:  # if new read overlaps former
-            currentend = increment
-            dic_start[record.pos] = record.is_reverse
-            dic_end[currentend] = record.is_reverse
-        else:
-            get_size(dic_start, dic_end, samfile, chrom, f_output)
-            chrom = record.tid
-            currentend = increment
-            dic_start[record.pos] = record.is_reverse
-            dic_end[currentend] = record.is_reverse
+            last_end_pos = record.aend
 
-    get_size(dic_start, dic_end, samfile, chrom, f_output)
+        if last_end_pos >= record.pos:  # if new read overlaps former
+            last_end_pos = record.aend  # assign new end read
+            update_dics(dic_start, dic_end, record.pos, last_end_pos, strand)
+        else:  # calculate the distance
+            call_distance(dic_start, dic_end, samfile, chrom, f_output)
+            last_end_pos = record.aend
+            update_dics(dic_start, dic_end, record.pos, last_end_pos, strand)
+
+    call_distance(dic_start, dic_end, samfile, chrom, f_output)
     f_output.close()
     samfile.close()
     return 0
