@@ -33,6 +33,9 @@ def parse_args(argv):
 def get_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
     ''' docstring '''
     tempdic_minus = dic_lastpos.pop(last_pos, {})
+    if len(tempdic_minus) >= 1:
+        print(tempdic_minus.get('A', 0), 'A')
+        print(tempdic_minus.get('G', 0), 'G',type(tempdic_minus.get('G', 0)))
     top = dic_base_forward['T']+tempdic_minus.get('A', 0)
     lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
     ms_value = top/float(lower)
@@ -56,7 +59,7 @@ def get_minus_ms(chrom, last_pos, dic_lastpos, output):
 def fetchfasta(chrom, presentpos, fasta):
     ''' docstring '''
     end = presentpos + _FASTA_LENGTH  # .1 million bases
-    return presentpos, 0, fasta.fetch(chrom, start=presentpos, end=end)
+    return fasta.fetch(chrom, start=presentpos, end=end)
 
 
 def main(argv):
@@ -65,17 +68,9 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = pysam.Fastafile(args.fastafile)
     f_output = open(args.out, 'w')  # the output file
-    last_pos = -1
     chrom = ''
-    fasta_last_pos = 0
-    fasta_idx = 0
     dic_lastpos = defaultdict(lambda: defaultdict(int))
     dic_base_forward = defaultdict(int)
-
-    # mybeds = read.beds(...)
-    # handle = pysam.samfile(...)
-    # for bed in mybeds:
-    #    call_Ms(handle, bed)
 
     for record in samfile.fetch(args.chrom, args.start, args.end):
         read_sequence = record.seq
@@ -84,15 +79,18 @@ def main(argv):
         if record.tid != chrom:  # new chromosome
             chrom = record.tid
             last_pos = -1
-            fasta_last_pos, fasta_idx, fasta_string = \
-                fetchfasta(samfile.getrname(record.tid), record.pos, fasta)
+            fasta_idx = 0
+            fasta_last_pos = record.pos
+            fasta_string = fetchfasta(samfile.getrname(record.tid),
+                                      record.pos, fasta)
 
-        jump = record.pos - fasta_last_pos
-        fasta_idx += jump
+        fasta_idx += (record.pos - fasta_last_pos)
 
-        if fasta_idx > (_FASTA_LENGTH * .9) or jump > (_FASTA_LENGTH*.8):
-            fasta_last_pos, fasta_idx, fasta_string = \
-                fetchfasta(samfile.getrname(record.tid), record.pos, fasta)
+        if fasta_idx > (_FASTA_LENGTH * .9):  # fetch new fasta string
+            fasta_idx = 0
+            fasta_last_pos = record.pos
+            fasta_string = fetchfasta(samfile.getrname(record.tid),
+                                      record.pos, fasta)
 
         if len(dic_lastpos.keys()) > 0 and (max(dic_lastpos.keys()) < last_pos):
             get_minus_ms(samfile.getrname(record.tid),
@@ -111,8 +109,7 @@ def main(argv):
                 pos = fasta_idx
                 if 'CG' in fasta_string[pos:pos+2]:
                     cigar_op, cigar_len = read_cigar[0]
-                    if (cigar_op) == 0 and (cigar_len) >= 2:
-
+                    if cigar_op == 0 and cigar_len >= 2:
                         if record.pos != last_pos and last_pos != -1:
                             get_ms(samfile.getrname(record.tid), last_pos,
                                    dic_lastpos, dic_base_forward, f_output)
