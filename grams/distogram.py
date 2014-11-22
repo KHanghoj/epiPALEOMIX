@@ -27,34 +27,13 @@ def parse_args(argv):
 
 def call_distance(l_minus, l_plus, samfile, chrom, f_output):
     ''' docstring '''
-    if len(l_minus) > 1 and len(l_plus) > 1:
-        # startstrand = True
-        # plus = [k for k, v in dic_start.items() if v != startstrand]
-        # minus = [k for k, v in dic_start.items() if v == startstrand]
-        # create all combinations
-        print(l_minus)
-        print(l_plus)
+    if len(l_minus) > 0 and len(l_plus) > 0:
         for plus_pos, minus_pos in product(set(l_plus), set(l_minus)):
             print(samfile.getrname(chrom), plus_pos+1, minus_pos+1,
                   abs(plus_pos-minus_pos), file=f_output, sep='\t')
+    print(file=f_output)
     del l_minus[:]
     del l_plus[:]
-    # dic_start.clear()
-    #     print(plus, 'plus')
-    #     print(minus, 'minus')
-    # for _ in sorted(dic_start.keys()):
-    #     if len(set(dic_start.values())) > 1:
-    #         #   only if data available from both strands
-    #         start_pos = min(dic_start)  # start position
-    #         startstrand = dic_start[min(dic_start)]  # start position strand
-    #         end_pos = max([k for k, v in dic_start.items() if v != startstrand])
-    #         length = end_pos-start_pos
-
-    #         print(samfile.getrname(chrom), start_pos+1, end_pos+1,
-    #               length, startstrand, (not startstrand), file=f_output, sep='\t')
-    #         dic_start.pop(start_pos, None)
-    # STILL NEED TO CALCULATE LAST EXAMPLE IN VALOEUV 2011
-    # need to pop only smallest value and recalculate
 
 
 def update_dic(l_minus, l_plus, beginpos, endpos, strand):
@@ -82,7 +61,7 @@ def main(argv):
         if last_end_pos >= record.pos:  # if new read overlaps former
             last_end_pos = record.aend  # assign new end read
             update_dic(l_minus, l_plus, record.pos, last_end_pos, strand)
-        else:  # calculate the distance
+        else:  # calculate the distance and restart
             call_distance(l_minus, l_plus, samfile, chrom, f_output)
             last_end_pos = record.aend
             update_dic(l_minus, l_plus, record.pos, last_end_pos, strand)
