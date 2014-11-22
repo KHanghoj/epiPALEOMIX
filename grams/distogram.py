@@ -8,6 +8,7 @@ aligning in opposing orientation.
 '''
 
 from __future__ import print_function
+from itertools import product
 import sys
 import pysam
 import argparse
@@ -24,31 +25,45 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def call_distance(dic_start, samfile, chrom, f_output):
+def call_distance(l_minus, l_plus, samfile, chrom, f_output):
     ''' docstring '''
-    for k in sorted(dic_start.keys()):
-        if len(set(dic_start.values())) > 1:
-            #   only if data available from both strands
-            start_pos = min(dic_start)  # start position
-            startstrand = dic_start[min(dic_start)]  # start position strand
-            end_pos = max([k for k, v in dic_start.items() if v != startstrand])
-            # end_strand = dic_start[end_pos]
-            length = end_pos-start_pos
+    if len(l_minus) > 1 and len(l_plus) > 1:
+        # startstrand = True
+        # plus = [k for k, v in dic_start.items() if v != startstrand]
+        # minus = [k for k, v in dic_start.items() if v == startstrand]
+        # create all combinations
+        print(l_minus)
+        print(l_plus)
+        for plus_pos, minus_pos in product(set(l_plus), set(l_minus)):
+            print(samfile.getrname(chrom), plus_pos+1, minus_pos+1,
+                  abs(plus_pos-minus_pos), file=f_output, sep='\t')
+    del l_minus[:]
+    del l_plus[:]
+    # dic_start.clear()
+    #     print(plus, 'plus')
+    #     print(minus, 'minus')
+    # for _ in sorted(dic_start.keys()):
+    #     if len(set(dic_start.values())) > 1:
+    #         #   only if data available from both strands
+    #         start_pos = min(dic_start)  # start position
+    #         startstrand = dic_start[min(dic_start)]  # start position strand
+    #         end_pos = max([k for k, v in dic_start.items() if v != startstrand])
+    #         length = end_pos-start_pos
 
-            print(samfile.getrname(chrom), start_pos+1, end_pos+1,
-                  length, file=f_output, sep='\t')
-            dic_start.pop(start_pos, None)
-            # STILL NEED TO CALCULATE LAST EXAMPLE IN VALOEUV 2011
-            # need to pop only smallest value and recalculate
-    dic_start.clear()
+    #         print(samfile.getrname(chrom), start_pos+1, end_pos+1,
+    #               length, startstrand, (not startstrand), file=f_output, sep='\t')
+    #         dic_start.pop(start_pos, None)
+    # STILL NEED TO CALCULATE LAST EXAMPLE IN VALOEUV 2011
+    # need to pop only smallest value and recalculate
 
 
-def update_dic(dic_start, beginpos, endpos, strand):
+def update_dic(l_minus, l_plus, beginpos, endpos, strand):
     ''' docstring '''
     if strand:  # minus strand
-        dic_start[endpos] = strand
+        l_minus.append(endpos)
     else:
-        dic_start[beginpos] = strand
+        l_plus.append(beginpos)
+
 
 def main(argv):
     ''' docstring '''
@@ -56,35 +71,23 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     f_output = open(args.out, 'w')  # the output file
     chrom = ''
-    last_end_pos = -1
+    l_minus = []
+    l_plus = []
 
-    dic_start = {}
-    # dic_start = {}
     for record in samfile.fetch(args.chrom, args.start, args.end):
         strand = record.is_reverse
         if record.tid != chrom:  # new chromosome or first read
-            # call_distance(dic_start, dic_end, samfile, chrom, f_output)
             chrom = record.tid
             last_end_pos = record.aend
-
         if last_end_pos >= record.pos:  # if new read overlaps former
             last_end_pos = record.aend  # assign new end read
-            # if strand:  # minus strand
-            #     dic_start[record.aend] = strand
-            # else:
-            #     dic_start[record.pos] = strand
-            update_dic(dic_start, record.pos, last_end_pos, strand)
+            update_dic(l_minus, l_plus, record.pos, last_end_pos, strand)
         else:  # calculate the distance
-            call_distance(dic_start, samfile, chrom, f_output)
+            call_distance(l_minus, l_plus, samfile, chrom, f_output)
             last_end_pos = record.aend
-            # if strand:  # minus strand
-            #     dic_start[record.aend] = strand
-            # else:
-            #     dic_start[record.pos] = strand
-            update_dic(dic_start, record.pos, last_end_pos, strand)
+            update_dic(l_minus, l_plus, record.pos, last_end_pos, strand)
 
-
-    call_distance(dic_start, samfile, chrom, f_output)
+    call_distance(l_minus, l_plus, samfile, chrom, f_output)
     f_output.close()
     samfile.close()
     return 0
