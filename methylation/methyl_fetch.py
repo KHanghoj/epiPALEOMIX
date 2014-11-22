@@ -15,7 +15,7 @@ from collections import defaultdict
 
 _PLUS_STRAND_BASES = ['CG', 'TG']
 _MINUS_STRAND_BASES = ['CG', 'CA']
-_FASTA_LENGTH = 1e5
+_TEMP_FASTA_LENGTH = 1e5
 
 
 def parse_args(argv):
@@ -30,21 +30,17 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def get_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
+def call_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
     ''' docstring '''
     tempdic_minus = dic_lastpos.pop(last_pos, {})
-    if len(tempdic_minus) >= 1:
-        print(tempdic_minus.get('A', 0), 'A')
-        print(tempdic_minus.get('G', 0), 'G',type(tempdic_minus.get('G', 0)))
     top = dic_base_forward['T']+tempdic_minus.get('A', 0)
     lower = top+dic_base_forward['C']+tempdic_minus.get('G', 0)
     ms_value = top/float(lower)
     dic_base_forward.clear()
-    print(chrom, last_pos+1, ms_value,
-          file=output, sep='\t')
+    print(chrom, last_pos+1, ms_value, file=output, sep='\t')
 
 
-def get_minus_ms(chrom, last_pos, dic_lastpos, output):
+def call_minus_ms(chrom, last_pos, dic_lastpos, output):
     ''' docstring '''
     for keys in sorted(dic_lastpos.keys()):
         if last_pos > keys:
@@ -52,13 +48,12 @@ def get_minus_ms(chrom, last_pos, dic_lastpos, output):
             top = dic_temp.get('A', 0)
             lower = top + dic_temp.get('G', 0)
             ms_value = top/float(lower)
-            print(chrom, keys+1, ms_value,
-                  file=output, sep='\t')
+            print(chrom, keys+1, ms_value, file=output, sep='\t')
 
 
 def fetchfasta(chrom, presentpos, fasta):
     ''' docstring '''
-    end = presentpos + _FASTA_LENGTH  # .1 million bases
+    end = presentpos + _TEMP_FASTA_LENGTH  # .1 million bases
     return fasta.fetch(chrom, start=presentpos, end=end)
 
 
@@ -70,13 +65,14 @@ def main(argv):
     f_output = open(args.out, 'w')  # the output file
     chrom = ''
     dic_lastpos = defaultdict(lambda: defaultdict(int))
+
     dic_base_forward = defaultdict(int)
 
     for record in samfile.fetch(args.chrom, args.start, args.end):
         read_sequence = record.seq
         read_cigar = record.cigar
 
-        if record.tid != chrom:  # new chromosome
+        if record.tid != chrom:  # new chromosome or first record
             chrom = record.tid
             last_pos = -1
             fasta_idx = 0
@@ -86,15 +82,16 @@ def main(argv):
 
         fasta_idx += (record.pos - fasta_last_pos)
 
-        if fasta_idx > (_FASTA_LENGTH * .9):  # fetch new fasta string
+        if fasta_idx > (_TEMP_FASTA_LENGTH * .9):  # fetch new fasta string
             fasta_idx = 0
             fasta_last_pos = record.pos
             fasta_string = fetchfasta(samfile.getrname(record.tid),
                                       record.pos, fasta)
 
+        # Call minus strand Ms with no plus strand information
         if len(dic_lastpos.keys()) > 0 and (max(dic_lastpos.keys()) < last_pos):
-            get_minus_ms(samfile.getrname(record.tid),
-                         last_pos, dic_lastpos, f_output)
+            call_minus_ms(samfile.getrname(record.tid),
+                          last_pos, dic_lastpos, f_output)
 
         if record.is_reverse:  # the minus strand
             if read_sequence[-2:] in _MINUS_STRAND_BASES:  # last two bases ok
@@ -111,16 +108,16 @@ def main(argv):
                     cigar_op, cigar_len = read_cigar[0]
                     if cigar_op == 0 and cigar_len >= 2:
                         if record.pos != last_pos and last_pos != -1:
-                            get_ms(samfile.getrname(record.tid), last_pos,
-                                   dic_lastpos, dic_base_forward, f_output)
+                            call_ms(samfile.getrname(record.tid), last_pos,
+                                    dic_lastpos, dic_base_forward, f_output)
                         dic_base_forward[read_sequence[0]] += 1
                         last_pos = record.pos
         fasta_last_pos = record.pos
 
     # check the absolute final reads
     if len(dic_base_forward.keys()) > 0 or len(dic_lastpos.keys()) > 0:
-        get_ms(samfile.getrname(chrom), last_pos,
-               dic_lastpos, dic_base_forward, f_output)
+        call_ms(samfile.getrname(chrom), last_pos,
+                dic_lastpos, dic_base_forward, f_output)
 
     f_output.close()
     samfile.close()
