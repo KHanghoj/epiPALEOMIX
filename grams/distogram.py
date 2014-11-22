@@ -24,26 +24,31 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def call_distance(dic_start, dic_end, samfile, chrom, f_output):
+def call_distance(dic_start, samfile, chrom, f_output):
     ''' docstring '''
-    if len(set(dic_end.values())) > 1:
-        # only if data available from both strands
-        start_pos = min(dic_start)
-        startstrand = dic_start[min(dic_start)]
-        end_pos = max([k for k, v in dic_end.items() if v != startstrand])
-        end_strand = dic_end[end_pos]
-        length = end_pos-start_pos
-        print(samfile.getrname(chrom), start_pos+1, end_pos+1,
-              length, startstrand, end_strand, file=f_output, sep='\t')
+    for k in sorted(dic_start.keys()):
+        if len(set(dic_start.values())) > 1:
+            #   only if data available from both strands
+            start_pos = min(dic_start)  # start position
+            startstrand = dic_start[min(dic_start)]  # start position strand
+            end_pos = max([k for k, v in dic_start.items() if v != startstrand])
+            # end_strand = dic_start[end_pos]
+            length = end_pos-start_pos
+
+            print(samfile.getrname(chrom), start_pos+1, end_pos+1,
+                  length, file=f_output, sep='\t')
+            dic_start.pop(start_pos, None)
+            # STILL NEED TO CALCULATE LAST EXAMPLE IN VALOEUV 2011
+            # need to pop only smallest value and recalculate
     dic_start.clear()
-    dic_end.clear()
 
 
-def update_dics(dic_start, dic_end, beginpos, endpos, strand):
+def update_dic(dic_start, beginpos, endpos, strand):
     ''' docstring '''
-    dic_start[beginpos] = strand
-    dic_end[endpos] = strand
-
+    if strand:  # minus strand
+        dic_start[endpos] = strand
+    else:
+        dic_start[beginpos] = strand
 
 def main(argv):
     ''' docstring '''
@@ -54,23 +59,32 @@ def main(argv):
     last_end_pos = -1
 
     dic_start = {}
-    dic_end = {}
+    # dic_start = {}
     for record in samfile.fetch(args.chrom, args.start, args.end):
         strand = record.is_reverse
         if record.tid != chrom:  # new chromosome or first read
-            call_distance(dic_start, dic_end, samfile, chrom, f_output)
+            # call_distance(dic_start, dic_end, samfile, chrom, f_output)
             chrom = record.tid
             last_end_pos = record.aend
 
         if last_end_pos >= record.pos:  # if new read overlaps former
             last_end_pos = record.aend  # assign new end read
-            update_dics(dic_start, dic_end, record.pos, last_end_pos, strand)
+            # if strand:  # minus strand
+            #     dic_start[record.aend] = strand
+            # else:
+            #     dic_start[record.pos] = strand
+            update_dic(dic_start, record.pos, last_end_pos, strand)
         else:  # calculate the distance
-            call_distance(dic_start, dic_end, samfile, chrom, f_output)
+            call_distance(dic_start, samfile, chrom, f_output)
             last_end_pos = record.aend
-            update_dics(dic_start, dic_end, record.pos, last_end_pos, strand)
+            # if strand:  # minus strand
+            #     dic_start[record.aend] = strand
+            # else:
+            #     dic_start[record.pos] = strand
+            update_dic(dic_start, record.pos, last_end_pos, strand)
 
-    call_distance(dic_start, dic_end, samfile, chrom, f_output)
+
+    call_distance(dic_start, samfile, chrom, f_output)
     f_output.close()
     samfile.close()
     return 0
