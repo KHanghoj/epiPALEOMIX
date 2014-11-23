@@ -1,6 +1,9 @@
 #!/opt/local/bin/python
 '''  Object: return the base composition of the bases in the called nucleosome.
-Single-, di- and tetranucleotides '''
+Single-, di- and tetranucleotides
+### note: we need to find a solution of nucleosome mapping with wide peaks.
+### need to change the code to fit only one dyad
+'''
 from __future__ import print_function
 import random
 from collections import defaultdict
