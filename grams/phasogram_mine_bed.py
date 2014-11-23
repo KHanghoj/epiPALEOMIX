@@ -52,15 +52,13 @@ def get_distance(start, end, score, f_output):
         if abs(end[idx]-start[last_element]) > _MAX_SIZE:
             reads_for_removal.append(idx)  # get the index
 
-    for idx in reads_for_removal:
-        if score[idx] >= _MIN_DEPTH:
+    for idx_remove in reads_for_removal:
+        if score[idx_remove] >= _MIN_DEPTH:
             for idx_list in range(last_element):
-                if not idx == idx_list:
-                    var = abs(start[idx]-start[idx_list])
+                if not idx_remove == idx_list:
+                    var = abs(start[idx_remove]-start[idx_list])
                     if var >= _NEXTNUC:
                         f_output.write(str(var)+'\n')
-#                       outfile.write("\n".join(itemlist))
-                        # this is for lists
 
     # removal:
     for idx in sorted(reads_for_removal, reverse=True):
@@ -86,13 +84,9 @@ def main(argv):
     with open(args.bed, 'r') as myfile:
         for line in myfile.readlines():
             input_line = (line.rstrip('\n')).split('\t')[:3]
-            #chrom = input_line[0].replace('chr', '')
             chrom = input_line.pop(0).replace('chr', '')
             start = int(input_line.pop(0))
             end = int(input_line.pop(0))
-            # print(chrom)
-            # print(input_line)
-            # start, end = [int(x) for x in input_line[1:]]
             for record in samfile.fetch(chrom, start, end):
                 if record.mapq < _MINMAPQUALI:
                     break  # do not analyze low quality reads
@@ -104,12 +98,12 @@ def main(argv):
                 if record.is_reverse:
                     get_append(start_minus, end_minus, score_minus,
                                record.aend, record.pos)  # begin & end swapped
+
                     get_distance(start_minus, end_minus, score_minus, f_output)
                 else:
                     get_append(start_plus, end_plus, score_plus,
                                record.pos, record.aend)
                     get_distance(start_plus, end_plus, score_plus, f_output)
-
     samfile.close()
     return 0
 
