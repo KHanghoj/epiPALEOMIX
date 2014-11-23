@@ -43,7 +43,7 @@ def call_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
 def call_minus_ms(chrom, last_pos, dic_lastpos, output):
     ''' docstring '''
     for keys in sorted(dic_lastpos.keys()):
-        if last_pos > keys:
+        if last_pos > keys:  # this is not necessary
             dic_temp = dic_lastpos.pop(keys, {})
             top = dic_temp.get('A', 0)
             lower = top + dic_temp.get('G', 0)
@@ -89,7 +89,7 @@ def main(argv):
                                       record.pos, fasta)
 
         # Call minus strand Ms with no plus strand information
-        if len(dic_lastpos.keys()) > 0 and (max(dic_lastpos.keys()) < last_pos):
+        if len(dic_lastpos.keys()) > 0 and max(dic_lastpos.keys() < last_pos):
             call_minus_ms(samfile.getrname(record.tid),
                           last_pos, dic_lastpos, f_output)
 

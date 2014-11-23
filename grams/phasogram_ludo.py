@@ -70,7 +70,7 @@ def main(argv):
             last_element = len(buffer_dict[strand]['start'])-1
             torefesh = []
 
-            for idx in range(last_element-1): # extra minus cause not check itself
+            for idx in range(last_element-1):  # extra minus cause not check itself
                 if buffer_dict[strand]['end'][last_element] >=  \
                         buffer_dict[strand]['start'][idx]:
                     buffer_dict[strand]['score'][last_element] += 1
@@ -83,23 +83,18 @@ def main(argv):
             for idx_out in torefesh:
                 if buffer_dict[strand]['score'][idx_out] >= _MIN_DEPTH:
                     for i in range(last_element):
-                        if not (idx_out == i):
+                        if not idx_out == i:
                             var = abs(buffer_dict[strand]['start'][idx_out] - buffer_dict[strand]['start'][i])
                             if var >= nextnuc:
                                 print(var, file=f_output)
-                                # print(buffer_dict[strand]['start'][idx_out])
-                                # print(buffer_dict[strand]['start'][i])
             nb_removed_already = 0
 
             for idx in torefesh:
-                # print(idx, nb_removed_already, idx - nb_removed_already)
+
                 buffer_dict[strand]['start'].pop(idx - nb_removed_already)
                 buffer_dict[strand]['end'].pop(idx - nb_removed_already)
                 buffer_dict[strand]['score'].pop(idx - nb_removed_already)
                 nb_removed_already += 1
-            last = last_element - nb_removed_already
-            # print(last_element, nb_removed_already, 'last values')
-            # print(last, buffer_dict[strand]['score'][last], buffer_dict[strand]['score'][0])
     f_output.close()
     samfile.close()
     return 0

@@ -31,7 +31,6 @@ def call_distance(l_minus, l_plus, samfile, chrom, f_output):
         for plus_pos, minus_pos in product(set(l_plus), set(l_minus)):
             print(samfile.getrname(chrom), plus_pos+1, minus_pos+1,
                   abs(plus_pos-minus_pos), file=f_output, sep='\t')
-    print(file=f_output)
     del l_minus[:]
     del l_plus[:]
 
