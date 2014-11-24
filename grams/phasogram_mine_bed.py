@@ -13,7 +13,7 @@ from os import remove
 _MIN_DEPTH = 5
 _MAX_SIZE = 1000
 _MINMAPQUALI = 30
-_NEXTNUC = 0
+_NEXTNUC = 147
 
 
 def parse_args(argv):

@@ -18,6 +18,19 @@ _MINUS_STRAND_BASES = ['CG', 'CA']
 _TEMP_FASTA_LENGTH = 1e5
 
 
+# class Cache():
+#     ''' docstring '''
+#     def __init__(self, filename):
+#         pass
+#         # Open FASTA file, setup positions, etc.
+#     def fetch(self, chrom, start):
+#         pass
+#         # If chrom/start outside of cache, fetch new sequence chrom!=record.tid:
+                # get new base
+            #else:
+#         # Return 2 bases starting at 'start'
+
+
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
