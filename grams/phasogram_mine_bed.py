@@ -74,9 +74,9 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     try:
         remove(args.out)
+        f_output = open(args.out, 'a')  # the output file
     except OSError:
-        pass
-    f_output = open(args.out, 'a')  # the output file
+        f_output = open(args.out, 'a')  # the output file
     start_plus, start_minus = [], []
     end_plus, end_minus = [], []
     score_plus, score_minus = [], []
@@ -104,6 +104,7 @@ def main(argv):
                     get_append(start_plus, end_plus, score_plus,
                                record.pos, record.aend)
                     get_distance(start_plus, end_plus, score_plus, f_output)
+    f_output.close()
     samfile.close()
     return 0
 

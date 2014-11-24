@@ -50,7 +50,7 @@ def get_distance(start, end, score, f_output):
     for idx in reads_for_removal:
         if score[idx] >= _MIN_DEPTH:
             for idx_list in range(last_element):
-                if not (idx == idx_list):
+                if not idx == idx_list:
                     var = abs(start[idx]-start[idx_list])
                     if var >= _NEXTNUC:
                         print(var, file=f_output)
@@ -79,11 +79,11 @@ def main(argv):
             empty_lists(start_plus, start_minus, end_plus, end_minus,
                         score_plus, score_minus)  # empty all lists)
 
-        if record.is_reverse:
+        if record.is_reverse:  # minus strand
             get_append(start_minus, end_minus, score_minus,
                        record.aend, record.pos)  # begin and end swapped
             get_distance(start_minus, end_minus, score_minus, f_output)
-        else:
+        else:  # plus strand
             get_append(start_plus, end_plus, score_plus,
                        record.pos, record.aend)
             get_distance(start_plus, end_plus, score_plus, f_output)
