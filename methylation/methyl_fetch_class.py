@@ -18,7 +18,7 @@ _MINUS_STRAND_BASES = ['CG', 'CA']
 
 
 class Cache(object):
-    ''' class documentation '''
+    ''' class doc '''
 
     def __init__(self, filename):
         self.fasta = pysam.Fastafile(filename)
@@ -38,17 +38,6 @@ class Cache(object):
 
     def closefile(self):
         return self.fasta.close()
-# class Cache():
-#     ''' class documentation '''
-#     def __init__(self, filename):
-#         pass
-#         # Open FASTA file, setup positions, etc.
-#     def fetch(self, chrom, start):
-#         pass
-#         # If chrom/start outside of cache, fetch new sequence chrom!=record.tid:
-                # get new base
-            #else:
-#         # Return 2 bases starting at 'start'
 
 
 def parse_args(argv):
@@ -108,7 +97,7 @@ def main(argv):
         if record.tid != chrom:  # new chromosome or first record
             chrom = record.tid
             last_pos = -1
-            fasta.fetch_string(present_chrom, record.pos)
+            # fasta.fetch_string(present_chrom, record.pos)
 
         # Call minus strand Ms with no plus strand information
         if len(dic_lastpos.keys()) > 0 and max(dic_lastpos.keys()) < last_pos:
