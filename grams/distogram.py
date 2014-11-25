@@ -9,6 +9,7 @@ aligning in opposing orientation.
 
 from __future__ import print_function
 from itertools import product
+from collections import defaultdict
 import sys
 import pysam
 import argparse
@@ -25,12 +26,15 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def call_distance(l_minus, l_plus, samfile, chrom, f_output):
+# def call_distance(l_minus, l_plus, samfile, chrom, f_output):
+def call_distance(l_minus, l_plus, output_dic):
     ''' docstring '''
     if len(l_minus) > 0 and len(l_plus) > 0:
         for plus_pos, minus_pos in product(set(l_plus), set(l_minus)):
-            print(samfile.getrname(chrom), plus_pos+1, minus_pos+1,
-                  abs(plus_pos-minus_pos), file=f_output, sep='\t')
+            var = abs(plus_pos-minus_pos)
+            output_dic[var] += 1  # this creates much smaller output files.
+            # print(samfile.getrname(chrom), plus_pos+1, minus_pos+1,
+                  # abs(plus_pos-minus_pos), file=f_output, sep='\t')
     del l_minus[:]
     del l_plus[:]
 
@@ -43,12 +47,18 @@ def update_dic(l_minus, l_plus, beginpos, endpos, strand):
         l_plus.append(beginpos)
 
 
+def writetofile(output_dic, f_output):
+    for key, value in output_dic.iteritems():
+        f_output.write('{}\t{}\n'.format(key, value))
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     f_output = open(args.out, 'w')  # the output file
     chrom = ''
+    output_dic = defaultdict(int)
     l_minus = []
     l_plus = []
 
@@ -61,11 +71,12 @@ def main(argv):
             last_end_pos = record.aend  # assign new end read
             update_dic(l_minus, l_plus, record.pos, last_end_pos, strand)
         else:  # calculate the distance and restart
-            call_distance(l_minus, l_plus, samfile, chrom, f_output)
+            call_distance(l_minus, l_plus, output_dic)
             last_end_pos = record.aend
             update_dic(l_minus, l_plus, record.pos, last_end_pos, strand)
 
-    call_distance(l_minus, l_plus, samfile, chrom, f_output)
+    call_distance(l_minus, l_plus, output_dic)
+    writetofile(output_dic, f_output)
     f_output.close()
     samfile.close()
     return 0

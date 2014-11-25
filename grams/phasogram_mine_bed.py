@@ -9,11 +9,12 @@ import sys
 import pysam
 import argparse
 from os import remove
+from collections import defaultdict
 
 _MIN_DEPTH = 5
 _MAX_SIZE = 1000
 _MINMAPQUALI = 30
-_NEXTNUC = 147
+_NEXTNUC = 10
 
 
 def parse_args(argv):
@@ -41,7 +42,7 @@ def get_append(start, end, score, record_begin, record_end):
     score.append(0)
 
 
-def get_distance(start, end, score, f_output):
+def get_distance(start, end, score, output_dic):
     ''' docstring '''
     reads_for_removal = []
     last_element = len(end)-1
@@ -58,7 +59,9 @@ def get_distance(start, end, score, f_output):
                 if not idx_remove == idx_list:
                     var = abs(start[idx_remove]-start[idx_list])
                     if var >= _NEXTNUC:
-                        f_output.write(str(var)+'\n')
+                        output_dic[var] += 1
+                        # this creates much smaller output files.
+                        # f_output.write(str(var)+'\n')
 
     # removal:
     for idx in sorted(reads_for_removal, reverse=True):
@@ -67,11 +70,17 @@ def get_distance(start, end, score, f_output):
         score.pop(idx)
 
 
+def writetofile(output_dic, f_output):
+    for key, value in output_dic.iteritems():
+        f_output.write('{}\t{}\n'.format(key, value))
+
+
 def main(argv):
     ''' docstring '''
     chrom_check = ''
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
+    output_dic = defaultdict(int)
     try:
         remove(args.out)
         f_output = open(args.out, 'a')  # the output file
@@ -99,11 +108,13 @@ def main(argv):
                     get_append(start_minus, end_minus, score_minus,
                                record.aend, record.pos)  # begin & end swapped
 
-                    get_distance(start_minus, end_minus, score_minus, f_output)
+                    get_distance(start_minus, end_minus,
+                                 score_minus, output_dic)
                 else:
                     get_append(start_plus, end_plus, score_plus,
                                record.pos, record.aend)
-                    get_distance(start_plus, end_plus, score_plus, f_output)
+                    get_distance(start_plus, end_plus, score_plus, output_dic)
+    writetofile(output_dic, f_output)
     f_output.close()
     samfile.close()
     return 0
