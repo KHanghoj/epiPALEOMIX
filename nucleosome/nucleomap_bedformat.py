@@ -12,7 +12,6 @@ import sys
 import pysam
 import math
 import argparse
-import gzip
 
 #### Constants:
 _SIZE = 147  # the window
@@ -62,10 +61,14 @@ def call_max(mainwind):
 
 def call_flanking(flankwindow):
     ''' docstring '''
-    maxdepth = max(flankwindow)
-    center_index = (len(flankwindow)-1)/2
-    if flankwindow[center_index] == maxdepth:
-        return flankwindow[center_index]
+
+    return sum(flankwindow)/len(flankwindow)
+    # we are now trying with mean of flanks
+
+    # maxdepth = max(flankwindow)
+    # center_index = (len(flankwindow)-1)/2
+    # if flankwindow[center_index] == maxdepth:
+    # return flankwindow[center_index]
 
 
 def shift_window(pileupcolumn, windows, positions, last_pos, s_depth):
@@ -144,7 +147,7 @@ def main(argv):
     positions = []  # the chromosomal position of the nuclesome
     bedfile = args.bed
     samfile = pysam.Samfile(args.bam, "rb")
-    with gzip.open(bedfile, 'rb') as bedfile_f:
+    with open(bedfile, 'r') as bedfile_f:
         for line in bedfile_f.readlines():
             input_line = (line.rstrip('\n')).split('\t')[:3]
             chrom = input_line.pop(0).replace('chr', '')
