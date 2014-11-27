@@ -135,7 +135,7 @@ def main(argv):
     # start_pileup = args.start
     # end_pileup = args.end
 
-    f_outputname = open(args.out, 'w')
+    f_output = open(args.out, 'w')
 
     windows = []
     last_tid = -1
@@ -147,10 +147,11 @@ def main(argv):
     with gzip.open(bedfile, 'rb') as bedfile_f:
         for line in bedfile_f.readlines():
             input_line = (line.rstrip('\n')).split('\t')[:3]
-            chrom = input_line[0].replace('chr', '')
-            start_pileup, end_pileup = [int(x) for x in input_line[1:]]
-            # chrom, start_pileup, end_pileup = (line.rstrip('\n')).split('\t')[:3]
-            # chrom = chrom.replace('chr', '')
+            chrom = input_line.pop(0).replace('chr', '')
+            # it is the users responsibility to input bed format
+            # identical to BAM format.
+            start_pileup = int(input_line.pop(0))
+            end_pileup = int(input_line.pop(0))
             for pileupcolumn in samfile.pileup(chrom, start_pileup, end_pileup):
                 if pileupcolumn.tid != last_tid:
                     last_tid = pileupcolumn.tid
@@ -158,11 +159,12 @@ def main(argv):
                     windows = []
 
                 s_depth = int(pileupcolumn.n)
-                shift_window(pileupcolumn, windows, positions, last_pos, s_depth)
+                shift_window(pileupcolumn, windows, positions,
+                             last_pos, s_depth)
                 last_pos = pileupcolumn.pos
                 if len(windows) == _TOTAL_WIN_LENGTH:
                     last_result = call_window(windows, positions,
-                                              last_result, samfile, f_outputname)
+                                              last_result, samfile, f_output)
 
     samfile.close()
     return 0

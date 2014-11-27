@@ -1,2 +1,0 @@
---chr 16 --start 67562407 --end 67639185 --out first
---chr 16 --start 67552407 --end 67649185 --out second_larger

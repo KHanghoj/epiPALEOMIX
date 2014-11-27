@@ -95,7 +95,7 @@ def main(argv):
             each_line = (line.rstrip('\n'))
             chrom, dyad = each_line.split('\t')[:2]
             score = float(each_line.split('\t')[4])
-            if score < 1:
+            if score < 1:  # arbitrary value
                 continue
             dyad = int(dyad)
             if (dyad - _HALF_NUC) == begin_nucl:
@@ -114,6 +114,7 @@ def main(argv):
     writetofile(singnucl_update, 'single')
     writetofile(dinucl_update, 'dinucleo')
     writetofile(tetranucl_update, 'tetra')
+    samfile.close()
     return 0
 
 if __name__ == '__main__':
