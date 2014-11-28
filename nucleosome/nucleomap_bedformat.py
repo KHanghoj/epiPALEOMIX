@@ -61,10 +61,8 @@ def call_max(mainwind):
 
 def call_flanking(flankwindow):
     ''' docstring '''
-
     return sum(flankwindow)/len(flankwindow)
     # we are now trying with mean of flanks
-
     # maxdepth = max(flankwindow)
     # center_index = (len(flankwindow)-1)/2
     # if flankwindow[center_index] == maxdepth:
@@ -111,12 +109,18 @@ def call_window(windows, positions, last_result, samfile, outname):
 
             # NOTE: Use getrname to get name of chromosome / contig / etc.
             chrom = samfile.getrname(position_start[0])
-            result = (chrom, position_start[1]+1, position_end[1]+1,
-                      value, score)
-            if result != last_result:  # to avoid printing duplicates
-                print(*result, file=outname, sep='\t')
-            return result
+            result = [chrom, position_start[1]+1, position_end[1]+1,
+                      value, score]
 
+            if result[:3] == last_result[:3]:  # to avoid printing duplicates
+                if last_result[4] > score:
+                    result[4] = last_result[4]
+            else:  # result[:3] != last_result[:3]:
+                if not last_result[0] is 0:
+                    print(*last_result, file=outname, sep='\t')
+            # return result
+            del last_result[:]
+            last_result.extend(result)
 
 def parse_args(argv):
     ''' docstring '''
@@ -143,32 +147,41 @@ def main(argv):
     windows = []
     last_tid = -1
     last_pos = -1
-    last_result = None
+    last_result = [0]*5
     positions = []  # the chromosomal position of the nuclesome
     bedfile = args.bed
     samfile = pysam.Samfile(args.bam, "rb")
     with open(bedfile, 'r') as bedfile_f:
         for line in bedfile_f.readlines():
             input_line = (line.rstrip('\n')).split('\t')[:3]
-            chrom = input_line.pop(0).replace('chr', '')
+
             # it is the users responsibility to input bed format
             # identical to BAM format.
-            start_pileup = int(input_line.pop(0))
-            end_pileup = int(input_line.pop(0))
+            try:
+                chrom = input_line.pop(0).replace('chr', '')
+                start_pileup = int(input_line.pop(0))
+                end_pileup = int(input_line.pop(0))
+            except ValueError:
+                print('hek')
+                chrom = None
+                start_pileup = None
+                end_pileup = None
             for pileupcolumn in samfile.pileup(chrom, start_pileup, end_pileup):
                 if pileupcolumn.tid != last_tid:
                     last_tid = pileupcolumn.tid
                     last_pos = -1
                     windows = []
+                    last_result = [0]*5
 
                 s_depth = int(pileupcolumn.n)
                 shift_window(pileupcolumn, windows, positions,
                              last_pos, s_depth)
                 last_pos = pileupcolumn.pos
                 if len(windows) == _TOTAL_WIN_LENGTH:
-                    last_result = call_window(windows, positions,
-                                              last_result, samfile, f_output)
+                    call_window(windows, positions,
+                                last_result, samfile, f_output)
 
+    print(*last_result, file=f_output, sep='\t')
     samfile.close()
     return 0
 
