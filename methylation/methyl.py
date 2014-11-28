@@ -3,6 +3,7 @@
 score (Ms)
  python ~/research/projects/epiomix/methylation/methyl_fetch.py chrome.fa test.bam --chrom 22 --start 18100000 --end 20100000 --out new.txt
  Rscript -e "a=read.table('new.txt') ;summary(a)"
+ Rscript -e "a=read.table('new.txt');b=sum(a[,1])/sum(a[,2]);print(b)"
         # Profiling af python script:
         # $ python -m cProfile -s cumulative script.py
 '''
@@ -52,10 +53,11 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('fastafile', help="fastafile")
     parser.add_argument('bam', help="...")
+    parser.add_argument('bed', help="...")
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
-    parser.add_argument('--out', help='...', default='out_mapmethyl_fetch.txt')
+    parser.add_argument('--out', help='...', default='out_mapmethyl.txt')
     return parser.parse_args(argv)
 
 
@@ -64,8 +66,9 @@ def call_ms(chrom, last_pos, dic_lastpos, dic_base_forward, output):
     tempdic_minus = dic_lastpos.pop(last_pos, {})
     top = dic_base_forward.get('T', 0)+tempdic_minus.get('A', 0)
     lower = top+dic_base_forward.get('C', 0)+tempdic_minus.get('G', 0)
-    ms_value = top/float(lower)
-    print(chrom, last_pos+1, ms_value, file=output, sep='\t')
+    # ms_value = top/float(lower)
+    # print(chrom, last_pos+1, ms_value, file=output, sep='\t')
+    print(top, lower, last_pos+1, file=output, sep='\t')
 
 
 def call_minus_ms(chrom, last_pos, dic_lastpos, output):
@@ -83,49 +86,65 @@ def main(argv):
     # MS: Consider using WITH statements
     f_output = open(args.out, 'w')  # the output file
     chrom = None
+    bedfile = args.bed
     dic_lastpos = defaultdict(lambda: defaultdict(int))
-
     dic_base_forward = defaultdict(int)
+    with open(bedfile, 'r') as bedfile_f:
+        for line in bedfile_f.readlines():
+            input_line = (line.rstrip('\n')).split('\t')[:3]
 
-    for record in samfile.fetch(args.chrom, args.start, args.end):
-        read_sequence = record.seq
-        if record.tid != chrom:  # new chromosome or first record
-            chrom = record.tid
-            last_pos = -1
-            present_chrom = samfile.getrname(record.tid)
+            # it is the users responsibility to input bed format
+            # identical to BAM format.
+            try:
+                chrom = input_line.pop(0).replace('chr', '')
+                start = int(input_line.pop(0))
+                end = int(input_line.pop(0))
+            except (ValueError, IndexError):
+                chrom = args.chrom
+                start = args.start
+                end = args.end
+            # print('> newsite', file=f_output, sep='\t')
+            # print(start, end, file=f_output, sep='\t')
+            # make a dictionary counter with relative positions.
+            for record in samfile.fetch(chrom, start, end):
+                read_sequence = record.seq
+                if record.tid != chrom:  # new chromosome or first record
+                    chrom = record.tid
+                    last_pos = -1
+                    pres_chrom = samfile.getrname(record.tid)
 
-        # Call minus strand Ms with no plus strand information
-        if dic_lastpos and max(dic_lastpos.keys()) < last_pos:
-            call_minus_ms(present_chrom,
-                          last_pos, dic_lastpos, f_output)
+                # Call minus strand Ms with no plus strand information
+                if dic_lastpos and max(dic_lastpos.keys()) < last_pos:
+                    call_minus_ms(pres_chrom,
+                                  last_pos, dic_lastpos, f_output)
 
-        if record.is_reverse:  # the minus strand
-            if read_sequence[-2:] in _MINUS_STRAND_BASES:  # last two bases ok
-                pos = record.aend-2  # end of read minus 2 bases
-                if 'CG' in fasta.fetch_string(present_chrom, pos):
-                    cigar_op, cigar_len = record.cigar[-1]
-                    if (cigar_op == 0) and (cigar_len >= 2):
-                        dic_lastpos[record.aend-2][read_sequence[-1]] += 1
+                if record.is_reverse:  # the minus strand
+                    if read_sequence[-2:] in _MINUS_STRAND_BASES:
+                        # last two bases ok
+                        pos = record.aend-2  # end of read minus 2 bases
+                        if 'CG' in fasta.fetch_string(pres_chrom, pos):
+                            cigar_op, cigar_len = record.cigar[-1]
+                            if (cigar_op == 0) and (cigar_len >= 2):
+                                dic_lastpos[record.aend-2][read_sequence[-1]] += 1
 
-        else:  # this is for the forward strand
-            if read_sequence[:2] in _PLUS_STRAND_BASES:  # first two bases ok
-                if 'CG' in fasta.fetch_string(present_chrom, record.pos):
-                    cigar_op, cigar_len = record.cigar[0]
-                    if cigar_op == 0 and cigar_len >= 2:
-                        if record.pos != last_pos and last_pos != -1:
-                            call_ms(present_chrom, last_pos,
-                                    dic_lastpos, dic_base_forward, f_output)
-                            dic_base_forward.clear()
-                        dic_base_forward[read_sequence[0]] += 1
-                        last_pos = record.pos
-
-    if dic_base_forward:  # this checks if dic contains anything
-        call_ms(present_chrom, last_pos,
-                dic_lastpos, dic_base_forward, f_output)
-    if dic_lastpos:
-        call_minus_ms(present_chrom,
-                      last_pos, dic_lastpos, f_output)
-
+                else:  # this is for the forward strand
+                    if read_sequence[:2] in _PLUS_STRAND_BASES:
+                        # first two bases ok
+                        if 'CG' in fasta.fetch_string(pres_chrom, record.pos):
+                            cigar_op, cigar_len = record.cigar[0]
+                            if cigar_op == 0 and cigar_len >= 2:
+                                if record.pos != last_pos and last_pos != -1:
+                                    call_ms(pres_chrom, last_pos, dic_lastpos,
+                                            dic_base_forward, f_output)
+                                    dic_base_forward.clear()
+                                dic_base_forward[read_sequence[0]] += 1
+                                last_pos = record.pos
+            if dic_base_forward:  # this checks if dic contains anything
+                call_ms(pres_chrom, last_pos,
+                        dic_lastpos, dic_base_forward, f_output)
+            if dic_lastpos:
+                call_minus_ms(pres_chrom,
+                              last_pos, dic_lastpos, f_output)
     f_output.close()
     samfile.close()
     fasta.closefile()

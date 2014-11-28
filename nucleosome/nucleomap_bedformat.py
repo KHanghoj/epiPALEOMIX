@@ -4,6 +4,8 @@ value=DEPTH. It extends the values around the centre of the nucleosome if
 identical maximal depth
 Example:
 test.bam --chrom 22 --start 18500000 --end 18513769 --out dingdong
+Thi is with and empty '\n' bed file.
+nucleomap_bedformat.py test.bam test.bed --chrom 22 --start 20000000 --end 20200000 --out tra12
 '''
 from __future__ import print_function
 
@@ -161,11 +163,12 @@ def main(argv):
                 chrom = input_line.pop(0).replace('chr', '')
                 start_pileup = int(input_line.pop(0))
                 end_pileup = int(input_line.pop(0))
+            # except (ValueError, IndexError):
+            # may not be best idea if take all genome when EOF
             except ValueError:
-                print('hek')
-                chrom = None
-                start_pileup = None
-                end_pileup = None
+                chrom = args.chrom
+                start_pileup = args.start
+                end_pileup = args.end
             for pileupcolumn in samfile.pileup(chrom, start_pileup, end_pileup):
                 if pileupcolumn.tid != last_tid:
                     last_tid = pileupcolumn.tid

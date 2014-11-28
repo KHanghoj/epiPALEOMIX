@@ -93,11 +93,14 @@ def main(argv):
     with open(args.bed, 'r') as myfile:
         for line in myfile.readlines():
             input_line = (line.rstrip('\n')).split('\t')[:3]
-            chrom = input_line.pop(0).replace('chr', '')
-            # it is the users responsibility to input bed format
-            # identical to BAM format.
-            start = int(input_line.pop(0))
-            end = int(input_line.pop(0))
+            try:
+                chrom = input_line.pop(0).replace('chr', '')
+                start = int(input_line.pop(0))
+                end = int(input_line.pop(0))
+            except ValueError:
+                chrom = args.chrom
+                start = args.start
+                end = args.end
             for record in samfile.fetch(chrom, start, end):
                 if record.mapq < _MINMAPQUALI:
                     continue  # do not analyze low quality reads

@@ -74,10 +74,9 @@ def main(argv):
                 start = int(input_line.pop(0))
                 end = int(input_line.pop(0))
             except ValueError:
-                print('hek')
-                chrom = None
-                start = None
-                end = None
+                chrom = args.chrom
+                start = args.start
+                end = args.end
 
             for record in samfile.fetch(chrom, start, end):
                 if record.tid != chrom:  # new chromosome or first read
