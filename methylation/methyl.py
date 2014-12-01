@@ -61,23 +61,23 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def call_ms(chrom, last_pos, dic_lastpos, dic_base_forward, start, dic_top, dic_lower):
+def call_ms(last_pos, dic_lastpos, dic_base_forward, start, dic_top, dic_lower):
     ''' docstring '''
     tempdic_minus = dic_lastpos.pop(last_pos, {})
     top = dic_base_forward.get('T', 0)+tempdic_minus.get('A', 0)
     lower = top+dic_base_forward.get('C', 0)+tempdic_minus.get('G', 0)
     # ms_value = top/float(lower)
-    # print(chrom, last_pos+1, ms_value, file=output, sep='\t')
+    # print(last_pos+1, ms_value, file=output, sep='\t')
     dic_top[last_pos-start] += top
     dic_lower[last_pos-start] += lower
     # print(top, lower, last_pos+1, file=output, sep='\t')
 
 
-def call_minus_ms(chrom, last_pos, dic_lastpos, start, dic_top, dic_lower):
+def call_minus_ms(last_pos, dic_lastpos, start, dic_top, dic_lower):
     ''' docstring '''
     for keys in sorted(dic_lastpos.keys()):
         if last_pos > keys:  # this is not necessary
-            call_ms(chrom, keys, dic_lastpos, {}, start, dic_top, dic_lower)
+            call_ms(keys, dic_lastpos, {}, start, dic_top, dic_lower)
 
 
 def writetofile(dic_top, dic_lower, f_name):
@@ -86,16 +86,6 @@ def writetofile(dic_top, dic_lower, f_name):
     for key in sorted(dic_top.keys()):
         f_output.write('{}\t{}\t{}\n'.format(key, repr(dic_top[key]),
                        repr(dic_lower[key])))
-
-    # word_combinations = [x for x in sorted(dic[0].keys())]
-    # f_output.write('\t'+'{}'.format('\t'.join(word_combinations))+'\n')
-    # for i in sorted(dic.keys()):
-    #     f_output.write(repr(i))
-    #     for value in sorted(dic[i]):  # sort word combinations. A,C,G,T
-    #         # f_output.write('\t{}:{}'.format(repr(value), repr(dic[i][value])))
-    #         f_output.write('\t{}'.format(repr(dic[i][value])))
-    #     f_output.write('\n')
-
     f_output.close()
 
 
@@ -105,15 +95,13 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = Cache(args.fastafile)
     # MS: Consider using WITH statements
-    f_output = open(args.out, 'w')  # the output file
     chrom = None
-    bedfile = args.bed
     dic_lastpos = defaultdict(lambda: defaultdict(int))
     dic_base_forward = defaultdict(int)
     dic_top = defaultdict(int)
     dic_lower = defaultdict(int)
 
-    with open(bedfile, 'r') as bedfile_f:
+    with open(args.bed, 'r') as bedfile_f:
         for line in bedfile_f.readlines():
             input_line = (line.rstrip('\n')).split('\t')[:3]
 
@@ -127,9 +115,6 @@ def main(argv):
                 chrom = args.chrom
                 start = args.start
                 end = args.end
-
-            # print('> newsite', file=f_output, sep='\t')
-            # print(start, end, file=f_output, sep='\t')
             # make a dictionary counter with relative positions.
             for record in samfile.fetch(chrom, start, end):
                 read_sequence = record.seq
@@ -140,7 +125,7 @@ def main(argv):
 
                 # Call minus strand Ms with no plus strand information
                 if dic_lastpos and max(dic_lastpos.keys()) < last_pos:
-                    call_minus_ms(pres_chrom, last_pos, dic_lastpos,
+                    call_minus_ms(last_pos, dic_lastpos,
                                   start, dic_top, dic_lower)
 
                 if record.is_reverse:  # the minus strand
@@ -159,21 +144,19 @@ def main(argv):
                             cigar_op, cigar_len = record.cigar[0]
                             if cigar_op == 0 and cigar_len >= 2:
                                 if record.pos != last_pos and last_pos != -1:
-                                    call_ms(pres_chrom, last_pos, dic_lastpos,
+                                    call_ms(last_pos, dic_lastpos,
                                             dic_base_forward, start, dic_top,
                                             dic_lower)
-                                    # call_ms(pres_chrom, last_pos, dic_lastpos,
-                                            # dic_base_forward, f_output)
+                                    # call_ms(last_pos, dic_lastpos,
+
                                     dic_base_forward.clear()
                                 dic_base_forward[read_sequence[0]] += 1
                                 last_pos = record.pos
             if dic_base_forward:  # this checks if dic contains anything
-                call_ms(pres_chrom, last_pos,
-                        dic_lastpos, dic_base_forward, start, dic_top,
+                call_ms(last_pos, dic_lastpos, dic_base_forward, start, dic_top,
                         dic_lower)
             if dic_lastpos:
-                call_minus_ms(pres_chrom,
-                              last_pos, dic_lastpos, start, dic_top, dic_lower)
+                call_minus_ms(last_pos, dic_lastpos, start, dic_top, dic_lower)
     writetofile(dic_top, dic_lower, args.out)
     samfile.close()
     fasta.closefile()
