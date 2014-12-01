@@ -66,11 +66,8 @@ def call_ms(last_pos, dic_lastpos, dic_base_forward, start, dic_top, dic_lower):
     tempdic_minus = dic_lastpos.pop(last_pos, {})
     top = dic_base_forward.get('T', 0)+tempdic_minus.get('A', 0)
     lower = top+dic_base_forward.get('C', 0)+tempdic_minus.get('G', 0)
-    # ms_value = top/float(lower)
-    # print(last_pos+1, ms_value, file=output, sep='\t')
     dic_top[last_pos-start] += top
     dic_lower[last_pos-start] += lower
-    # print(top, lower, last_pos+1, file=output, sep='\t')
 
 
 def call_minus_ms(last_pos, dic_lastpos, start, dic_top, dic_lower):
@@ -152,11 +149,11 @@ def main(argv):
                                     dic_base_forward.clear()
                                 dic_base_forward[read_sequence[0]] += 1
                                 last_pos = record.pos
-            if dic_base_forward:  # this checks if dic contains anything
-                call_ms(last_pos, dic_lastpos, dic_base_forward, start, dic_top,
-                        dic_lower)
-            if dic_lastpos:
-                call_minus_ms(last_pos, dic_lastpos, start, dic_top, dic_lower)
+        if dic_base_forward:  # this checks if dic contains anything
+            call_ms(last_pos, dic_lastpos, dic_base_forward, start, dic_top,
+                    dic_lower)
+        if dic_lastpos:
+            call_minus_ms(last_pos, dic_lastpos, start, dic_top, dic_lower)
     writetofile(dic_top, dic_lower, args.out)
     samfile.close()
     fasta.closefile()
