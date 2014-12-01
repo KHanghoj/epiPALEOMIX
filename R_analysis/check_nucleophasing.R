@@ -1,9 +1,10 @@
 # require(ggplot2)
 # require(zoo)
 files = list.files(pattern='*Saq*')
-Test <- lapply(files[1], function(x) {
+Test <- lapply(files, function(x) {
   a <- read.table(x)
   start_nucleo = a$V2
+  score = a$V5
   i = 1
   for (idx in 1:length(start_nucleo)){
   	if (i > 1){  # i do not want to get the same hit several times. so pass loop == the length of former nuclesome phasing
@@ -11,11 +12,14 @@ Test <- lapply(files[1], function(x) {
   		next
   	}
   	currentstart = start_nucleo[idx]
-  	while (start_nucleo[idx+i] <= currentstart+1000 & start_nucleo[idx+i] >= start_nucleo[idx+i-1]+147 & i <= length(start_nucleo)-idx){
+  	while (start_nucleo[idx+i] <= currentstart+1000 & 
+  			start_nucleo[idx+i] >= start_nucleo[idx+i-1]+147 & 
+  			i <= length(start_nucleo)-idx & 
+  			score[idx+i] > 1){
   		i = i + 1
   	}
   	if (i >= 4){
-  		write.table(currentstart,file=paste0(x,'Analysis.txt'), append=TRUE, sep='\t', row.names=F, col.names=F, quote=F, eol='\n')
+  		write.table(currentstart,file=paste0('data_w_score/Analysis',x), append=TRUE, sep='\t', row.names=F, col.names=F, quote=F, eol='\n')
   		# print(c(currentstart, idx,i))
   	}
   }
