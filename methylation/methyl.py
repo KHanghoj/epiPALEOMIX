@@ -103,7 +103,7 @@ def main(argv):
             input_line = (line.rstrip('\n')).split('\t')[:3]
 
             # it is the users responsibility to input bed format
-            # identical to BAM format.
+            # identical to BAM format
             try:
                 chrom = input_line.pop(0).replace('chr', '')
                 start = int(input_line.pop(0))
@@ -113,6 +113,9 @@ def main(argv):
                 start = args.start
                 end = args.end
             # make a dictionary counter with relative positions.
+            last_pos = -1  # reset when starting a new bedfile line
+            dic_lastpos.clear()
+            dic_base_forward.clear()
             for record in samfile.fetch(chrom, start, end):
                 read_sequence = record.seq
                 if record.tid != chrom:  # new chromosome or first record
@@ -149,11 +152,11 @@ def main(argv):
                                     dic_base_forward.clear()
                                 dic_base_forward[read_sequence[0]] += 1
                                 last_pos = record.pos
-        if dic_base_forward:  # this checks if dic contains anything
-            call_ms(last_pos, dic_lastpos, dic_base_forward, start, dic_top,
-                    dic_lower)
-        if dic_lastpos:
-            call_minus_ms(last_pos, dic_lastpos, start, dic_top, dic_lower)
+            if dic_base_forward:  # this checks if dic contains anything
+                call_ms(last_pos, dic_lastpos, dic_base_forward, start, dic_top,
+                        dic_lower)
+            if dic_lastpos:
+                call_minus_ms(last_pos, dic_lastpos, start, dic_top, dic_lower)
     writetofile(dic_top, dic_lower, args.out)
     samfile.close()
     fasta.closefile()
