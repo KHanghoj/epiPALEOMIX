@@ -101,6 +101,8 @@ def main(argv):
                 chrom = args.chrom
                 start = args.start
                 end = args.end
+            empty_lists(start_plus, start_minus, end_plus, end_minus,
+                        score_plus, score_minus)  # empty all lists
             for record in samfile.fetch(chrom, start, end):
                 if record.mapq < _MINMAPQUALI:
                     continue  # do not analyze low quality reads
