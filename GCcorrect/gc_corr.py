@@ -12,7 +12,7 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
-from collections import collections
+from collections import Counter, defaultdict
 
 # _PLUS_STRAND_BASES = ['CG', 'TG']
 # _MINUS_STRAND_BASES = ['CG', 'CA']
@@ -37,20 +37,27 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
+def writetofile(dic_f_gc, dic_n_gc, f_name):
+    ''' dfs '''
+    f_output = open(f_name, 'w')
+    for key in sorted(dic_n_gc.keys()):
+        f_output.write('{}\t{}\t{}\n'.format(key, repr(dic_f_gc[key]),
+                       repr(dic_n_gc[key])))
+    f_output.close()
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    f_output = open(args.out, 'w')
+    # f_output = open(args.out, 'w')
     fasta = pysam.Fastafile(args.fastafile)
     # MS: Consider using WITH statements
     chrom = None
     dic_fasta_gc = Counter()
-    fasta_wind = []
-    chrom = None
-    dic_f_gc = defaultdict(int)
     dic_n_gc = defaultdict(int)
-
+    dic_f_gc = defaultdict(int)
+    fasta_wind = []
     with open(args.bed, 'r') as bedfile_f:
         for line in bedfile_f.readlines():
             input_line = (line.rstrip('\n')).split('\t')
@@ -72,19 +79,35 @@ def main(argv):
                 # chrom = args.chrom
                 # start = args.start
                 # end = args.end
-            for record in samfile.fetch(chrom, start, end):
-                record.pos
-                gc = 
-                dic_n_gc[]
 
-                if record.tid != chrom:  # new chromosome or first record
-                    chrom = record.tid
+            for fasta_base in fasta.fetch(chrom, start, end):
+                current_pos += 1
+                if fasta_base not in _BASES:
+                    continue
+                fasta_wind.append(fasta_base)
+                if len(fasta_wind) == _TOTAL_FRAG_LENGTH:
+                    actual_read = fasta_wind[_BEGIN_A:_END_M]  # removbegin&end
+                    dic_fasta_gc.update(actual_read)
+                    gc = dic_fasta_gc['G']+dic_fasta_gc['C']
+                    temp_start = start + current_pos + _BEGIN_A
+                    # f_output.write('{}\t{}\t{}\n'.format(chrom,
+                    #                repr(temp_start), repr(gc)))
 
-                    pres_chrom = samfile.getrname(record.tid)
+                    # fasta_wind.pop(0)
+                    dic_n_gc[gc] += 1
+                    # temp_end = temp_start+_TOTAL_FRAG_LENGTH
+                    for record in samfile.fetch(chrom, temp_start,
+                                                temp_start+1):
+                        if record.pos+1 == temp_start:
+                            print(record.pos+1, temp_start)
+                            dic_f_gc[gc] += 1
+                    print()
+                    dic_fasta_gc.clear()
+                    del fasta_wind[:]
 
+    writetofile(dic_f_gc, dic_n_gc, args.out)
 
-
-    f_output.close()
+    # f_output.close()
     samfile.close()
     fasta.close()
     return 0
