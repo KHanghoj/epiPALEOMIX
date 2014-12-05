@@ -12,7 +12,7 @@ from collections import defaultdict
 
 _MAX_SIZE = 1000
 _MINMAPQUALI = 30
-_MIN_COVERAGE = 3
+_MIN_COVERAGE = 1
 
 
 class Phaso():
@@ -38,9 +38,14 @@ def read_bed(args):
         with open(args.bed, 'r') as myfile:
             for line in myfile.readlines():
                 input_line = (line.rstrip('\n')).split('\t')[:3]
-                chrom = input_line.pop(0).replace('chr', '')
-                start = int(input_line.pop(0))
-                end = int(input_line.pop(0))
+                try:
+                    chrom = input_line.pop(0).replace('chr', '')
+                    start = int(input_line.pop(0))
+                    end = int(input_line.pop(0))
+                except ValueError:
+                    chrom = '22'
+                    start=None
+                    end=None
 
                 yield (chrom, start, end)
     else:
