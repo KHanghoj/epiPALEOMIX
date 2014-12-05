@@ -1,9 +1,6 @@
 # !/opt/local/bin/python
 '''  Object: To find the methylation value from a region. the methylation
 score (Ms)
- python ~/research/projects/epiomix/methylation/methyl_fetch.py chrome.fa test.bam --chrom 22 --start 18100000 --end 20100000 --out new.txt
- Rscript -e "a=read.table('new.txt') ;summary(a)"
- Rscript -e "a=read.table('new.txt');b=sum(a[,1])/sum(a[,2]);print(b)"
         # Profiling af python script:
         # $ python -m cProfile -s cumulative script.py
 '''
@@ -12,16 +9,40 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
-from collections import Counter, defaultdict
+from random import sample
+from collections import defaultdict
 
-# _PLUS_STRAND_BASES = ['CG', 'TG']
-# _MINUS_STRAND_BASES = ['CG', 'CA']
+_TOTAL_FRAG_LENGTH = 140
+# _TOTAL_FRAG_LENGTH = 10
+_BUFFER = 2
+_N_RANDOM = 100  # 300 is maximum when frag_length is 130 and blocks are 40000
 
-_TOTAL_FRAG_LENGTH = 31
-_BEGIN_A = 2
-_END_M = -2
-_BASES = ['A', 'C', 'G', 'T']
 
+# class fasta_cache(object):
+#     ''' class doc '''
+
+#     def __init__(self, filename, seq_len=40000):
+#         self._samfile = pysam.Samfile(filename)
+#         self._seq_len = int(seq_len)
+#         self._last_chrom = None
+#         self._pileups = None
+#         self._last_start = None
+#         self._actual_pos = None
+#         self._end = None
+
+#     def fetch_string(self, chrom, start):
+#         ''' docstring '''
+#         if self._last_chrom != chrom or abs(start-self._last_start) >= \
+#                 self._seq_len or start >= self._end-_BUFFER:
+
+#             self._end = start + self._seq_len
+#             self._pileups = self._samfile.pileup(chrom,
+#                                                 start, self._end, truncate=True)
+#             self._last_start = start
+#             self._last_chrom = chrom
+#         self._actual_pos = start-self._last_start
+
+#         return self._fasta_str[self._actual_pos:self._actual_pos+nbases]
 
 def parse_args(argv):
     ''' docstring '''
@@ -46,68 +67,110 @@ def writetofile(dic_f_gc, dic_n_gc, f_name):
     f_output.close()
 
 
+# def rand_parts(seq, n, l):
+#     indices = xrange(len(seq) - (l - 1) * n)
+#     result = []
+#     offset = 0
+#     for i in sorted(random.sample(indices, n)):
+#         i += offset
+#         result.append(seq[i:i+l])
+#         offset += l - 1
+#     return result
+
+
+def rand_parts(seq, n, l):
+
+    ''' seq_fasta, no of occurences, length of occurences '''
+    indices = xrange(len(seq) - (l - 1) * n)
+    offset = 0
+    it = iter(sorted(sample(indices, n)))
+    while True:
+        try:
+            idx = offset+it.next()
+            yield idx+_BUFFER, seq[idx+_BUFFER: idx-_BUFFER+l]
+            offset += l - 1
+        except StopIteration:
+            break
+
+    # it = read_bed(args)
+    # while True:  # while true needs to have a break within
+                   # or if in a function, it needs a break
+                   # outside the function if in a loop
+                   # like below
+    #     try:
+    #         chrom, start, end = it.next()
+
+    #         ....
+    #     except StopIteration:
+    #         break
+
+    # def infinite():
+    #     x = 0
+    #     while True:
+    #         yield x
+    #         x += 1
+
+
+def read_bed(args):
+    if args.bed:
+        with open(args.bed, 'r') as myfile:
+            for line in myfile.readlines():
+                input_line = (line.rstrip('\n')).split('\t')
+                chrom = input_line.pop(0)
+                start = int(input_line.pop(0))
+                end = int(input_line.pop(0))
+                score = float(input_line[-1])
+                yield (chrom, start, end, score)
+    else:
+        yield (args.chrom, args.start, args.end)
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    # f_output = open(args.out, 'w')
     fasta = pysam.Fastafile(args.fastafile)
     # MS: Consider using WITH statements
-    chrom = None
-    dic_fasta_gc = Counter()
     dic_n_gc = defaultdict(int)
     dic_f_gc = defaultdict(int)
-    fasta_wind = []
-    with open(args.bed, 'r') as bedfile_f:
-        for line in bedfile_f.readlines():
-            input_line = (line.rstrip('\n')).split('\t')
-            if float(input_line[-1]) < args.unique:
-                # removes regions with low uniqueness
-                continue
-            del fasta_wind[:]
-            dic_fasta_gc.clear()
-            current_pos = -1
-            # it is the users responsibility to input bed format
-            # identical to BAM format
-            try:
-                chrom = input_line.pop(0)
-                start = int(input_line.pop(0))
-                end = int(input_line.pop(0))
-            except (ValueError, IndexError):
-                print('something si not right')
-                sys.exit()
-                # chrom = args.chrom
-                # start = args.start
-                # end = args.end
 
-            for fasta_base in fasta.fetch(chrom, start, end):
-                current_pos += 1
-                if fasta_base not in _BASES:
-                    continue
-                fasta_wind.append(fasta_base)
-                if len(fasta_wind) == _TOTAL_FRAG_LENGTH:
-                    actual_read = fasta_wind[_BEGIN_A:_END_M]  # removbegin&end
-                    dic_fasta_gc.update(actual_read)
-                    gc = dic_fasta_gc['G']+dic_fasta_gc['C']
-                    temp_start = start + current_pos + _BEGIN_A
-                    # f_output.write('{}\t{}\t{}\n'.format(chrom,
-                    #                repr(temp_start), repr(gc)))
+    for chrom, start, end, score in read_bed(args):
+        if score < 0.7:
+            # print(score)
+            continue
+        seq = fasta.fetch(chrom, start, end)
+        for genomicpos, seq_sample in rand_parts(seq, _N_RANDOM,
+                                                 _TOTAL_FRAG_LENGTH):
+            # print(seq_sample)
+            # print(genomicpos+start)
+            curr_start = genomicpos+start
+            gc = (seq_sample.count('C')+seq_sample.count('G'))
+            dic_n_gc[gc] += 1
+            # for pileupcolumn in samfile.pileup(chrom, curr_start,
+            #                                    curr_start+1, truncate=True):
 
-                    # fasta_wind.pop(0)
-                    dic_n_gc[gc] += 1
-                    # temp_end = temp_start+_TOTAL_FRAG_LENGTH
-                    for record in samfile.fetch(chrom, temp_start,
-                                                temp_start+1):
-                        if record.pos+1 == temp_start:
-                            print(record.pos+1, temp_start)
-                            dic_f_gc[gc] += 1
-                    print()
-                    dic_fasta_gc.clear()
-                    del fasta_wind[:]
+            #     for pileupread in pileupcolumn.pileups:
+            #         if pileupread.alignment.is_reverse:  # check strand read
+            #             # print(abs(pileupread.alignment.aend-1 - curr_start))
+            #             if (pileupread.alignment.aend-1 == curr_start):
+            #                 dic_f_gc[gc] += 1
+            #                 # print('hej_reverse', curr_start, gc, seq_sample)
+            #         else:
+            #             forw_5_prime = (pileupcolumn.pos +
+            #                             pileupread.query_position)
 
+            #             if forw_5_prime == curr_start:
+            #                 dic_f_gc[gc] += 1
+            for record in samfile.fetch(chrom, curr_start-1, curr_start+1):
+                if record.is_reverse:
+                    if record.aend == curr_start:
+                        dic_f_gc[gc] += 1
+                        # print('hej_reverse', curr_start, gc, seq_sample)
+                else:
+                    if record.pos+1 == curr_start:
+                        dic_f_gc[gc] += 1
+                        # print('hej', curr_start, gc, seq_sample)
     writetofile(dic_f_gc, dic_n_gc, args.out)
-
-    # f_output.close()
     samfile.close()
     fasta.close()
     return 0

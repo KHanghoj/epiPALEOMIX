@@ -10,9 +10,9 @@ import pysam
 import argparse
 from collections import defaultdict
 
-_MAX_SIZE = 1000
-_MINMAPQUALI = 30
-_MIN_COVERAGE = 1
+_MAX_SIZE = 3000
+_MINMAPQUALI = 25
+_MIN_COVERAGE = 5
 
 
 class Phaso():
@@ -38,15 +38,9 @@ def read_bed(args):
         with open(args.bed, 'r') as myfile:
             for line in myfile.readlines():
                 input_line = (line.rstrip('\n')).split('\t')[:3]
-                try:
-                    chrom = input_line.pop(0).replace('chr', '')
-                    start = int(input_line.pop(0))
-                    end = int(input_line.pop(0))
-                except ValueError:
-                    chrom = '22'
-                    start=None
-                    end=None
-
+                chrom = input_line.pop(0).replace('chr', '')
+                start = int(input_line.pop(0))
+                end = int(input_line.pop(0))
                 yield (chrom, start, end)
     else:
         yield (args.chrom, args.start, args.end)
@@ -81,7 +75,7 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     output_dic = defaultdict(int)
-    starts = [Phaso(0)]
+    starts = [Phaso(0)]  # initialize the positions and counts
     ends = [Phaso(0)]
     last_tid = -1
 
@@ -108,7 +102,6 @@ def main(argv):
                 lst.append(Phaso(pos))
                 call_output(lst, output_dic)
             lst[-1].count += 1
-
         call_output(ends, output_dic, max_lst_range=0)
         call_output(starts, output_dic, max_lst_range=0)
 
