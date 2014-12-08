@@ -61,6 +61,8 @@ def main(argv):
     bedfile = args.bed
     chrom = None
     output_dic = defaultdict(int)
+    # make a class for plus strand and minus strand with
+    # positions and pileup count.
     l_minus = []
     l_plus = []
     with open(bedfile, 'r') as bedfile_f:
