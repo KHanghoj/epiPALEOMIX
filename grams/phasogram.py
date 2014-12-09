@@ -10,9 +10,9 @@ import pysam
 import argparse
 from collections import defaultdict
 
-_MAX_SIZE = 3000
+_MAX_SIZE = 1000
 _MINMAPQUALI = 25
-_MIN_COVERAGE = 5
+_MIN_COVERAGE = 3
 
 
 class Phaso():
@@ -24,8 +24,8 @@ class Phaso():
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
-    parser.add_argument('bed', help="...")
     parser.add_argument('bam', help="...")
+    parser.add_argument('--bed', help="...")
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
@@ -46,21 +46,38 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
+# def call_output(starts, output_dic,
+#                 max_lst_range=_MAX_SIZE, max_size=_MAX_SIZE):
+#     while starts[-1].position - starts[0].position > max_lst_range:
+#         oldest = starts.pop(0)
+#         for current in starts:
+#             # Have we reached positions outside
+#             # the maximum range we are interested in?
+#             if current.position - oldest.position >= max_size:
+#                 break
+
+#             count = oldest.count
+#             length = current.position - oldest.position
+#             if count >= _MIN_COVERAGE:
+#                 output_dic[length] += 1
+#                 # print count, length
+
+
 def call_output(starts, output_dic,
                 max_lst_range=_MAX_SIZE, max_size=_MAX_SIZE):
-    while starts[-1].position - starts[0].position > max_lst_range:
-        oldest = starts.pop(0)
-        for current in starts:
-            # Have we reached positions outside
-            # the maximum range we are interested in?
-            if current.position - oldest.position >= max_size:
-                break
-
-            count = oldest.count
-            length = current.position - oldest.position
-            if count >= _MIN_COVERAGE:
-                output_dic[length] += 1
-                # print count, length
+    if starts:
+        while max(starts) - min(starts) > max_lst_range:
+            old_pos = min(starts)
+            old_count = starts.pop(old_pos, None)
+            for current in starts:
+                # Have we reached positions outside
+                # the maximum range we are interested in?
+                length = current - old_pos
+                if length >= max_size:
+                    break
+                if old_count >= _MIN_COVERAGE:
+                    output_dic[length] += 1
+                    # print count, length
 
 
 def writetofile(output_dic, f_name):
@@ -75,13 +92,17 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     output_dic = defaultdict(int)
-    starts = [Phaso(0)]  # initialize the positions and counts
-    ends = [Phaso(0)]
+    # starts = [Phaso(0)]  # initialize the positions and counts
+    # ends = [Phaso(0)]
+    starts = {}  # initialize the positions and counts
+    ends = {}
     last_tid = -1
 
     for chrom, start, end in read_bed(args):
-        starts = [Phaso(0)]
-        ends = [Phaso(0)]
+        # starts = [Phaso(0)]
+        # ends = [Phaso(0)]
+        starts = {}
+        ends = {}
 
         for record in samfile.fetch(chrom, start, end):
             if record.mapq < _MINMAPQUALI:
@@ -90,18 +111,32 @@ def main(argv):
                 last_tid = record.tid
                 call_output(starts, output_dic, max_lst_range=0)
                 call_output(ends, output_dic, max_lst_range=0)
-                starts = [Phaso(0)]
-                ends = [Phaso(0)]
+                # starts = [Phaso(0)]
+                # ends = [Phaso(0)]
+                starts = {}
+                ends = {}
+
+            # if record.is_reverse:
+            #     pos, lst = record.aend, ends
+            # else:
+            #     pos, lst = record.pos, starts
+
+            # if lst[-1].position != pos:
+            #     lst.append(Phaso(pos))
+            #     call_output(lst, output_dic)
+            # lst[-1].count += 1
 
             if record.is_reverse:
-                pos, lst = record.aend, ends
+                pos, present_dic = record.aend, ends
             else:
-                pos, lst = record.pos, starts
+                pos, present_dic = record.pos, starts
 
-            if lst[-1].position != pos:
-                lst.append(Phaso(pos))
-                call_output(lst, output_dic)
-            lst[-1].count += 1
+            if present_dic.get(pos, 0):  # only True if present in dict
+                present_dic[pos] += 1
+            else:
+                present_dic[pos] = 1
+                call_output(present_dic, output_dic)
+
         call_output(ends, output_dic, max_lst_range=0)
         call_output(starts, output_dic, max_lst_range=0)
 

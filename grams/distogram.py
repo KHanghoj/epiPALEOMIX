@@ -15,16 +15,8 @@ import pysam
 import argparse
 
 
-# _MAX_SIZE = 147
 _MINMAPQUALI = 25
 _MIN_COVERAGE = 3
-
-
-class Phaso():
-    def __init__(self, pos):
-        self.position = int(pos)
-        self.count = 0
-        # self.dic = {int(pos): 0}
 
 
 def parse_args(argv):
@@ -60,8 +52,8 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
-def filter_by_count(lst):
-    return [x.position for x in lst if x.count >= _MIN_COVERAGE]
+def filter_by_count(dic):
+    return [key for key, value in dic.iteritems() if value >= _MIN_COVERAGE]
 
 
 def call_output(plus, minus, output_dic):
@@ -79,14 +71,15 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     output_dic = defaultdict(int)
-    plus = [Phaso(0)]  # initialize the positions and counts
-    minus = [Phaso(0)]
+    plus = {}
+    minus = {}
+
     last_tid = -1
     last_pos = -1
 
     for chrom, start, end in read_bed(args):
-        plus = [Phaso(0)]
-        minus = [Phaso(0)]
+        plus = {}
+        minus = {}
         last_pos = -1
         last_tid = -1
 
@@ -97,71 +90,28 @@ def main(argv):
                 last_tid = record.tid
                 last_pos = record.aend
                 call_output(plus, minus, output_dic)
-                plus = [Phaso(0)]
-                minus = [Phaso(0)]
+                plus = {}
+                minus = {}
 
             if last_pos < record.pos:  # read not overlapping
                 call_output(plus, minus, output_dic)
-                plus = [Phaso(0)]
-                minus = [Phaso(0)]
-
-            THINK ABOUT MAKING A DICT INSTEAD OF THE LIST OF POS. SO MUCH FASTER FOR MINUS STRAND THAT IS UNSORTED.
+                plus = {}
+                minus = {}
 
             if record.is_reverse:
-                # if minus[-1].position != record.aend:
-                    # minus.append(Phaso(record.aend))
-                # minus[-1].count += 1
-                try:
-                    idx = [x.position for x in minus].index(record.aend)
-                    minus[idx].count += 1
-                except ValueError:
-                    minus.append(Phaso(record.aend))
-                    minus[-1].count += 1
-                # pos, lst = record.aend, minus
+                pos, present_dic = record.aend, minus
             else:
-                if plus[-1].position != record.pos:
-                    plus.append(Phaso(record.pos))
-                plus[-1].count += 1
-                # pos, lst = record.pos, plus
+                pos, present_dic = record.pos, plus
 
-            # if lst[-1].position != pos:
-                # lst.append(Phaso(pos))
-            # lst[-1].count += 1
-
-            # if lst[-1].position != pos:
-            #     lst.append(Phaso(pos))
-            # lst[-1].count += 1
-
-            # if record.is_reverse:
-            #     try:
-
-            #     except ValueError:
-            #         print('adsfasdfasdf')
-            #         print(lst[:].count)
-            # print()
-
-            # call_output(lst, output_dic)
+            if present_dic.get(pos, 0):  # only True if present in dict
+                present_dic[pos] += 1
+            else:
+                present_dic[pos] = 1
             last_pos = record.aend
         call_output(plus, minus, output_dic)
-        # call_output(ends, output_dic, max_lst_range=0)
-        # call_output(starts, output_dic, max_lst_range=0)
     call_output(plus, minus, output_dic)
     writetofile(output_dic, args.out)
     samfile.close()
-            # if last_end_pos >= record.pos:  # if new read overlaps former
-    #             last_end_pos = record.aend  # assign new end read
-    #             update_dic(l_minus, l_plus, record.pos,
-    #                        last_end_pos, record.is_reverse)
-    #         else:  # calculate the distance and restart
-    #             call_distance(l_minus, l_plus, output_dic)
-    #             last_end_pos = record.aend
-    #             update_dic(l_minus, l_plus, record.pos,
-    #                        last_end_pos, record.is_reverse)
-
-    # call_distance(l_minus, l_plus, output_dic)
-    # writetofile(output_dic, f_output)
-    # f_output.close()
-    # samfile.close()
     return 0
 
 
