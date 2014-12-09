@@ -29,3 +29,24 @@ id(sr)
 s(sr)
 sr
 id(sr)
+
+
+
+
+    # it = read_bed(args)
+    # while True:  # while true needs to have a break within
+                   # or if in a function, it needs a break
+                   # outside the function if in a loop
+                   # like below
+    #     try:
+    #         chrom, start, end = it.next()
+
+    #         ....
+    #     except StopIteration:
+    #         break
+
+    # def infinite():
+    #     x = 0
+    #     while True:
+    #         yield x
+    #         x += 1

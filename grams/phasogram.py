@@ -15,12 +15,6 @@ _MINMAPQUALI = 25
 _MIN_COVERAGE = 3
 
 
-class Phaso():
-    def __init__(self, pos):
-        self.position = int(pos)
-        self.count = 0
-
-
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -46,23 +40,6 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
-# def call_output(starts, output_dic,
-#                 max_lst_range=_MAX_SIZE, max_size=_MAX_SIZE):
-#     while starts[-1].position - starts[0].position > max_lst_range:
-#         oldest = starts.pop(0)
-#         for current in starts:
-#             # Have we reached positions outside
-#             # the maximum range we are interested in?
-#             if current.position - oldest.position >= max_size:
-#                 break
-
-#             count = oldest.count
-#             length = current.position - oldest.position
-#             if count >= _MIN_COVERAGE:
-#                 output_dic[length] += 1
-#                 # print count, length
-
-
 def call_output(starts, output_dic,
                 max_lst_range=_MAX_SIZE, max_size=_MAX_SIZE):
     if starts:
@@ -70,14 +47,11 @@ def call_output(starts, output_dic,
             old_pos = min(starts)
             old_count = starts.pop(old_pos, None)
             for current in starts:
-                # Have we reached positions outside
-                # the maximum range we are interested in?
                 length = current - old_pos
                 if length >= max_size:
                     break
                 if old_count >= _MIN_COVERAGE:
                     output_dic[length] += 1
-                    # print count, length
 
 
 def writetofile(output_dic, f_name):
@@ -92,15 +66,11 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     output_dic = defaultdict(int)
-    # starts = [Phaso(0)]  # initialize the positions and counts
-    # ends = [Phaso(0)]
     starts = {}  # initialize the positions and counts
     ends = {}
     last_tid = -1
 
     for chrom, start, end in read_bed(args):
-        # starts = [Phaso(0)]
-        # ends = [Phaso(0)]
         starts = {}
         ends = {}
 
@@ -111,27 +81,14 @@ def main(argv):
                 last_tid = record.tid
                 call_output(starts, output_dic, max_lst_range=0)
                 call_output(ends, output_dic, max_lst_range=0)
-                # starts = [Phaso(0)]
-                # ends = [Phaso(0)]
                 starts = {}
                 ends = {}
-
-            # if record.is_reverse:
-            #     pos, lst = record.aend, ends
-            # else:
-            #     pos, lst = record.pos, starts
-
-            # if lst[-1].position != pos:
-            #     lst.append(Phaso(pos))
-            #     call_output(lst, output_dic)
-            # lst[-1].count += 1
-
             if record.is_reverse:
                 pos, present_dic = record.aend, ends
             else:
                 pos, present_dic = record.pos, starts
 
-            if present_dic.get(pos, 0):  # only True if present in dict
+            if present_dic.get(pos, 0):  # only True if present pos in dict
                 present_dic[pos] += 1
             else:
                 present_dic[pos] = 1
@@ -143,25 +100,6 @@ def main(argv):
     writetofile(output_dic, args.out)
     samfile.close()
     return 0
-
-    # it = read_bed(args)
-    # while True:  # while true needs to have a break within
-                   # or if in a function, it needs a break
-                   # outside the function if in a loop
-                   # like below
-    #     try:
-    #         chrom, start, end = it.next()
-
-    #         ....
-    #     except StopIteration:
-    #         break
-
-    # def infinite():
-    #     x = 0
-    #     while True:
-    #         yield x
-    #         x += 1
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
