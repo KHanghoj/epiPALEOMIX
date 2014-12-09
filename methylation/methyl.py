@@ -53,7 +53,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('fastafile', help="fastafile")
     parser.add_argument('bam', help="...")
-    parser.add_argument('bed', help="...")
+    parser.add_argument('--bed', help="...")
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
