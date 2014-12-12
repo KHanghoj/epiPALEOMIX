@@ -4,6 +4,20 @@ of any given fasta file. in this case hs.build37 as the Labrana and saqqaq
 is aligned against that build
 '''
 
+def rand_parts(seq, n, l):
+    ''' seq_fasta, no of occurences, length of occurences '''
+    indices = xrange(len(seq) - (l - 1) * n)
+    offset = 0
+    it = iter(sorted(sample(indices, n)))
+    # it = iter(indices)
+    while True:
+        try:
+            idx = offset+it.next()
+            yield idx+_BUFFER, seq[idx+_BUFFER: idx-_BUFFER+l]
+            offset += l - 1
+        except StopIteration:
+            break
+
 
 # import pysam, sys
 # f = sys.argv[1]
