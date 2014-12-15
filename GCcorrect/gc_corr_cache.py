@@ -12,15 +12,15 @@ import argparse
 from random import sample
 from collections import defaultdict
 
-_READ_LENGTH = 180
+# _READ_LENGTH = 180
 # _READ_LENGTH = 10
 _BUFFER = 2
-_N_RANDOM = 150  # 300 is maximum when frag_length is 130 and blocks are 40000
-_MAPPABILITY = 0.9
+# _N_RANDOM = 150  # 300 is maximum when frag_length is 130 and blocks are 40000
+# _MAPPABILITY = 0.9
 # no longer random, now every position in the chunk with high mappability.
 
 
-class Cache(object):
+class Cache_fasta(object):
     ''' class doc '''
 
     def __init__(self, filename, seq_len=1e6):
@@ -47,6 +47,34 @@ class Cache(object):
     def closefile(self):
         ''' docstring '''
         return self._fasta.close()
+
+
+class Cache_reads():
+    def __init__(self, filename):
+        self._records_obj = pysam.Samfile(filename, 'rb')
+        self._last_chrom = None
+        self._records = None
+        self._start = None
+        self._end = None
+
+    def fetch_read(self, chrom, start, end):
+        ''' docstring '''
+        if self._last_chrom != chrom or start >= self._end or\
+                start != self._start:
+            self._records = self._records_obj.fetch(chrom,
+                                                    start=start, end=end)
+            self._last_chrom = chrom
+            self._end = end
+            self._start = start
+        while True:
+            try:
+                yield self._records.next()
+            except StopIteration:
+                break
+
+    def closefile(self):
+        ''' docstring '''
+        return self._records_obj.close()
 
 
 def parse_args(argv):
@@ -140,41 +168,12 @@ def update_dics(record, curr_start, dic_f_gc, read_length, gc):
             dic_f_gc[read_length][gc] += 1
 
 
-class cache_reads():
-    def __init__(self, filename):
-        self._records_obj = pysam.Samfile(filename, 'rb')
-        self._last_chrom = None
-        self._records = None
-        self._start = None
-        self._end = None
-
-    def fetch_read(self, chrom, start, end):
-        ''' docstring '''
-        if self._last_chrom != chrom or start >= self._end or\
-                start != self._start:
-            self._records = self._records_obj.fetch(chrom,
-                                                    start=start, end=end)
-            self._last_chrom = chrom
-            self._end = end
-            self._start = start
-        # yield self._records
-        while True:
-            try:
-                yield self._records.next()
-            except StopIteration:
-                break
-
-    def closefile(self):
-        ''' docstring '''
-        return self._records_obj.close()
-
-
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     # samfile = pysam.Samfile(args.bam, "rb")
-    fasta = Cache(args.fastafile)
-    samfile = cache_reads(args.bam)
+    fasta = Cache_fasta(args.fastafile)
+    samfile = Cache_reads(args.bam)
     # MS: Consider using WITH statements
     mappability = args.uniqueness
     dic_n_gc = defaultdict(lambda: defaultdict(int))
@@ -222,16 +221,19 @@ def main(argv):
                             dic_f_gc[read_length][gc] += 1
                     rec = None
 
+                # [[float(y) for y in x] for x in l]
 
                 # the infinte loop error is in here somewhere.
                 # (curr_end_dic.pop(key) for key in curr_end_dic.keys() if key < curr_end)
-                # (reverse_dic.pop(key) for key in reverse_dic.keys() if key < curr_end)
-
-                dat = (key for key in curr_end_dic.keys() if key in reverse_dic.keys())
-                dat_pop = (key for key in curr_end_dic.keys() if key not in reverse_dic.keys())
-                for key in dat_pop:
-                    reverse_dic.pop(key, None)
-                    curr_end_dic.pop(key, None)
+                (reverse_dic.pop(key) for key in
+                    reverse_dic.keys() if key < curr_end)
+                # x for x in reverse_dic
+                dat = (key for key in curr_end_dic.keys()
+                       if key in reverse_dic.keys())
+                # dat_pop = (key for key in curr_end_dic.keys() if key not in reverse_dic.keys())
+                # for key in dat_pop:
+                #     reverse_dic.pop(key, None)
+                #     curr_end_dic.pop(key, None)
 
                 for key in dat:
                     gcs = curr_end_dic[key]
