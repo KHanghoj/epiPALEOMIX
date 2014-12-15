@@ -49,32 +49,34 @@ class Cache_fasta(object):
         return self._fasta.close()
 
 
-class Cache_reads():
-    def __init__(self, filename):
-        self._records_obj = pysam.Samfile(filename, 'rb')
-        self._last_chrom = None
-        self._records = None
-        self._start = None
-        self._end = None
+# class Cache_reads():
+#     def __init__(self, filename):
+#         self._records_obj = pysam.Samfile(filename, 'rb')
+#         self._last_chrom = None
+#         self._records = None
+#         self._start = None
+#         self._end = None
 
-    def fetch_read(self, chrom, start, end):
-        ''' docstring '''
-        if self._last_chrom != chrom or start >= self._end or\
-                start != self._start:
-            self._records = self._records_obj.fetch(chrom,
-                                                    start=start, end=end)
-            self._last_chrom = chrom
-            self._end = end
-            self._start = start
-        while True:
-            try:
-                yield self._records.next()
-            except StopIteration:
-                break
+#     def fetch_read(self, chrom, start, end):
+#         ''' docstring '''
+#         if self._last_chrom != chrom or start >= self._end or\
+#                 start != self._start:
+#             self._records = self._records_obj.fetch(chrom,
+#                                                     start=start, end=end)
+#             self._last_chrom = chrom
+#             self._end = end
+#             self._start = start
+#         # while True:
+#             # try:
+#         lst = []
+#         for record in self._records:
+#             yield record.pos
+#             # except StopIteration:
+#                 # break
 
-    def closefile(self):
-        ''' docstring '''
-        return self._records_obj.close()
+    # def closefile(self):
+    #     ''' docstring '''
+    #     return self._records_obj.close()
 
 
 def parse_args(argv):
@@ -171,9 +173,9 @@ def update_dics(record, curr_start, dic_f_gc, read_length, gc):
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
-    # samfile = pysam.Samfile(args.bam, "rb")
+    samfile = pysam.Samfile(args.bam, "rb")
     fasta = Cache_fasta(args.fastafile)
-    samfile = Cache_reads(args.bam)
+    # samfile = Cache_reads(args.bam)
     # MS: Consider using WITH statements
     mappability = args.uniqueness
     dic_n_gc = defaultdict(lambda: defaultdict(int))
@@ -186,22 +188,19 @@ def main(argv):
             rec = None
             reverse_dic = {}
             curr_end_dic = {}
-
             if score < mappability:
                 continue
             # seq = fasta.fetch(chrom, start, end)
             seq = fasta.fetch_string(chrom, start, nbases=end-start)
-            records = samfile.fetch_read(chrom, start, end)
-            print ('NEW SITE')
-            print(records.next().pos)
-            print(start)
+            records = samfile.fetch(chrom, start, end)
+            records = samfile.fetch(chrom, start, end)
             # continue
+            sites=0
             for relative_pos, seq_sample in it_fasta_seq(seq, read_length):
                 # this is a sliding window to create
                 # the other option is random sampling.
                 curr_start = relative_pos+start
                 curr_end = curr_start+len(seq_sample)
-
                 gc = seq_sample.count('C')+seq_sample.count('G')
                 dic_n_gc[read_length][gc] += 1
                 ## this is for the reverse strand
@@ -209,8 +208,8 @@ def main(argv):
                 # for record in samfile.fetch(chrom, curr_start-1,
                 #                             curr_start+1):
                 #######
-                # if curr_start < last_pos:
-                #     continue
+                if curr_start < last_pos:
+                    continue
                 if rec:
                     if rec.is_reverse:
                         reverse_dic[rec.aend] = 0
@@ -221,45 +220,104 @@ def main(argv):
                             dic_f_gc[read_length][gc] += 1
                     rec = None
 
-                # [[float(y) for y in x] for x in l]
-
-                # the infinte loop error is in here somewhere.
-                # (curr_end_dic.pop(key) for key in curr_end_dic.keys() if key < curr_end)
-                (reverse_dic.pop(key) for key in
-                    reverse_dic.keys() if key < curr_end)
-                # x for x in reverse_dic
-                dat = (key for key in curr_end_dic.keys()
-                       if key in reverse_dic.keys())
-                # dat_pop = (key for key in curr_end_dic.keys() if key not in reverse_dic.keys())
-                # for key in dat_pop:
-                #     reverse_dic.pop(key, None)
-                #     curr_end_dic.pop(key, None)
-
-                for key in dat:
-                    gcs = curr_end_dic[key]
-                    dic_f_gc[read_length][gcs] += 1
-                    reverse_dic.pop(key, None)
-                    curr_end_dic.pop(key, None)
-
-                while last_pos < curr_start:
+                # for record in records.next():
+                    # if last_pos < curr_start:
+                while last_pos+1 < curr_start:
                     try:
                         record = records.next()
                     except StopIteration:
+                        sites+=1
                         break
                     last_pos = record.pos
                 #######
                     if record.is_reverse:
-
-                        reverse_dic[record.aend] = 0
+                        if record.aend in curr_end_dic.keys():
+                            gcs = curr_end_dic[record.aend]
+                            dic_f_gc[read_length][gcs] += 1
+                            curr_end_dic.pop(record.aend, None)
+                        else:
+                            reverse_dic[record.aend] = 0
                         # if record.aend == curr_start:
                             # dic_f_gc[read_length][gc] += 1
                     else:
                         if record.pos+1 == curr_start:
                             dic_f_gc[read_length][gc] += 1
                     rec = record
+
+                if len(curr_end_dic) > 100:
+                    for key in curr_end_dic.keys():
+                        if key in reverse_dic.keys():
+                            gcs = curr_end_dic[key]
+                            dic_f_gc[read_length][gcs] += 1
+                            reverse_dic.pop(key, None)
+                            curr_end_dic.pop(key, None)
+                        else:
+                            reverse_dic.pop(key, None)
+                            curr_end_dic.pop(key, None)
+
+            for key in curr_end_dic.keys():
+                if key in reverse_dic.keys():
+                    gcs = curr_end_dic[key]
+                    dic_f_gc[read_length][gcs] += 1
+                    reverse_dic.pop(key, None)
+                    curr_end_dic.pop(key, None)
+                else:
+                    reverse_dic.pop(key, None)
+                    curr_end_dic.pop(key, None)
+            print(chrom, start, end)
+            print(sites)
+                        # for key in re
+                # while last_pos < curr_start:
+                #     try:
+                #         record = records.next()
+                #     except StopIteration:
+                #         break
+                #     last_pos = record.pos
+                # #######
+                #     if record.is_reverse:
+
+                #         reverse_dic[record.aend] = 0
+                #         # if record.aend == curr_start:
+                #             # dic_f_gc[read_length][gc] += 1
+                #     else:
+                #         if record.pos+1 == curr_start:
+                #             dic_f_gc[read_length][gc] += 1
+                #     rec = record
+
+
+                                # the infinte loop error is in here somewhere.
+                # (curr_end_dic.pop(key) for key in curr_end_dic.keys() if key < curr_end)
+                # (reverse_dic.pop(key) for key in reverse_dic.keys() if key < curr_end)
+                # dat=[]
+                # dat_pop = []
+                # for key in curr_end_dic.keys():
+                #     if key in reverse_dic.keys():
+                #         dat.append(key)
+                #     else:
+                #         dat_pop.append(key)
+
+                # dat = [key for key in curr_end_dic.keys() if key in reverse_dic.keys()]
+                # print(len(curr_end_dic))
+                # print(len(reverse_dic))
+                # dat_pop = [key for key in reverse_dic.keys() if key < curr_end]
+                # dat_pop = (key for key in curr_end_dic.keys() if key > max(reverse_dic.keys()))
+
+                # for key in dat:
+                #     gcs = curr_end_dic[key]
+                #     dic_f_gc[read_length][gcs] += 1
+                #     reverse_dic.pop(key, None)
+                #     curr_end_dic.pop(key, None)
+                # # print(dat_pop)
+                # for key in dat_pop:
+                #     # sites += 1
+                #     reverse_dic.pop(key, None)
+                #     curr_end_dic.pop(key, None)
+
+
     writetofile(dic_f_gc, dic_n_gc, args.out)
-    samfile.closefile()
+    samfile.close()
     fasta.closefile()
+    
     return 0
 
 if __name__ == '__main__':
