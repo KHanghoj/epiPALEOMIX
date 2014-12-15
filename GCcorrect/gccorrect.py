@@ -81,7 +81,6 @@ def rand_parts(seq, n, l):
     indices = xrange(len(seq) - (l - 1) * n)
     offset = 0
     it = iter(sorted(sample(indices, n)))
-    # it = iter(indices)
     while True:
         try:
             idx = offset+it.next()
@@ -135,6 +134,22 @@ def update(pos, dic):
     dic[pos] = dic.get(pos, 0) + 1
 
 
+def call_five_prime_pos(relative_pos, seq_sample, start, read_length,
+                        dic_plus, dic_minus, dic_n_gc, dic_f_gc):
+    curr_start = relative_pos+start
+    curr_end = curr_start + len(seq_sample)
+    gc = seq_sample.count('C')+seq_sample.count('G')
+    dic_n_gc[read_length][gc] += 1
+    plus_count = dic_plus.get(curr_start-1, None)
+    minus_count = dic_minus.get(curr_end-1, None)
+    # plus_count = dic_plus.pop(curr_start-1, None)
+    # minus_count = dic_minus.pop(curr_end-1, None)
+    if plus_count:
+        dic_f_gc[read_length][gc] += plus_count
+    elif minus_count:
+        dic_f_gc[read_length][gc] += minus_count
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
@@ -144,11 +159,17 @@ def main(argv):
     mappability = args.uniqueness
     dic_n_gc = defaultdict(lambda: defaultdict(int))
     dic_f_gc = defaultdict(lambda: defaultdict(int))
+    last_chrom, last_end = '', -1
+
     for chrom, start, end, score in read_bed(args):
-        dic_plus = {}
-        dic_minus = {}
         if score < mappability:
             continue
+        if start-last_end < 0 and last_chrom == chrom:
+            start = start + ((end-start)/2)
+        last_chrom = chrom
+        last_end = end
+        dic_plus = {}
+        dic_minus = {}
         seq = fasta.fetch_string(chrom, start, nbases=end-start)
         records = samfile.fetch(chrom, start, end)
         # here we get all postions in minus strand and plus strand
@@ -159,18 +180,21 @@ def main(argv):
             # can be in the beginnig as well.
             # if in beginning we can pop the dict.
             for relative_pos, seq_sample in it_fasta_seq(seq, read_length):
-                curr_start = relative_pos+start
-                curr_end = curr_start + len(seq_sample)
-                gc = seq_sample.count('C')+seq_sample.count('G')
-                dic_n_gc[read_length][gc] += 1
-                plus_count = dic_plus.get(curr_start-1, None)
-                minus_count = dic_minus.get(curr_end-1, None)
-                # plus_count = dic_plus.pop(curr_start-1, None)
-                # minus_count = dic_minus.pop(curr_end-1, None)
-                if plus_count:
-                    dic_f_gc[read_length][gc] += plus_count
-                elif minus_count:
-                    dic_f_gc[read_length][gc] += minus_count
+                call_five_prime_pos(relative_pos, seq_sample,
+                                    start, read_length, dic_plus, dic_minus,
+                                    dic_n_gc, dic_f_gc)
+                # curr_start = relative_pos+start
+                # curr_end = curr_start + len(seq_sample)
+                # gc = seq_sample.count('C')+seq_sample.count('G')
+                # dic_n_gc[read_length][gc] += 1
+                # plus_count = dic_plus.get(curr_start-1, None)
+                # minus_count = dic_minus.get(curr_end-1, None)
+                # # plus_count = dic_plus.pop(curr_start-1, None)
+                # # minus_count = dic_minus.pop(curr_end-1, None)
+                # if plus_count:
+                #     dic_f_gc[read_length][gc] += plus_count
+                # elif minus_count:
+                #     dic_f_gc[read_length][gc] += minus_count
     writetofile(dic_f_gc, dic_n_gc, args.out)
     samfile.close()
     fasta.closefile()
