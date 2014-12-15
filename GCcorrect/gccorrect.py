@@ -113,7 +113,7 @@ def read_lengths(args):
                     # should be user-defined later
                     continue
                 else:
-                    yield int(length)
+                    yield length
     else:
         yield args.onelength
 
@@ -137,22 +137,19 @@ def update(pos, dic):
 
 
 def call_five_prime_pos(relative_pos, seq_sample, start, read_length,
-                        dic_plus, dic_minus, dic_n_gc, dic_f_gc):  # , f_out):
+                        dic_plus, dic_minus, dic_n_gc, dic_f_gc):
     curr_start = relative_pos+start
     curr_end = curr_start + len(seq_sample)
     gc = seq_sample.count('C')+seq_sample.count('G')
-    # f_out.write('{}\t{}\n'.format(read_length, gc))
-    ## gc should be printed 
-    ## used in the analysis later on.
     dic_n_gc[read_length][gc] += 2
     ## this is two as both ways directions in one go.
     plus_count = dic_plus.get(curr_start-1, None)
-    minus_count = dic_minus.get(curr_end-1, None)
+    minus_count = dic_minus.get(curr_end, None)
     # plus_count = dic_plus.pop(curr_start-1, None)
     # minus_count = dic_minus.pop(curr_end-1, None)
     if plus_count:
         dic_f_gc[read_length][gc] += plus_count
-    elif minus_count:
+    if minus_count:
         dic_f_gc[read_length][gc] += minus_count
 
 
@@ -166,10 +163,6 @@ def main(argv):
     dic_n_gc = defaultdict(lambda: defaultdict(int))
     dic_f_gc = defaultdict(lambda: defaultdict(int))
     last_chrom, last_end = '', -1
-    # f_out = gzip.open('file.txt.gz', 'wb')
-    ## timeit with and with out this. 
-    ## can we implement by choosing the best
-    ##  
 
     for chrom, start, end, score in read_bed(args):
         if score < mappability:
@@ -182,7 +175,7 @@ def main(argv):
         dic_minus = {}
         seq = fasta.fetch_string(chrom, start, nbases=end-start)
         records = samfile.fetch(chrom, start, end)
-        # here we get all postions in minus strand and plus strand
+        # here we get all postions in minus strand and plus strand in a dict
         [update(record.aend, dic_minus) if record.is_reverse else
             update(record.pos, dic_plus) for record in records]
         for read_length in read_lengths(args):
@@ -192,23 +185,10 @@ def main(argv):
             for relative_pos, seq_sample in it_fasta_seq(seq, read_length):
                 call_five_prime_pos(relative_pos, seq_sample,
                                     start, read_length, dic_plus, dic_minus,
-                                    dic_n_gc, dic_f_gc)  # , f_out)
-                # curr_start = relative_pos+start
-                # curr_end = curr_start + len(seq_sample)
-                # gc = seq_sample.count('C')+seq_sample.count('G')
-                # dic_n_gc[read_length][gc] += 1
-                # plus_count = dic_plus.get(curr_start-1, None)
-                # minus_count = dic_minus.get(curr_end-1, None)
-                # # plus_count = dic_plus.pop(curr_start-1, None)
-                # # minus_count = dic_minus.pop(curr_end-1, None)
-                # if plus_count:
-                #     dic_f_gc[read_length][gc] += plus_count
-                # elif minus_count:
-                #     dic_f_gc[read_length][gc] += minus_count
+                                    dic_n_gc, dic_f_gc)
     writetofile(dic_f_gc, dic_n_gc, args.out)
     samfile.close()
     fasta.closefile()
-    # f_out.close()
     return 0
 
 if __name__ == '__main__':
