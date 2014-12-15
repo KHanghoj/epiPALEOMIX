@@ -58,7 +58,7 @@ def parse_args(argv):
     parser.add_argument('mappability_bed', help="...")
     parser.add_argument('--readlengths', help="...", default=None)
     parser.add_argument('--uniqueness', help="...", type=float, default=0.9)
-    parser.add_argument('--onelength', help="...", type=int, default=31)
+    parser.add_argument('--onelength', help="...", type=int, default=56)
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
@@ -70,8 +70,8 @@ def writetofile(dic_f_gc, dic_n_gc, f_name):
     ''' dfs '''
     f_output = open(f_name, 'w')
     for length in sorted(dic_n_gc):
-        for key in sorted(dic_n_gc[length]):
-        # for key in range(0, length+1):
+        # for key in sorted(dic_n_gc[length]):
+        for key in range(0, length+1):
             f_output.write('{}\t{}\t{}\t{}\n'.format(length, key,
                            repr(dic_f_gc[length][key]),
                            repr(dic_n_gc[length][key])))
@@ -137,14 +137,15 @@ def update(pos, dic):
 
 
 def call_five_prime_pos(relative_pos, seq_sample, start, read_length,
-                        dic_plus, dic_minus, dic_n_gc, dic_f_gc, f_out):
+                        dic_plus, dic_minus, dic_n_gc, dic_f_gc):  # , f_out):
     curr_start = relative_pos+start
     curr_end = curr_start + len(seq_sample)
     gc = seq_sample.count('C')+seq_sample.count('G')
-    f_out.write('{}\n'.format(gc))
+    # f_out.write('{}\t{}\n'.format(read_length, gc))
     ## gc should be printed 
     ## used in the analysis later on.
-    dic_n_gc[read_length][gc] += 1
+    dic_n_gc[read_length][gc] += 2
+    ## this is two as both ways directions in one go.
     plus_count = dic_plus.get(curr_start-1, None)
     minus_count = dic_minus.get(curr_end-1, None)
     # plus_count = dic_plus.pop(curr_start-1, None)
@@ -165,7 +166,7 @@ def main(argv):
     dic_n_gc = defaultdict(lambda: defaultdict(int))
     dic_f_gc = defaultdict(lambda: defaultdict(int))
     last_chrom, last_end = '', -1
-    f_out = gzip.open('file.txt.gz', 'wb')
+    # f_out = gzip.open('file.txt.gz', 'wb')
     ## timeit with and with out this. 
     ## can we implement by choosing the best
     ##  
@@ -191,7 +192,7 @@ def main(argv):
             for relative_pos, seq_sample in it_fasta_seq(seq, read_length):
                 call_five_prime_pos(relative_pos, seq_sample,
                                     start, read_length, dic_plus, dic_minus,
-                                    dic_n_gc, dic_f_gc, f_out)
+                                    dic_n_gc, dic_f_gc)  # , f_out)
                 # curr_start = relative_pos+start
                 # curr_end = curr_start + len(seq_sample)
                 # gc = seq_sample.count('C')+seq_sample.count('G')
@@ -207,7 +208,7 @@ def main(argv):
     writetofile(dic_f_gc, dic_n_gc, args.out)
     samfile.close()
     fasta.closefile()
-    f_out.close()
+    # f_out.close()
     return 0
 
 if __name__ == '__main__':
