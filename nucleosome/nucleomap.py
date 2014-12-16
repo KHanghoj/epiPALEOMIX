@@ -119,6 +119,7 @@ def call_window(windows, positions, last_result, samfile, outname):
             del last_result[:]
             last_result.extend(result)
 
+
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -151,20 +152,21 @@ def main(argv):
     windows = []
     last_tid = -1
     last_pos = -1
-    last_result = [0]*5
+    sizeofoutputfile = 5
+    last_result = [0]*sizeofoutputfile
     positions = []  # the chromosomal position of the nuclesome
     samfile = pysam.Samfile(args.bam, "rb")
     for chrom, start, end in read_bed(args):
         last_tid = -1
         last_pos = -1
         windows = []
-        last_result = [0]*5
+        last_result = [0]*sizeofoutputfile
         for pileupcolumn in samfile.pileup(chrom, start, end):
             if pileupcolumn.tid != last_tid:
                 last_tid = pileupcolumn.tid
                 last_pos = -1
                 windows = []
-                last_result = [0]*5
+                last_result = [0]*sizeofoutputfile
 
             s_depth = int(pileupcolumn.n)
             shift_window(pileupcolumn, windows, positions,

@@ -9,8 +9,6 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
-from random import sample
-from collections import defaultdict
 import gzip
 
 # _READ_LENGTH = 180
@@ -85,19 +83,19 @@ def it_fasta_seq(seq, l):
             break
 
 
-def read_lengths(args):
-    if args.readlengths:
-        with open(args.readlengths, 'r') as myfile:
-            for length in myfile.readlines():
-                length = int(length)
-                if length < 31:
-                    # do not take low readlength into account
-                    # should be user-defined later
-                    continue
-                else:
-                    yield int(length)
-    else:
-        yield args.onelength
+# def read_lengths(args):
+#     if args.readlengths:
+#         with open(args.readlengths, 'r') as myfile:
+#             for length in myfile.readlines():
+#                 length = int(length)
+#                 if length < 31:
+#                     # do not take low readlength into account
+#                     # should be user-defined later
+#                     continue
+#                 else:
+#                     yield int(length)
+#     else:
+#         yield args.onelength
 
 
 def read_bed(args):
@@ -127,6 +125,7 @@ def main(argv):
     mappability = args.uniqueness
     last_chrom, last_end = '', -1
     f_out = gzip.open(args.out, 'wb')
+    readlen = int(args.readlen)
     for chrom, start, end, score in read_bed(args):
         if score < mappability:
             continue
@@ -136,18 +135,18 @@ def main(argv):
         last_end = end
         dic_plus = {}
         dic_minus = {}
+
         seq = fasta.fetch_string(chrom, start, nbases=end-start)
         records = samfile.fetch(chrom, start, end)
         # here we get all postions in minus strand and plus strand
         [update(record.aend, dic_minus) if record.is_reverse else
             update(record.pos, dic_plus) for record in records]
         lst = []
-        for relative_pos, seq_sample in it_fasta_seq(seq, int(args.readlen)):
-            tot = 0
-            curr_start = relative_pos+start-1
+        for relative_pos, seq_sample in it_fasta_seq(seq, readlen):
+            curr_start = relative_pos+start
             gc = seq_sample.count('C')+seq_sample.count('G')
-            plus_count = dic_plus.pop(curr_start-1, 0)
-            minus_count = dic_minus.pop(curr_start-1, 0)
+            plus_count = dic_plus.get(curr_start-1, 0)
+            minus_count = dic_minus.get(curr_start, 0)
             tot = plus_count + minus_count
             lst.append((gc, tot))
         for x in lst:

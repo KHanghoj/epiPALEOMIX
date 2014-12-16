@@ -10,7 +10,7 @@ import pysam
 import argparse
 from collections import defaultdict
 
-_MAX_SIZE = 1000
+_MAX_SIZE = 3000
 _MINMAPQUALI = 25
 _MIN_COVERAGE = 3
 

@@ -73,7 +73,6 @@ def main(argv):
     output_dic = defaultdict(int)
     plus = {}
     minus = {}
-
     last_tid = -1
     last_pos = -1
 

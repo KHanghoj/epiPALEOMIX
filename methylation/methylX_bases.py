@@ -55,11 +55,12 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('fastafile', help="fastafile")
     parser.add_argument('bam', help="...")
-    parser.add_argument('--bed', help="...")
+    parser.add_argument('bed', help="a bed file format with\
+                        Sequences Of Interest")
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
-    parser.add_argument('--out', help='...', default='out_mapmethyl.txt')
+    parser.add_argument('--out', help='...', default='out_mapmethylX_bases.txt')
     return parser.parse_args(argv)
 
 
@@ -93,9 +94,10 @@ def writetofile(idxlist, dic_top, dic_lower, f_name):
     keys = chain.from_iterable(it_keys)
     keys = sorted(set(keys))
     for idx in idxlist:
-        f_output.write('>pos {}\n'.format(idx))
+        # f_output.write('>pos {}\n'.format(idx))
         for key in keys:
-            f_output.write('{}\t{}\t{}\n'.format(key, repr(dic_top[idx][key]),
+            f_output.write('{}\t{}\t{}\t{}\n'.format(idx,
+                           key, repr(dic_top[idx][key]),
                            repr(dic_lower[idx][key])))
     f_output.close()
 
@@ -113,15 +115,25 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
-def get_XX_index(string, pattern='CG'):
+def get_XX_index(string, forward=True, pattern='CG'):
     start = 0
     while True:
-        idx = string.find(pattern, start)
-        if idx < 0:
-            break
-        yield idx
-        start = idx + 1
-
+        if forward:
+            idx = string.find(pattern, start)
+            if idx < 0:
+                break
+            yield idx
+            start = idx + 1
+        else:
+            # takes the hit from the RIGHT as it the correct thing to do first
+            # for reverse strands. CG in the end is the
+            # 0th position in read.
+            idx = string.rfind(pattern, 0)
+            if idx < 0:
+                break
+            yield idx
+            # then it cuts of the hit
+            string = string[0:idx]
 
 def check_lst_dic(lst):
     ''' checks whichs dics are not empty in list and return the idx'''
@@ -181,7 +193,8 @@ def main(argv):
                 pos = record.aend-_BASES_CHECK
                 fast_string = fasta.fetch_string(pres_chrom,
                                                  pos, nbases=_BASES_CHECK)
-                fast_idx = list(get_XX_index(fast_string, pattern='CG'))
+                fast_idx = list(get_XX_index(fast_string, forward=False,
+                                pattern='CG'))
                 if fast_idx:
                     read_idx = [x for x in fast_idx if
                                 bases[x:x+2] in _MINUS_STRAND_BASES]
@@ -191,16 +204,7 @@ def main(argv):
                         cigar_op, cigar_len = record.cigar[-1]
                         if (cigar_op == 0) and (cigar_len >= max_pos):
                             for base_idx in read_idx:
-                                # print(base_idx)
-                                # print(bases[base_idx+1])
-                                # if bases[base_idx+1] == 'A':
-                                #     print(base_idx)
-                                #     print(_BASES_CHECK-base_idx-2)
-                                #     print(bases[base_idx+1])
-                                #     print(record.aend-2)
-                                    # sys.exit()
                                 lst_dic_lastpos[_BASES_CHECK-base_idx-2][record.aend-2][bases[base_idx+1]] += 1
-                                # sys.exit()
             else:  # this is for the forward strand
                 bases = read_sequence[:_BASES_CHECK]
                 pos = record.pos

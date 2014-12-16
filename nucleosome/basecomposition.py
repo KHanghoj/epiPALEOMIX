@@ -14,7 +14,8 @@ import pysam
 from itertools import product
 
 # Constants
-_HALF_NUC = 73
+# _HALF_NUC = 73  # a bit larger because of genome research paper.
+_HALF_NUC = 120  # a bit larger because of genome aresearch paper.
 _SINGLENUCLEO = 1
 _DINUCLEO = 2
 _TETRANUCLEO = 4
@@ -23,8 +24,9 @@ _TETRANUCLEO = 4
 def parse_args(argv):
     ''' dfs '''
     parser = argparse.ArgumentParser()
-    parser.add_argument('nucleosomepos', help="...")
     parser.add_argument('bam', help="...")
+    parser.add_argument('bed', help="special bedformat (the output from\
+                        the nucleomap.py script")
     return parser.parse_args(argv)
 
 
@@ -78,6 +80,21 @@ def writetofile(dic, f_name):
     f_output.close()
 
 
+def read_bed(args):
+    if args.bed:
+        with open(args.bed, 'r') as myfile:
+            for line in myfile.readlines():
+                input_line = (line.rstrip('\n')).split('\t')[:3]
+                chrom = input_line.pop(0).replace('chr', '')
+                start = int(input_line.pop(0))
+                end = int(input_line.pop(0))
+                depth = int(input_line.pop(0))
+                score = int(input_line.pop(0))
+                yield (chrom, int(start), int(end), int(depth), float(score))
+    else:
+        yield (args.chrom, args.start, args.end)
+
+
 def main(argv):
     ''' dfs '''
     tempbasewin = []
@@ -89,28 +106,29 @@ def main(argv):
     singnucl_update = get_dic_fornucl(_SINGLENUCLEO)
     begin_nucl = -1
     end_nucl = -1
-    sites = 0
-    with open(args.nucleosomepos, 'r') as nucleosome_f:
-        for line in nucleosome_f.readlines():
-            each_line = (line.rstrip('\n'))
-            chrom, dyad = each_line.split('\t')[:2]
-            score = float(each_line.split('\t')[4])
+    last_chrom = -1
+    last_dyad = -1
+    windowsize = len(range(0, _HALF_NUC*2+1))
+    # with open(args.nucleosomepos, 'r') as nucleosome_f:
+    #     for line in nucleosome_f.readlines():
+    for chrom, start, end, depth, score in read_bed(args):
             if score < 1:  # arbitrary value
                 continue
-            dyad = int(dyad)
-            if (dyad - _HALF_NUC) == begin_nucl:
+            if abs(start-end) > 0:
+                continue
+            dyad = start
+            if dyad == last_dyad and chrom == last_chrom:
                 continue  # will not use the same position twice
-
+            last_chrom = chrom
+            last_dyad = dyad
             begin_nucl = dyad - _HALF_NUC
             end_nucl = dyad + _HALF_NUC + 1
             get_wind_nucleo(samfile, tempbasewin, chrom, begin_nucl, end_nucl)
-            if len(tempbasewin) != 147:  # becuase 0-based
+            if len(tempbasewin) != windowsize:  # becuase 0-based
                 continue
             update_dic(tempbasewin, _SINGLENUCLEO, singnucl_update)
             update_dic(tempbasewin, _DINUCLEO, dinucl_update)
             update_dic(tempbasewin, _TETRANUCLEO, tetranucl_update)
-            sites += 1
-    print(sites)
     writetofile(singnucl_update, 'single')
     writetofile(dinucl_update, 'dinucleo')
     writetofile(tetranucl_update, 'tetra')
