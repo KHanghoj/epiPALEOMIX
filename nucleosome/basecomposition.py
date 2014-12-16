@@ -27,6 +27,7 @@ def parse_args(argv):
     parser.add_argument('bam', help="...")
     parser.add_argument('bed', help="special bedformat (the output from\
                         the nucleomap.py script")
+    parser.add_argument('--out', help='...', default='out_basecomposition.txt')
     return parser.parse_args(argv)
 
 
@@ -65,9 +66,10 @@ def get_wind_nucleo(samfile, tempbasewin, chrom, begin_nucl, end_nucl):
             tempbasewin.append(choice(bases))
 
 
-def writetofile(dic, f_name):
+def writetofile(dic, f_name, args):
     ''' dfs '''
-    f_output = open(f_name, 'w')
+    full_f_name = '{}{}'.format(args.out, f_name)
+    f_output = open(full_f_name, 'w')
     word_combinations = [x for x in sorted(dic[0].keys())]
     f_output.write('\t'+'{}'.format('\t'.join(word_combinations))+'\n')
     for i in sorted(dic.keys()):
@@ -84,13 +86,13 @@ def read_bed(args):
     if args.bed:
         with open(args.bed, 'r') as myfile:
             for line in myfile.readlines():
-                input_line = (line.rstrip('\n')).split('\t')[:3]
-                chrom = input_line.pop(0).replace('chr', '')
+                input_line = (line.rstrip('\n')).split('\t')
+                chrom = input_line.pop(0)
                 start = int(input_line.pop(0))
                 end = int(input_line.pop(0))
                 depth = int(input_line.pop(0))
-                score = int(input_line.pop(0))
-                yield (chrom, int(start), int(end), int(depth), float(score))
+                score = float(input_line.pop(0))
+                yield (chrom, start, end, depth, score)
     else:
         yield (args.chrom, args.start, args.end)
 
@@ -99,16 +101,17 @@ def main(argv):
     ''' dfs '''
     tempbasewin = []
     args = parse_args(argv)
-    print(args.nucleosomepos)
     samfile = pysam.Samfile(args.bam, "rb")
-    dinucl_update = get_dic_fornucl(_DINUCLEO)
-    tetranucl_update = get_dic_fornucl(_TETRANUCLEO)
-    singnucl_update = get_dic_fornucl(_SINGLENUCLEO)
+
     begin_nucl = -1
     end_nucl = -1
     last_chrom = -1
     last_dyad = -1
     windowsize = len(range(0, _HALF_NUC*2+1))
+
+    dinucl_update = get_dic_fornucl(_DINUCLEO, windowsize)
+    tetranucl_update = get_dic_fornucl(_TETRANUCLEO, windowsize)
+    singnucl_update = get_dic_fornucl(_SINGLENUCLEO, windowsize)
     # with open(args.nucleosomepos, 'r') as nucleosome_f:
     #     for line in nucleosome_f.readlines():
     for chrom, start, end, depth, score in read_bed(args):
@@ -129,9 +132,9 @@ def main(argv):
             update_dic(tempbasewin, _SINGLENUCLEO, singnucl_update)
             update_dic(tempbasewin, _DINUCLEO, dinucl_update)
             update_dic(tempbasewin, _TETRANUCLEO, tetranucl_update)
-    writetofile(singnucl_update, 'single')
-    writetofile(dinucl_update, 'dinucleo')
-    writetofile(tetranucl_update, 'tetra')
+    writetofile(singnucl_update, 'single', args)
+    writetofile(dinucl_update, 'dinucleo', args)
+    writetofile(tetranucl_update, 'tetra', args)
     samfile.close()
     return 0
 
