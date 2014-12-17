@@ -135,12 +135,17 @@ def main(argv):
         last_end = end
         dic_plus = {}
         dic_minus = {}
-
-        seq = fasta.fetch_string(chrom, start, nbases=end-start)
+        lengthofregion = end-start
+        averagehit = lengthofregion*0.0002
+        seq = fasta.fetch_string(chrom, start, nbases=lengthofregion)
         records = samfile.fetch(chrom, start, end)
         # here we get all postions in minus strand and plus strand
         [update(record.aend, dic_minus) if record.is_reverse else
             update(record.pos, dic_plus) for record in records]
+        if len(dic_minus)+len(dic_plus) < averagehit:
+            # need to have at least one read
+            # starting at average of every 5KB
+            continue
         lst = []
         for relative_pos, seq_sample in it_fasta_seq(seq, readlen):
             curr_start = relative_pos+start
