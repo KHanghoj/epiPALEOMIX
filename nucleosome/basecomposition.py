@@ -14,11 +14,12 @@ import pysam
 from itertools import product
 
 # Constants
-# _HALF_NUC = 73  # a bit larger because of genome research paper.
+# _HALF_NUC = 73  #
 _HALF_NUC = 120  # a bit larger because of genome aresearch paper.
 _SINGLENUCLEO = 1
 _DINUCLEO = 2
 _TETRANUCLEO = 4
+_SCORE = 0
 
 
 def parse_args(argv):
@@ -115,9 +116,9 @@ def main(argv):
     # with open(args.nucleosomepos, 'r') as nucleosome_f:
     #     for line in nucleosome_f.readlines():
     for chrom, start, end, depth, score in read_bed(args):
-            if score < 1:  # arbitrary value
+            if score < _SCORE:  # arbitrary value
                 continue
-            if abs(start-end) > 0:
+            if abs(start-end) > 0:  # remove wide nuclesome calls
                 continue
             dyad = start
             if dyad == last_dyad and chrom == last_chrom:

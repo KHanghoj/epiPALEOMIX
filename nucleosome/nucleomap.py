@@ -100,7 +100,7 @@ def call_window(windows, positions, last_result, samfile, outname):
 
             value = next(calls_center.itervalues())
             score = math.log(float(value) / mean_spacer)
-
+            # math.log by standard is natural
             position_start = positions[_NEIGHBOR + _OFFSET + min(calls_center)]
             position_end = positions[_NEIGHBOR + _OFFSET + max(calls_center)]
 

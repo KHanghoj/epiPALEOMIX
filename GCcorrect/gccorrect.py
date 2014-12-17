@@ -11,7 +11,7 @@ import pysam
 import argparse
 from random import sample
 from collections import defaultdict
-import gzip
+# import gzip
 
 # _READ_LENGTH = 180
 # _READ_LENGTH = 10
@@ -173,11 +173,27 @@ def main(argv):
         last_end = end
         dic_plus = {}
         dic_minus = {}
-        seq = fasta.fetch_string(chrom, start, nbases=end-start)
+        lengthofregion = end-start
+        averagehit = lengthofregion*0.0002
+        # have at least one read for every 5Kb.
+
         records = samfile.fetch(chrom, start, end)
         # here we get all postions in minus strand and plus strand in a dict
         [update(record.aend, dic_minus) if record.is_reverse else
             update(record.pos, dic_plus) for record in records]
+
+        # if sum(dic_minus.values())+sum(dic_plus.values())\
+        #         < (lengthofregion)/100:
+            # need to have at least one read for every 100 bases on average
+            # continue
+
+        if len(dic_minus)+len(dic_plus) < averagehit:
+            # need to have at least one read
+            # starting at average of every 1KB
+            continue
+        print(chrom, start, end, len(dic_minus)+len(dic_plus))
+
+        seq = fasta.fetch_string(chrom, start, nbases=lengthofregion)
         for read_length in read_lengths(args):
             # now we run through all the different read lengths
             # can be in the beginnig as well.
