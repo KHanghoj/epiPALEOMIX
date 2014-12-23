@@ -78,6 +78,7 @@ def shift_window(pileupcolumn, windows, positions, last_pos, s_depth):
         for pos in xrange(1, delta_pos):
             windows.append(0)
             positions.append((pileupcolumn.tid, last_pos + pos))
+
     windows.append(s_depth)  # the actual windows with pileup
     positions.append((pileupcolumn.tid, pileupcolumn.pos))  # positions
 
@@ -86,7 +87,7 @@ def shift_window(pileupcolumn, windows, positions, last_pos, s_depth):
         positions.pop(0)
 
 
-def call_window(windows, positions, last_result, samfile, outname):
+def call_window(windows, positions, samfile, output_dic):
     ''' docstring '''
     calls_center = call_max(windows[_NEIGHBOR + _OFFSET: _NEIGHBOR +
                                     _OFFSET+_SIZE])
@@ -100,24 +101,19 @@ def call_window(windows, positions, last_result, samfile, outname):
 
             value = next(calls_center.itervalues())
             score = math.log(float(value) / mean_spacer)
-            # math.log by standard is natural
+            # math.log by default is natural
             position_start = positions[_NEIGHBOR + _OFFSET + min(calls_center)]
             position_end = positions[_NEIGHBOR + _OFFSET + max(calls_center)]
 
             # NOTE: Use getrname to get name of chromosome / contig / etc.
             chrom = samfile.getrname(position_start[0])
-            result = [chrom, position_start[1]+1, position_end[1]+1,
-                      value, score]
-
-            if result[:3] == last_result[:3]:  # to avoid printing duplicates
-                if last_result[4] > score:
-                    result[4] = last_result[4]
-            else:  # result[:3] != last_result[:3]:
-                if not last_result[0] is 0:
-                    print(*last_result, file=outname, sep='\t')
-            # return result
-            del last_result[:]
-            last_result.extend(result)
+            key = '{}_{}_{}'.format(chrom, position_start[1]+1,
+                                    position_end[1]+1)
+            if key in output_dic.keys():
+                if output_dic[key][1] < score:
+                    output_dic[key] = [value, score]
+            else:
+                output_dic[key] = [value, score]
 
 
 def parse_args(argv):
@@ -128,7 +124,7 @@ def parse_args(argv):
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
-    parser.add_argument('--out', help='...', default='out_phasogram.txt')
+    parser.add_argument('--out', help='...', default='out_nucleomap.txt')
     return parser.parse_args(argv)
 
 
@@ -145,28 +141,43 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
+def fun(item):
+    try:
+        return int(item)
+    except ValueError:
+        return str(item)
+
+
+def writetofile(output_dic, f_name):
+    ''' dfs '''
+    f_output = open(f_name, 'w')
+####
+    key_values = iter(sorted((map(fun, key.split('_'))+value for key,
+                      value in output_dic.iteritems())))
+    fmt = '{0}\t{1}\t{2}\t{3}\t{4}\n'
+    for dat in key_values:
+        f_output.write(fmt.format(*dat))
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
-    f_output = open(args.out, 'w')
     windows = []
     last_tid = -1
     last_pos = -1
-    sizeofoutputfile = 5
-    last_result = [0]*sizeofoutputfile
+    output_dic = {}
     positions = []  # the chromosomal position of the nuclesome
     samfile = pysam.Samfile(args.bam, "rb")
     for chrom, start, end in read_bed(args):
         last_tid = -1
         last_pos = -1
         windows = []
-        last_result = [0]*sizeofoutputfile
+
         for pileupcolumn in samfile.pileup(chrom, start, end):
             if pileupcolumn.tid != last_tid:
                 last_tid = pileupcolumn.tid
                 last_pos = -1
                 windows = []
-                last_result = [0]*sizeofoutputfile
 
             s_depth = int(pileupcolumn.n)
             shift_window(pileupcolumn, windows, positions,
@@ -174,9 +185,8 @@ def main(argv):
             last_pos = pileupcolumn.pos
             if len(windows) == _TOTAL_WIN_LENGTH:
                 call_window(windows, positions,
-                            last_result, samfile, f_output)
-
-    print(*last_result, file=f_output, sep='\t')
+                            samfile, output_dic)
+    writetofile(output_dic, args.out)
     samfile.close()
     return 0
 

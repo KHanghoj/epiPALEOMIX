@@ -191,7 +191,7 @@ def main(argv):
             # need to have at least one read
             # starting at average of every 1KB
             continue
-        print(chrom, start, end, len(dic_minus)+len(dic_plus))
+        # print(chrom, start, end, len(dic_minus)+len(dic_plus))
 
         seq = fasta.fetch_string(chrom, start, nbases=lengthofregion)
         for read_length in read_lengths(args):
