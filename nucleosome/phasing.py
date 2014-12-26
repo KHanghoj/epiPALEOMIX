@@ -13,7 +13,7 @@ import argparse
 
 #### Constants:
 _SIZE = 147  # the nucleosome size
-_PHASING_RANGE = 300  # bases to find a new nucleosome
+_PHASING_RANGE = 500  # bases to find a new nucleosome
 
 
 def parse_args(argv):
@@ -59,9 +59,9 @@ def call_score(chrom, last_start, temp_start, countscore, output_dic):
         old_start = temp_start[0]
     except IndexError:
         old_start = last_start
-    if old_start is not 0:
-        key = '{}_{}_{}'.format(chrom, old_start, last_start)
-        output_dic[key] = countscore
+    # if old_start is not 0:
+    key = '{}_{}_{}'.format(chrom, old_start, last_start)
+    output_dic[key] = countscore
 
 
 def main(argv):
@@ -81,16 +81,16 @@ def main(argv):
             continue
 
         if chrom != last_chrom:
-            last_start = 0
+            last_start = start
             countscore = 1
             temp_start = []
             last_score = -100
 
-        shift = start - (last_start + _SIZE)
+        shift = start - last_start
         # shift is an expression of jeg size between
         # last_start + nucleosome size minus new start
-        if shift > 0:
-            #  if zero or larger, nucleosome is furtheraway than
+        if shift >= _SIZE:
+            #  if _SIZE or larger, nucleosome is furtheraway than
             #  147 from the former. if not. assign the new start.
             if shift <= _PHASING_RANGE:
                 countscore += 1
@@ -109,7 +109,6 @@ def main(argv):
                 # new last_start else keep the former one.
                 last_start, last_score = start, score
         overall += 1
-        # last_start = start
         last_chrom = chrom
     call_score(chrom, last_start, temp_start,
                countscore, output_dic)
