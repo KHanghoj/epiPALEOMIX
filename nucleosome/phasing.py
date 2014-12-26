@@ -59,8 +59,9 @@ def call_score(chrom, last_start, temp_start, countscore, output_dic):
         old_start = temp_start[0]
     except IndexError:
         old_start = last_start
-    key = '{}_{}_{}'.format(chrom, old_start, last_start)
-    output_dic[key] = countscore
+    if old_start is not 0:
+        key = '{}_{}_{}'.format(chrom, old_start, last_start)
+        output_dic[key] = countscore
 
 
 def main(argv):
@@ -94,22 +95,19 @@ def main(argv):
             if shift <= _PHASING_RANGE:
                 countscore += 1
                 temp_start.append(start)
-                last_start = start
-                last_score = score
+                last_start, last_score = start, score
             else:
                 call_score(chrom, last_start, temp_start,
                            countscore, output_dic)
                 countscore = 1
                 temp_start = []
-                last_start = start
-                last_score = score
+                last_start, last_score = start, score
         else:
             counter_to_close += 1
             if score > last_score:
                 # if new score is greater than the previous assign
                 # new last_start else keep the former one.
-                last_start = start
-                last_score = score
+                last_start, last_score = start, score
         overall += 1
         # last_start = start
         last_chrom = chrom
@@ -117,8 +115,7 @@ def main(argv):
                countscore, output_dic)
     writetofile(output_dic, args.out)
     print('{} called nucleosomes analyzed\n{} nucleosomes to close positioned'
-          .format(overall,
-          counter_to_close))
+          .format(overall, counter_to_close))
     return 0
 
 
