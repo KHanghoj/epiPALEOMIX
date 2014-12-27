@@ -12,8 +12,8 @@ import sys
 import argparse
 
 #### Constants:
-_SIZE = 147  # the nucleosome size
-_PHASING_RANGE = 500  # bases to find a new nucleosome
+_SIZE = 147  # the nucleosome size 147 base pairs
+_PHASING_RANGE = 600  # bases to find a new nucleosome
 
 
 def parse_args(argv):
@@ -104,10 +104,17 @@ def main(argv):
                 last_start, last_score = start, score
         else:
             counter_to_close += 1
+            # # if we do take score into account
+            # # else take the code below when
+            # # to close positioned then
+            # # else use this simple oneliner
+            # last_start = start
+
             if score > last_score:
                 # if new score is greater than the previous assign
                 # new last_start else keep the former one.
                 last_start, last_score = start, score
+
         overall += 1
         last_chrom = chrom
     call_score(chrom, last_start, temp_start,
