@@ -79,7 +79,7 @@ def call_minus_ms(idxlist, last_pos, lst_dic_lastpos,
                   start, dic_top, dic_lower):
     ''' docstring '''
     lst_base_forward_temp = create_lst_dic()
-    # this is need to fix the indexing
+    # this is needed to fix the indexing
     for idx in idxlist:
         for key in sorted(lst_dic_lastpos[idx]):
             if last_pos > key:  # this is not necessary
@@ -90,11 +90,14 @@ def call_minus_ms(idxlist, last_pos, lst_dic_lastpos,
 def writetofile(idxlist, dic_top, dic_lower, f_name):
     ''' dfs '''
     f_output = open(f_name, 'w')
+    #  this is done to make sure we have all
+    #  keys present in every read position
+    #  even is key value is zero
+    #  advantage of defaultdict
     it_keys = ((key for key in x) for x in dic_lower if x)
     keys = chain.from_iterable(it_keys)
     keys = sorted(set(keys))
     for idx in idxlist:
-        # f_output.write('>pos {}\n'.format(idx))
         for key in keys:
             f_output.write('{}\t{}\t{}\t{}\n'.format(idx,
                            key, repr(dic_top[idx][key]),
@@ -115,28 +118,53 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
-def get_XX_index(string, forward=True, pattern='CG'):
+# def get_XX_index(string, forward=True, pattern='CG'):
+#     start = 0
+#     while True:
+#         if forward:
+#             idx = string.find(pattern, start)
+#             if idx < 0:
+#                 break
+#             yield idx
+#             start = idx + 1
+#         else:
+#             # takes the hit from the RIGHT as it the correct thing to do first
+#             # for reverse strands. CG in the end is the
+#             # 0th position in read.
+#             idx = string.rfind(pattern, 0)
+#             if idx < 0:
+#                 break
+#             yield idx
+#             # then it cuts of the hit
+#             string = string[:idx]
+
+
+def get_index_forw(string, pattern='CG'):
     start = 0
     while True:
-        if forward:
-            idx = string.find(pattern, start)
-            if idx < 0:
-                break
-            yield idx
-            start = idx + 1
-        else:
-            # takes the hit from the RIGHT as it the correct thing to do first
-            # for reverse strands. CG in the end is the
-            # 0th position in read.
-            idx = string.rfind(pattern, 0)
-            if idx < 0:
-                break
-            yield idx
-            # then it cuts of the hit
-            string = string[0:idx]
+
+        idx = string.find(pattern, start)
+        if idx < 0:
+            break
+        yield idx
+        start = idx + 1
+
+
+def get_index_rev(string, pattern='CG'):
+    while True:
+        # takes the hit from the RIGHT as it the correct thing to do first
+        # for reverse strands. CG in the end is the
+        # 0th position in read.
+        idx = string.rfind(pattern, 0)
+        if idx < 0:
+            break
+        yield idx
+        # then it cuts of the hit
+        string = string[:idx]
+
 
 def check_lst_dic(lst):
-    ''' checks whichs dics are not empty in list and return the idx'''
+    ''' checks which dics are not empty in list and return the idx'''
     return [idx for idx, x in enumerate(lst) if x]
 
 
@@ -152,10 +180,6 @@ def create_lst_dic(nested=False, size=_BASES_CHECK-1):
         return [defaultdict(int) for _ in range(size)]
 
 
-# def makereverseidx(lst):
-#     return [_BASES_CHECK - x for x in lst][::-1]
-
-
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
@@ -167,24 +191,23 @@ def main(argv):
     idx_standard = range(len(lst_dic_lastpos))
     dic_top = create_lst_dic()
     dic_lower = create_lst_dic()
+    chrom_last = ''
     for chrom, start, end in read_bed(args):
         last_pos = -1  # reset when starting a new bedfile line
-        # lst_dic_lastpos.clear()
-        # lst_base_forward.clear()
         # this is for clearing the dics
         lst_dic_lastpos = create_lst_dic(nested=True)
         lst_base_forward = create_lst_dic()
         for record in samfile.fetch(chrom, start, end):
             read_sequence = record.seq
-            if record.tid != chrom:  # new chromosome or first record
-                chrom = record.tid
+            if record.tid != chrom_last:  # new chromosome or first record
+                chrom_last = record.tid
                 last_pos = -1
                 pres_chrom = samfile.getrname(record.tid)
 
             # Call minus strand Ms with no plus strand information
             # check if some dics are not empty and max
-            lastpos_idx = check_lst_dic(lst_dic_lastpos)
-            if lastpos_idx and max_lst_dic(lst_dic_lastpos) < last_pos:
+            if check_lst_dic(lst_dic_lastpos) and \
+                    max_lst_dic(lst_dic_lastpos) < last_pos:
                 call_minus_ms(idx_standard, last_pos, lst_dic_lastpos,
                               start, dic_top, dic_lower)
 
@@ -193,8 +216,9 @@ def main(argv):
                 pos = record.aend-_BASES_CHECK
                 fast_string = fasta.fetch_string(pres_chrom,
                                                  pos, nbases=_BASES_CHECK)
-                fast_idx = list(get_XX_index(fast_string, forward=False,
-                                pattern='CG'))
+                # fast_idx = list(get_XX_index(fast_string, forward=False,
+                #                 pattern='CG'))
+                fast_idx = list(get_index_rev(fast_string))
                 if fast_idx:
                     read_idx = [x for x in fast_idx if
                                 bases[x:x+2] in _MINUS_STRAND_BASES]
@@ -204,13 +228,14 @@ def main(argv):
                         cigar_op, cigar_len = record.cigar[-1]
                         if (cigar_op == 0) and (cigar_len >= max_pos):
                             for base_idx in read_idx:
-                                lst_dic_lastpos[_BASES_CHECK-base_idx-2][record.aend-2][bases[base_idx+1]] += 1
+                                (lst_dic_lastpos[_BASES_CHECK-base_idx-2][record.aend-2][bases[base_idx+1]] += 1)
             else:  # this is for the forward strand
                 bases = read_sequence[:_BASES_CHECK]
                 pos = record.pos
                 fast_string = fasta.fetch_string(pres_chrom,
                                                  pos, nbases=_BASES_CHECK)
-                fast_idx = list(get_XX_index(fast_string, pattern='CG'))
+                # fast_idx = list(get_XX_index(fast_string, pattern='CG'))
+                fast_idx = list(get_index_forw(fast_string))
                 if fast_idx:
                     read_idx = [x for x in fast_idx if
                                 bases[x:x+2] in _PLUS_STRAND_BASES]
@@ -223,9 +248,7 @@ def main(argv):
                                 call_ms(idx_standard, last_pos, lst_dic_lastpos,
                                         lst_base_forward, start, dic_top,
                                         dic_lower)
-                                # lst_base_forward.clear()
-                                # print (lst_base_forward)
-                                lst_base_forward = create_lst_dic()
+                                lst_base_forward = create_lst_dic()  # reset dic
                             for base_idx in read_idx:
                                 lst_base_forward[base_idx][bases[base_idx]] += 1
                             last_pos = record.pos
