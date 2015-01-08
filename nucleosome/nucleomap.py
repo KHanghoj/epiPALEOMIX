@@ -6,6 +6,9 @@ Example:
 test.bam --chrom 22 --start 18500000 --end 18513769 --out dingdong
 Thi is with and empty '\n' bed file.
 nucleomap_bedformat.py test.bam test.bed --chrom 22 --start 20000000 --end 20200000 --out tra12
+## this is to take i.e. 2e7 numbers:
+# start = int(float(input_line.pop(0)))
+# end = int(float(input_line.pop(0)))
 '''
 from __future__ import print_function
 
@@ -14,7 +17,6 @@ import sys
 import pysam
 import math
 import argparse
-
 #### Constants:
 _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
@@ -122,8 +124,8 @@ def parse_args(argv):
     parser.add_argument('bam', help="...")
     parser.add_argument('--bed', help="...")
     parser.add_argument('--chrom', help="...", default=None)
-    parser.add_argument('--start', help="...", type=int, default=None)
-    parser.add_argument('--end', help="...", type=int, default=None)
+    parser.add_argument('--start', help="...", default=None)
+    parser.add_argument('--end', help="...", default=None)
     parser.add_argument('--out', help='...', default='out_nucleomap.txt')
     return parser.parse_args(argv)
 
@@ -132,7 +134,7 @@ def read_bed(args):
     if args.bed:
         with open(args.bed, 'r') as myfile:
             for line in myfile.readlines():
-                input_line = (line.rstrip('\n')).split('\t')[:3]
+                input_line = line.rstrip('\n').split('\t')
                 chrom = input_line.pop(0).replace('chr', '')
                 start = int(input_line.pop(0))
                 end = int(input_line.pop(0))
@@ -151,7 +153,6 @@ def fun(item):
 def writetofile(output_dic, f_name):
     ''' dfs '''
     f_output = open(f_name, 'w')
-####
     key_values = iter(sorted((map(fun, key.split('_'))+value for key,
                       value in output_dic.iteritems())))
     fmt = '{0}\t{1}\t{2}\t{3}\t{4}\n'
@@ -163,18 +164,18 @@ def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     windows = []
-    last_tid = -1
+    last_tid = ''
     last_pos = -1
     output_dic = {}
     positions = []  # the chromosomal position of the nuclesome
     samfile = pysam.Samfile(args.bam, "rb")
     for chrom, start, end in read_bed(args):
-        last_tid = -1
+        last_tid = ''
         last_pos = -1
         windows = []
-
         for pileupcolumn in samfile.pileup(chrom, start, end):
             if pileupcolumn.tid != last_tid:
+                # sys.stdout.write(str(pileupcolumn.tid) + '\n')
                 last_tid = pileupcolumn.tid
                 last_pos = -1
                 windows = []

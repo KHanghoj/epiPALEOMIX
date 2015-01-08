@@ -54,44 +54,73 @@ def writetofile(output_dic, f_name):
     f_output.close()
 
 
-def call_score(chrom, lst_start, output_dic):
-    key = '{}_{}_{}'.format(chrom, lst_start[0], lst_start[-1])
-    output_dic[key] = len(lst_start)
+def call_score(chrom, last_start, temp_start, countscore, output_dic):
+    try:
+        old_start = temp_start[0]
+    except IndexError:
+        old_start = last_start
+    # if old_start is not 0:
+    key = '{}_{}_{}'.format(chrom, old_start, last_start)
+    output_dic[key] = countscore
 
 
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
-    last_chrom = ''
+    last_chrom = -1
+    last_start = -1
+    countscore = 1
     output_dic = {}
-    lst_start = []
+    temp_start = []
     counter_to_close = 0
     overall = 0
+    last_score = -100
     for chrom, start, end, depth, score in read_bed(args):
         if abs(end - start) > 0:
             # discard all wide centers
             continue
 
         if chrom != last_chrom:
-            if lst_start:
-                call_score(chrom, lst_start, output_dic)
-            lst_start = [start]
+            last_start = start
+            countscore = 1
+            temp_start = []
+            last_score = -100
 
-        # shift = start - last_start
-        shift = start - lst_start[-1]
+        shift = start - last_start
+        # shift is an expression of jeg size between
+        # last_start + nucleosome size minus new start
         if shift >= _SIZE:
+            #  if _SIZE or larger, nucleosome is furtheraway than
+            #  147 from the former. if not. assign the new start.
             if shift <= _PHASING_RANGE:
-                lst_start.append(start)
+                countscore += 1
+                temp_start.append(start)
+                last_start, last_score = start, score
             else:
-                call_score(chrom, lst_start, output_dic)
-                lst_start = [start]
+                call_score(chrom, last_start, temp_start,
+                           countscore, output_dic)
+                countscore = 1
+                temp_start = []
+                last_start, last_score = start, score
         else:
             counter_to_close += 1
+            # # if we do take score into account
+            # # else take the code below when
+            # # to close positioned then
+            # # else use this simple oneliner
+            # last_start = start
+
+            if score > last_score:
+                # if new score is greater than the previous assign
+                # new last_start else keep the former one.
+                last_start, last_score = start, score
+
         overall += 1
         last_chrom = chrom
-    call_score(chrom, lst_start, output_dic)
+    call_score(chrom, last_start, temp_start,
+               countscore, output_dic)
     writetofile(output_dic, args.out)
-    print('{} 0bp-wide nucleosomes analyzed\n{} nucleosomes to close positioned'
+    print('{} called nucleosomes analyzed\n{} nucleosomes to close positioned'
           .format(overall, counter_to_close))
     return 0
 

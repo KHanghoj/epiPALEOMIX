@@ -228,7 +228,7 @@ def main(argv):
                         cigar_op, cigar_len = record.cigar[-1]
                         if (cigar_op == 0) and (cigar_len >= max_pos):
                             for base_idx in read_idx:
-                                (lst_dic_lastpos[_BASES_CHECK-base_idx-2][record.aend-2][bases[base_idx+1]] += 1)
+                                lst_dic_lastpos[_BASES_CHECK-base_idx-2][record.aend-2][bases[base_idx+1]] += 1
             else:  # this is for the forward strand
                 bases = read_sequence[:_BASES_CHECK]
                 pos = record.pos
