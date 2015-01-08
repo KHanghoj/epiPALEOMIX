@@ -20,7 +20,9 @@ def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
     parser.add_argument('bed_format', help="input is outout of nucleosome.py")
+    parser.add_argument('--UCSCformat', help='...', default=False)
     parser.add_argument('--out', help='...', default='out_phasing.txt')
+
     return parser.parse_args(argv)
 
 
@@ -43,12 +45,15 @@ def fun(item):
         return str(item)
 
 
-def writetofile(output_dic, f_name):
+def writetofile(output_dic, f_name, UCSCformat):
     ''' dfs '''
     f_output = open(f_name, 'w')
     key_values = iter(sorted((map(fun, key.split('_'))+[value] for key,
                       value in output_dic.iteritems())))
-    fmt = '{0}\t{1}\t{2}\t{3}\n'
+    if UCSCformat:
+        fmt = 'chr{0}:{1}-{2}\t{3}\n'
+    else:
+        fmt = '{0}\t{1}\t{2}\t{3}\n'
     for dat in key_values:
         f_output.write(fmt.format(*dat))
     f_output.close()
@@ -90,7 +95,7 @@ def main(argv):
         overall += 1
         last_chrom = chrom
     call_score(chrom, lst_start, output_dic)
-    writetofile(output_dic, args.out)
+    writetofile(output_dic, args.out, args.UCSCformat)
     print('{} 0bp-wide nucleosomes analyzed\n{} nucleosomes to close positioned'
           .format(overall, counter_to_close))
     return 0
