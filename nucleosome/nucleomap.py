@@ -140,7 +140,7 @@ def read_bed(args):
                 end = int(input_line.pop(0))
                 yield (chrom, start, end)
     else:
-        yield (args.chrom, args.start, args.end)
+        yield (args.chrom, int(args.start), int(args.end))
 
 
 def fun(item):
