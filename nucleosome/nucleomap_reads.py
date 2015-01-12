@@ -135,15 +135,10 @@ def call_window(depths_deque, positions_deque, chrom, output_dic):
 
 
 def extend_deque(rec_pos, depths_deque, positions_deque,
-                 deque_idx=None):
+                 deque_idx):
     start = rec_pos-_TOTAL_WIN_LENGTH
     end = start+_MAXLEN
-    if deque_idx is None:
-        ## reset all deques
-        depths_idx = _MAXLEN
-    else:
-        ## extend the deques
-        depths_idx = deque_idx-_TOTAL_WIN_LENGTH
+    depths_idx = deque_idx-_TOTAL_WIN_LENGTH
 
     depths_deque.extend([0]*(depths_idx))
     positions_deque.extend((pos+1) for pos in xrange(start,
@@ -191,21 +186,12 @@ def main(argv):
 
                 last_tid = record.tid
                 last_pos = record.pos
-                extend_deque(record.pos, depths_deque, positions_deque)
+                extend_deque(record.pos, depths_deque, positions_deque, _MAXLEN)
                 deque_idx = _TOTAL_WIN_LENGTH
 
-            jump = record.pos - last_pos
-            deque_idx += jump
+            deque_idx += record.pos - last_pos
 
-            if jump > _MAXLEN:
-                if max(depths_deque) > _MINDEPTH:
-                    last_chrom = samfile.getrname(record.tid)
-                    call_window(depths_deque, positions_deque,
-                                last_chrom, output_dic)
-                extend_deque(record.pos, depths_deque, positions_deque)
-                deque_idx = _TOTAL_WIN_LENGTH
-
-            elif deque_idx + record.alen >= _MAXLEN:
+            if deque_idx + record.alen >= _MAXLEN:
                 if max(depths_deque) > _MINDEPTH:
                     last_chrom = samfile.getrname(record.tid)
                     call_window(depths_deque, positions_deque,

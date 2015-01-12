@@ -139,15 +139,10 @@ def call_window(depths_deque, positions_deque, output_dic):
 
 
 def extend_deque(rec_pos, depths_deque,
-                 positions_deque, start, deque_idx=None):
+                 positions_deque, start, deque_idx):
     start_pos = rec_pos-_TOTAL_WIN_LENGTH - start
     end_pos = start_pos+_MAXLEN
-    if deque_idx is None:
-        ## reset all deques
-        depths_idx = _MAXLEN
-    else:
-        ## extend the deques
-        depths_idx = deque_idx-_TOTAL_WIN_LENGTH
+    depths_idx = deque_idx-_TOTAL_WIN_LENGTH
 
     depths_deque.extend([0]*(depths_idx))
     positions_deque.extend((pos+1) for pos in xrange(start_pos,
@@ -198,19 +193,13 @@ def main(argv):
                     positions_deque = deque(maxlen=_MAXLEN)
                 last_tid = record.tid
                 last_pos = record.pos
-                extend_deque(record.pos, depths_deque, positions_deque, start)
+                extend_deque(record.pos, depths_deque,
+                             positions_deque, start, _MAXLEN)
                 deque_idx = _TOTAL_WIN_LENGTH
 
-            jump = record.pos - last_pos
-            deque_idx += jump
+            deque_idx += record.pos - last_pos
 
-            if jump > _MAXLEN:
-                if max(depths_deque) > _MINDEPTH:
-                    call_window(depths_deque, positions_deque, output_dic)
-                extend_deque(record.pos, depths_deque, positions_deque, start)
-                deque_idx = _TOTAL_WIN_LENGTH
-
-            elif deque_idx + record.alen >= _MAXLEN:
+            if deque_idx + record.alen >= _MAXLEN:
                 if max(depths_deque) > _MINDEPTH:
                     call_window(depths_deque, positions_deque, output_dic)
                 extend_deque(record.pos, depths_deque, positions_deque, start,
