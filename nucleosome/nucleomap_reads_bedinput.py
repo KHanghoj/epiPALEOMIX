@@ -23,25 +23,19 @@ def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
     parser.add_argument('bam', help="...")
-    parser.add_argument('--bed', help="...")
-    parser.add_argument('--chrom', help="...", default=None)
-    parser.add_argument('--start', help="...", default=None)
-    parser.add_argument('--end', help="...", default=None)
+    parser.add_argument('bed', help="...")
     parser.add_argument('--out', help='...', default='out_nucleomap.txt')
     return parser.parse_args(argv)
 
 
 def read_bed(args):
-    if args.bed:
-        with open(args.bed, 'r') as myfile:
-            for line in myfile.readlines():
-                input_line = line.rstrip('\n').split('\t')
-                chrom = input_line.pop(0).replace('chr', '')
-                start = int(input_line.pop(0))
-                end = int(input_line.pop(0))
-                yield (chrom, start, end)
-    else:
-        yield (args.chrom, int(args.start), int(args.end))
+    with open(args.bed, 'r') as myfile:
+        for line in myfile.readlines():
+            input_line = line.rstrip('\n').split('\t')
+            chrom = input_line.pop(0).replace('chr', '')
+            start = int(input_line.pop(0))
+            end = int(input_line.pop(0))
+            yield (chrom, start, end)
 
 
 def update_depth(depths_deque, record, index):
@@ -71,19 +65,8 @@ def call_max(mainwind):
 
     if mainwind[center_index] == maxdepth:
         call[center_index] = mainwind[center_index]
-        i = 1
-        while (mainwind[(center_index - i)] == maxdepth) and (i < center_index):
-            call[(center_index-i)] = mainwind[(center_index-i)]  # extends 5'
-            i += 1
-        # if wide nucleosome then no good
-        if i > 1:
-            return None
-        i = 1
-        while (mainwind[(center_index + i)] == maxdepth) and (i < center_index):
-            call[(center_index+i)] = mainwind[(center_index+i)]  # extends 3'
-            i += 1
-        # if wide nucleosome then no good
-        if i > 1:
+        if (mainwind[(center_index - 1)] == maxdepth or
+                mainwind[(center_index + 1)] == maxdepth):
             return None
     else:
         return None  # not callable. i.e the centre is not maximal
@@ -152,8 +135,8 @@ def extend_deque(rec_pos, depths_deque,
 def writetofile(output_dic, f_output):
     ''' dfs '''
     ## append to file instead
-    mininum = min(output_dic.iterkeys)
-    maximum = max(output_dic.iterkeys)
+    mininum = min(output_dic.iterkeys())
+    maximum = max(output_dic.iterkeys())
     # key_values = iter(sorted(output_dic.iteritems()))
     fmt = '{0}\t{1}\n'
     # for dat in key_values:
@@ -162,6 +145,15 @@ def writetofile(output_dic, f_output):
     for key in xrange(mininum, maximum, 1):
         value = output_dic.get(key, 0)
         f_output.write(fmt.format(key, value))
+
+
+def makeoutputfile(argsout):
+    try:
+        remove(argsout)
+        f_output = open(argsout, 'a')
+    except OSError:
+        f_output = open(argsout, 'a')
+    return f_output
 
 
 def main(argv):
@@ -173,11 +165,7 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     deque_idx = 0
     ## i want to write to file every chrom, to speed up:
-    try:
-        remove(args.out)
-    except OSError:
-        pass
-    f_output = open(args.out, 'a')
+    f_output = makeoutputfile(args.out)
     depths_deque = deque(maxlen=_MAXLEN)
     positions_deque = deque(maxlen=_MAXLEN)
 

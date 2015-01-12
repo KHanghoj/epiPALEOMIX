@@ -1,7 +1,7 @@
 #!/opt/local/bin/python
 from __future__ import print_function
 
-#from fileinput import inpua
+#  from fileinput import inpua
 import sys
 import pysam
 import math
@@ -41,11 +41,14 @@ def read_bed(args):
                 end = int(input_line.pop(0))
                 yield (chrom, start, end)
     else:
-        yield (args.chrom, int(args.start), int(args.end))
+        try:
+            yield (args.chrom, int(args.start), int(args.end))
+        except TypeError:
+            yield (args.chrom, args.start, args.end)
 
 
 def update_depth(depths_deque, record, index):
-    ## we increment the counts list with all the alli
+    # we increment the counts list with all the alli
     for (cigar, count) in record.cigar:
         if cigar in (0, 7, 8):
             for idx in xrange(index, index + count):
@@ -155,6 +158,16 @@ def writetofile(chrom, output_dic, f_output):
         f_output.write(fmt.format(chrom, *dat))
 
 
+def makeoutputfile(argsout):
+    ## i want to write to file every chrom, to speed up:
+    try:
+        remove(argsout)
+        f_output = open(argsout, 'a')
+    except OSError:
+        f_output = open(argsout, 'a')
+    return f_output
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
@@ -163,12 +176,7 @@ def main(argv):
     output_dic = {}
     samfile = pysam.Samfile(args.bam, "rb")
     deque_idx = 0
-    ## i want to write to file every chrom, to speed up:
-    try:
-        remove(args.out)
-    except OSError:
-        pass
-    f_output = open(args.out, 'a')
+    f_output = makeoutputfile(args.out)
     for chrom, start, end in read_bed(args):
         last_tid = ''
         last_pos = -1
