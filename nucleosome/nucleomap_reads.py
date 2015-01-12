@@ -185,14 +185,16 @@ def main(argv):
                     output_dic.clear()
 
                 last_tid = record.tid
-                last_pos = record.pos
-                extend_deque(record.pos, depths_deque, positions_deque, _MAXLEN)
+                last_pos = -1
+                depths_deque = deque(maxlen=_MAXLEN)
+                positions_deque = deque(maxlen=_MAXLEN)
+                # extend_deque(record.pos, depths_deque, positions_deque, _MAXLEN)
                 deque_idx = _TOTAL_WIN_LENGTH
 
             deque_idx += record.pos - last_pos
 
             if deque_idx + record.alen >= _MAXLEN:
-                if max(depths_deque) > _MINDEPTH:
+                if depths_deque and max(depths_deque) > _MINDEPTH:
                     last_chrom = samfile.getrname(record.tid)
                     call_window(depths_deque, positions_deque,
                                 last_chrom, output_dic)

@@ -189,10 +189,10 @@ def main(argv):
             if record.tid != last_tid:
                 if output_dic:
                     call_window(depths_deque, positions_deque, output_dic)
-                    depths_deque = deque(maxlen=_MAXLEN)
-                    positions_deque = deque(maxlen=_MAXLEN)
+                depths_deque = deque(maxlen=_MAXLEN)
+                positions_deque = deque(maxlen=_MAXLEN)
                 last_tid = record.tid
-                last_pos = record.pos
+                last_pos = -1
                 extend_deque(record.pos, depths_deque,
                              positions_deque, start, _MAXLEN)
                 deque_idx = _TOTAL_WIN_LENGTH
