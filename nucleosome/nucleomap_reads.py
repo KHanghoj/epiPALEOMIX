@@ -8,13 +8,15 @@ import math
 import argparse
 from collections import deque
 from itertools import islice
+from os import remove
 #### Constants:
 _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
 _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _MAXLEN = int(1e3)
-_MINDEPTH = 2
+# _MINDEPTH = 2
+_MINDEPTH = 4
 
 
 def parse_args(argv):
@@ -70,7 +72,6 @@ def call_max(mainwind):
     if mainwind[center_index] == maxdepth:
         call[center_index] = mainwind[center_index]
         i = 1
-        # NOTE: Use 'and' instead of '&' unless non-lazy evaluation is needed
         while (mainwind[(center_index - i)] == maxdepth) and (i < center_index):
             call[(center_index-i)] = mainwind[(center_index-i)]  # extends 5'
             i += 1
@@ -123,8 +124,7 @@ def call_window(depths_deque, positions_deque, chrom, output_dic):
                 position_end = win_positions[_NEIGHBOR +
                                              _OFFSET + max(calls_center)]
 
-                key = '{}_{}_{}'.format(chrom, position_start,
-                                        position_end)
+                key = '{}_{}'.format(position_start, position_end)
                 if key in output_dic.keys():
                     # if new score is great than old score
                     # at same positions then replace.
@@ -134,21 +134,30 @@ def call_window(depths_deque, positions_deque, chrom, output_dic):
                     output_dic[key] = [value, score]
 
 
-def fun(item):
-    try:
-        return int(item)
-    except ValueError:
-        return str(item)
+def extend_deque(rec_pos, depths_deque, positions_deque,
+                 deque_idx=None):
+    start = rec_pos-_TOTAL_WIN_LENGTH
+    end = start+_MAXLEN
+    if deque_idx is None:
+        ## reset all deques
+        depths_idx = _MAXLEN
+    else:
+        ## extend the deques
+        depths_idx = deque_idx-_TOTAL_WIN_LENGTH
+
+    depths_deque.extend([0]*(depths_idx))
+    positions_deque.extend((pos+1) for pos in xrange(start,
+                           end))
 
 
-def writetofile(output_dic, f_name):
+def writetofile(chrom, output_dic, f_output):
     ''' dfs '''
-    f_output = open(f_name, 'w')
-    key_values = iter(sorted((map(fun, key.split('_'))+value for key,
-                      value in output_dic.iteritems())))
+    ## append to file instead
+    key_values = iter(sorted(key.split('_')+value for key,
+                      value in output_dic.iteritems()))
     fmt = '{0}\t{1}\t{2}\t{3}\t{4}\n'
     for dat in key_values:
-        f_output.write(fmt.format(*dat))
+        f_output.write(fmt.format(chrom, *dat))
 
 
 def main(argv):
@@ -158,67 +167,60 @@ def main(argv):
     last_pos = -1
     output_dic = {}
     samfile = pysam.Samfile(args.bam, "rb")
-
+    deque_idx = 0
+    ## i want to write to file every chrom, to speed up:
+    try:
+        remove(args.out)
+    except OSError:
+        pass
+    f_output = open(args.out, 'a')
     for chrom, start, end in read_bed(args):
         last_tid = ''
         last_pos = -1
-
         depths_deque = deque(maxlen=_MAXLEN)
         positions_deque = deque(maxlen=_MAXLEN)
-        depths_deque = []
-        positions_deque = []
+
         for record in samfile.fetch(chrom, start, end):
             if record.tid != last_tid:
-                #########
-                ######### Remember to call window before new chrom.
-                #########
+                if output_dic:
+                    last_chrom = samfile.getrname(last_tid)
+                    call_window(depths_deque, positions_deque,
+                                last_chrom, output_dic)
+                    writetofile(last_chrom, output_dic, f_output)
+                    output_dic.clear()
+
                 last_tid = record.tid
                 last_pos = record.pos
-                # depths_deque.clear()
-                depths_deque.extend([0]*_MAXLEN)
-                # positions_deque.clear()
-                positions_deque.extend((pos+1) for pos in xrange(record.pos,
-                                       record.pos+_MAXLEN))
-                deque_idx = 0
-
-            delta_pos = record.pos - last_pos
-            deque_idx += delta_pos
-            if deque_idx + record.alen >= _MAXLEN:
-                chrom = samfile.getrname(record.tid)
-                call_window(depths_deque, positions_deque, chrom, output_dic)
-                ## run the scoring through the depths_deque
-                # depths_deque.clear()
-                depths_deque.extend([0]*(_MAXLEN-_TOTAL_WIN_LENGTH))
-                # positions_deque.clear()
-                positions_deque.extend((pos+1) for pos in xrange(record.pos,
-                                       record.pos+_MAXLEN-_TOTAL_WIN_LENGTH))
-
-                while depths_deque < _MAXLEN:
-                    depths_deque.pop(0)
-                    positions_deque.pop(0)
-                # positions_deque.extend((record.tid,
-                #                        pos+1) for pos in xrange(record.pos,
-                #                        record.pos+_MAXLEN-_TOTAL_WIN_LENGTH))
+                extend_deque(record.pos, depths_deque, positions_deque)
                 deque_idx = _TOTAL_WIN_LENGTH
-                # delta_pos = _TOTAL_WIN_LENGTH
-            # deque_idx += delta_pos
-            # if deque_idx+record.alen >= _MAXLEN:
-            #     # if deque is too long, need to more depths_deque
-            #     ## run the scoring through the depths_deque
-            #     ## extend until all except the last window. _TOTAL_WIN_LENGTH
-            #     depths_deque.extend([0]*(_MAXLEN-_TOTAL_WIN_LENGTH))
-            #     deque_idx = 0
+
+            jump = record.pos - last_pos
+            deque_idx += jump
+
+            if jump > _MAXLEN:
+                if max(depths_deque) > _MINDEPTH:
+                    last_chrom = samfile.getrname(record.tid)
+                    call_window(depths_deque, positions_deque,
+                                last_chrom, output_dic)
+                extend_deque(record.pos, depths_deque, positions_deque)
+                deque_idx = _TOTAL_WIN_LENGTH
+
+            elif deque_idx + record.alen >= _MAXLEN:
+                if max(depths_deque) > _MINDEPTH:
+                    last_chrom = samfile.getrname(record.tid)
+                    call_window(depths_deque, positions_deque,
+                                last_chrom, output_dic)
+                extend_deque(record.pos, depths_deque, positions_deque,
+                             deque_idx)
+                deque_idx = _TOTAL_WIN_LENGTH
+
             update_depth(depths_deque, record, deque_idx)
 
             last_pos = record.pos
             last_tid = record.tid
-            # print(deque_idx)
-    # print(list(islice(depths_deque, 16, 20)))
-    # print(list(islice(positions_deque, 16, 20)))
-    # print(depths_deque)
-    # print(positions_deque)
-    # print(zip(depths_deque,positions_deque))
-    writetofile(output_dic, args.out)
+    last_chrom = samfile.getrname(last_tid)
+    writetofile(last_chrom, output_dic, f_output)
+    f_output.close()
     samfile.close()
     return 0
 

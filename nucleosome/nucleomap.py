@@ -28,7 +28,7 @@ def call_max(mainwind):
     ''' docstring '''
     call = {}  # this is the return dic with position and depth
     maxdepth = max(mainwind)
-    if maxdepth <= 2:  # do not take maxseqdep of 2 or lower into account
+    if maxdepth <= 4:  # do not take maxseqdep of 2 or lower into account
         # NOTE: Return None instead of setting 'NA' = 1
         return None
     center_index = (len(mainwind)-1)/2
@@ -73,7 +73,10 @@ def shift_window(pileupcolumn, windows, positions, last_pos, s_depth):
     delta_pos = pileupcolumn.pos - last_pos
     if delta_pos >= _TOTAL_WIN_LENGTH:
         windows[:] = [0] * _TOTAL_WIN_LENGTH
-        positions[:] = [(pileupcolumn.tid, last_pos + pos)
+        # positions[:] = [(pileupcolumn.tid, last_pos + pos)
+        #                 for pos in xrange(pileupcolumn.pos - _TOTAL_WIN_LENGTH,
+        #                                   pileupcolumn.pos)]
+        positions[:] = [(pileupcolumn.tid, pos)
                         for pos in xrange(pileupcolumn.pos - _TOTAL_WIN_LENGTH,
                                           pileupcolumn.pos)]
     else:
