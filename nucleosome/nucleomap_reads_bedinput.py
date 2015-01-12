@@ -172,7 +172,8 @@ def main(argv):
     for chrom, start, end in read_bed(args):
         last_tid = ''
         last_pos = -1
-
+        #depths_deque = deque(maxlen=_MAXLEN)
+        #positions_deque = deque(maxlen=_MAXLEN)
         for record in samfile.fetch(chrom, start, end):
             if record.tid != last_tid:
                 if output_dic:
