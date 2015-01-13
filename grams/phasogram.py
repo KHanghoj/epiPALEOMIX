@@ -46,10 +46,11 @@ def call_output(starts, output_dic,
         while max(starts) - min(starts) > max_lst_range:
             old_pos = min(starts)
             old_count = starts.pop(old_pos, None)
-            for current in starts:
+            for current in sorted(starts.iterkeys()):
                 length = current - old_pos
                 if length >= max_size:
                     break
+                    ## do no know if break or contiune
                 if old_count >= _MIN_COVERAGE:
                     output_dic[length] += 1
 

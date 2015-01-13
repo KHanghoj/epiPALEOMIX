@@ -13,7 +13,7 @@ import argparse
 
 #### Constants:
 _SIZE = 147  # the nucleosome size 147 base pairs
-_PHASING_RANGE = 500  # bases to find a new nucleosome
+_PHASING_RANGE = 400  # bases to find a new nucleosome
 
 
 def parse_args(argv):
