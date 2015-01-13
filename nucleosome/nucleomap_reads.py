@@ -142,7 +142,8 @@ def extend_deque(rec_pos, depths_deque, positions_deque,
     start = rec_pos-_TOTAL_WIN_LENGTH
     end = start+_MAXLEN
     depths_idx = deque_idx-_TOTAL_WIN_LENGTH
-
+    if depths_idx > _MAXLEN:
+        depths_idx = _MAXLEN
     depths_deque.extend([0]*(depths_idx))
     positions_deque.extend((pos+1) for pos in xrange(start,
                            end))
@@ -177,15 +178,14 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     deque_idx = 0
     f_output = makeoutputfile(args.out)
+    depths_deque = deque(maxlen=_MAXLEN)
+    positions_deque = deque(maxlen=_MAXLEN)
     for chrom, start, end in read_bed(args):
         last_tid = ''
         last_pos = -1
-        depths_deque = deque(maxlen=_MAXLEN)
-        positions_deque = deque(maxlen=_MAXLEN)
-
         for record in samfile.fetch(chrom, start, end):
             if record.tid != last_tid:
-                if output_dic:
+                if depths_deque:
                     last_chrom = samfile.getrname(last_tid)
                     call_window(depths_deque, positions_deque,
                                 last_chrom, output_dic)

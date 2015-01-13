@@ -126,7 +126,8 @@ def extend_deque(rec_pos, depths_deque,
     start_pos = rec_pos-_TOTAL_WIN_LENGTH - start
     end_pos = start_pos+_MAXLEN
     depths_idx = deque_idx-_TOTAL_WIN_LENGTH
-
+    if depths_idx > _MAXLEN:
+        depths_idx = _MAXLEN
     depths_deque.extend([0]*(depths_idx))
     positions_deque.extend((pos+1) for pos in xrange(start_pos,
                            end_pos))
@@ -147,15 +148,6 @@ def writetofile(output_dic, f_output):
         f_output.write(fmt.format(key, value))
 
 
-def makeoutputfile(argsout):
-    try:
-        remove(argsout)
-        f_output = open(argsout, 'a')
-    except OSError:
-        f_output = open(argsout, 'a')
-    return f_output
-
-
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
@@ -165,7 +157,7 @@ def main(argv):
     samfile = pysam.Samfile(args.bam, "rb")
     deque_idx = 0
     ## i want to write to file every chrom, to speed up:
-    f_output = makeoutputfile(args.out)
+    f_output = open(args.out, 'w')
     depths_deque = deque(maxlen=_MAXLEN)
     positions_deque = deque(maxlen=_MAXLEN)
 
@@ -176,7 +168,7 @@ def main(argv):
         #positions_deque = deque(maxlen=_MAXLEN)
         for record in samfile.fetch(chrom, start, end):
             if record.tid != last_tid:
-                if output_dic:
+                if depths_deque:
                     call_window(depths_deque, positions_deque, output_dic)
                 depths_deque = deque(maxlen=_MAXLEN)
                 positions_deque = deque(maxlen=_MAXLEN)
