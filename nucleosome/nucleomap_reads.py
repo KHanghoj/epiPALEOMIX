@@ -196,7 +196,8 @@ def main(argv):
                 last_pos = -1
                 depths_deque = deque(maxlen=_MAXLEN)
                 positions_deque = deque(maxlen=_MAXLEN)
-                # extend_deque(record.pos, depths_deque, positions_deque, _MAXLEN)
+                # extend_deque(record.pos, depths_deque,
+                # 			   positions_deque, _MAXLEN)
                 deque_idx = _TOTAL_WIN_LENGTH
 
             deque_idx += record.pos - last_pos
