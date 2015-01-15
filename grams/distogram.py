@@ -13,6 +13,7 @@ from collections import defaultdict
 import sys
 import pysam
 import argparse
+import gzip
 
 
 _MINMAPQUALI = 25
@@ -27,6 +28,8 @@ def parse_args(argv):
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
+    # parser.add_argument('--no_tab', help="...", action='store_true',
+    #                     default=False)
     parser.add_argument('--out', help='...', default='out_distogram.txt')
     return parser.parse_args(argv)
 
@@ -37,6 +40,16 @@ def writetofile(output_dic, f_name):
     for key in sorted(output_dic):
         f_output.write('{}\t{}\n'.format(key, output_dic[key]))
     f_output.close()
+
+
+# def writenotabulate(notab, out):
+#     import gzip
+#     outf = 'out_notab{}.gz'.format(out[3:])
+#     tab = iter(notab)
+#     with gzip.open(outf, 'wb') as f:
+#         [f.write('{}\n'.format(val)) for val in tab]
+#         # for val in tab:
+#             # f.write('{}\n'.format(val))
 
 
 def read_bed(args):
@@ -56,7 +69,7 @@ def filter_by_count(dic):
     return [key for key, value in dic.iteritems() if value >= _MIN_COVERAGE]
 
 
-def call_output(plus, minus, output_dic):
+def call_output(plus, minus, output_dic, outf):
         plus_good = filter_by_count(plus)
         minus_good = filter_by_count(minus)
 
@@ -64,6 +77,8 @@ def call_output(plus, minus, output_dic):
             for plus_pos, minus_pos in product(plus_good, minus_good):
                 var = abs(plus_pos-minus_pos)
                 output_dic[var] += 1  # this creates much smaller output files.
+                # notab.append(var)
+                # outf.write('{}\n'.format(var))
 
 
 def main(argv):
@@ -71,11 +86,13 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     output_dic = defaultdict(int)
+    # f = 'out_notab{}.gz'.format(args.out[3:])
+    # outf = gzip.open(f, 'wb')
     plus = {}
     minus = {}
     last_tid = -1
     last_pos = -1
-
+    # notab_lst = []
     for chrom, start, end in read_bed(args):
         plus = {}
         minus = {}
@@ -102,15 +119,23 @@ def main(argv):
             else:
                 pos, present_dic = record.pos, plus
 
-            if present_dic.get(pos, 0):  # only True if present in dict
+            try:  # only True if present in dict
                 present_dic[pos] += 1
-            else:
+            except KeyError:
                 present_dic[pos] = 1
+
+            # if present_dic.get(pos, 0):  # only True if present in dict
+            #     present_dic[pos] += 1
+            # else:
+            #     present_dic[pos] = 1
             last_pos = record.aend
         call_output(plus, minus, output_dic)
-    call_output(plus, minus, output_dic)
+    # call_output(plus, minus, output_dic, outf)
     writetofile(output_dic, args.out)
+    # if notab_lst:
+        # writenotabulate(notab_lst, args.out)
     samfile.close()
+    # outf.close()
     return 0
 
 

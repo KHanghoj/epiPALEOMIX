@@ -63,6 +63,9 @@ def writetofile(output_dic, f_name):
     f_output.close()
 
 
+
+
+
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
