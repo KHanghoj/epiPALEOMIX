@@ -13,11 +13,10 @@ from collections import defaultdict
 import sys
 import pysam
 import argparse
-import gzip
 
 
 _MINMAPQUALI = 25
-_MIN_COVERAGE = 3
+_MIN_COVERAGE = 1
 
 
 def parse_args(argv):
@@ -36,10 +35,9 @@ def parse_args(argv):
 
 def writetofile(output_dic, f_name):
     ''' dfs '''
-    f_output = open(f_name, 'w')
-    for key in sorted(output_dic):
-        f_output.write('{}\t{}\n'.format(key, output_dic[key]))
-    f_output.close()
+    with open(f_name, 'w') as f_output:
+        for key in sorted(output_dic):
+            f_output.write('{}\t{}\n'.format(key, output_dic[key]))
 
 
 # def writenotabulate(notab, out):
@@ -62,14 +60,15 @@ def read_bed(args):
                 end = int(input_line.pop(0))
                 yield (chrom, start, end)
     else:
-        yield (args.chrom, args.start, args.end)
+        yield (args.chrom, int(args.start), int(args.end))
 
 
 def filter_by_count(dic):
-    return [key for key, value in dic.iteritems() if value >= _MIN_COVERAGE]
+    return (key for key, value in dic.iteritems() if value >= _MIN_COVERAGE)
 
 
-def call_output(plus, minus, output_dic, outf):
+# def call_output(plus, minus, output_dic, outf):
+def call_output(plus, minus, output_dic):
         plus_good = filter_by_count(plus)
         minus_good = filter_by_count(minus)
 
@@ -79,6 +78,13 @@ def call_output(plus, minus, output_dic, outf):
                 output_dic[var] += 1  # this creates much smaller output files.
                 # notab.append(var)
                 # outf.write('{}\n'.format(var))
+
+
+def update(dic, pos):
+    try:  # only True if present in dict
+        dic[pos] += 1
+    except KeyError:
+        dic[pos] = 1
 
 
 def main(argv):
@@ -109,25 +115,15 @@ def main(argv):
                 plus = {}
                 minus = {}
 
-            if last_pos < record.pos:  # read not overlapping
-                call_output(plus, minus, output_dic)
-                plus = {}
-                minus = {}
+            # if last_pos < record.pos:  # read not overlapping
+            #     call_output(plus, minus, output_dic)
+            #     plus = {}
+            #     minus = {}
 
             if record.is_reverse:
-                pos, present_dic = record.aend, minus
+                update(minus, record.aend)
             else:
-                pos, present_dic = record.pos, plus
-
-            try:  # only True if present in dict
-                present_dic[pos] += 1
-            except KeyError:
-                present_dic[pos] = 1
-
-            # if present_dic.get(pos, 0):  # only True if present in dict
-            #     present_dic[pos] += 1
-            # else:
-            #     present_dic[pos] = 1
+                update(plus, record.pos)
             last_pos = record.aend
         call_output(plus, minus, output_dic)
     # call_output(plus, minus, output_dic, outf)
