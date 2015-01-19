@@ -7,7 +7,7 @@ import pysam
 import math
 import argparse
 from collections import deque
-from itertools import islice
+from itertools import islice, izip, tee
 from os import remove
 #### Constants:
 _SIZE = 147  # the window
@@ -74,25 +74,40 @@ def call_max(mainwind):
 
     if mainwind[center_index] == maxdepth:
         call[center_index] = mainwind[center_index]
-        i = 1
-        while (mainwind[(center_index - i)] == maxdepth) and (i < center_index):
-            call[(center_index-i)] = mainwind[(center_index-i)]  # extends 5'
-            i += 1
-        i = 1
-        while (mainwind[(center_index + i)] == maxdepth) and (i < center_index):
-            call[(center_index+i)] = mainwind[(center_index+i)]  # extends 3'
-            i += 1
+        for idx in xrange(0, center_index, 1):
+            if mainwind[(center_index + idx)] == maxdepth:
+                call[(center_index+idx)] = mainwind[(center_index+idx)]
+            else:
+                break
+        for idx in xrange(0, center_index, 1):
+            if mainwind[(center_index-idx)] == maxdepth:
+                call[(center_index-idx)] = mainwind[(center_index-idx)]
+            else:
+                break
     else:
         return None  # not callable. i.e the centre is not maximal
 
     return call
 
 
+def nwise(deq, n=_TOTAL_WIN_LENGTH):
+    ''' produces a list of n=len and increment of 1
+        islice ensurest the increment of i, izip zips the first value
+        of all lists, the second value of all. Tee simply produces n
+        copies of deq '''
+    return izip(*(islice(g, i, None)
+                  for i, g in enumerate(tee(deq, n))))
+    # this is the same output:
+    # izip(*(islice(deq, i, None) for i in xrange(n)))
+
+
 def window_yield(deque_depth, deque_position):
-    iterable_depth = (islice(deque_depth, i,
-                      i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
-    iterable_position = (islice(deque_position, i,
-                         i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
+    iterable_depth = nwise(deque_depth)
+    iterable_position = nwise(deque_position)
+    # iterable_depth = (islice(deque_depth, i,
+    #                   i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
+    # iterable_position = (islice(deque_position, i,
+    #                      i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
     while True:
         try:
             output_depth = iterable_depth.next()
@@ -102,39 +117,39 @@ def window_yield(deque_depth, deque_position):
             break
 
 
-def call_window(depths_deque, positions_deque, chrom, output_dic):
+def call_window(depths_deque, positions_deque, output_dic):
     ''' docstring '''
     for win_depth, win_positions in window_yield(depths_deque, positions_deque):
         win_depth = list(win_depth)
-        if not len(win_depth) == _TOTAL_WIN_LENGTH:
-            continue
         calls_center = call_max(win_depth[_NEIGHBOR + _OFFSET: _NEIGHBOR +
                                           _OFFSET+_SIZE])
         if calls_center:  # checks if the center of nuclesome == maxdepth
             calls_spacerL = call_flanking(win_depth[:_NEIGHBOR])
             calls_spacerR = call_flanking(win_depth[-_NEIGHBOR:])
+            # with new code never None
+            # if not (calls_spacerL is None or calls_spacerR is None):
+                # not calling nucleosomes with zero flanking reads
+            mean_spacer = 1.0 + 0.5 * (calls_spacerL + calls_spacerR)
 
-            if not (calls_spacerL is None or calls_spacerR is None):
-                mean_spacer = 1.0 + 0.5 * (calls_spacerL + calls_spacerR)
+            value = next(calls_center.itervalues())
+            # because all values are the same
+            score = math.log(float(value) / mean_spacer)
+            # math.log by default is natural
 
-                value = next(calls_center.itervalues())
-                # because all values are the same
-                score = math.log(float(value) / mean_spacer)
-                # math.log by default is natural
-                win_positions = list(win_positions)
-                position_start = win_positions[_NEIGHBOR +
-                                               _OFFSET + min(calls_center)]
-                position_end = win_positions[_NEIGHBOR +
-                                             _OFFSET + max(calls_center)]
-
-                key = '{}_{}'.format(position_start, position_end)
-                if key in output_dic.keys():
-                    # if new score is great than old score
-                    # at same positions then replace.
-                    if output_dic[key][1] < score:
-                        output_dic[key] = [value, score]
-                else:
+            position_offset = _NEIGHBOR+_OFFSET
+            min_pos = position_offset+min(calls_center)
+            max_pos = position_offset+max(calls_center)
+            # get start
+            start_pos = islice(win_positions, min_pos, None).next()
+            end_pos = islice(win_positions, max_pos, None).next()
+            key = '{}_{}'.format(start_pos, end_pos)
+            if key in output_dic.keys():
+                # if new score is greater than old score
+                # at same positions then replace.
+                if output_dic[key][1] < score:
                     output_dic[key] = [value, score]
+            else:
+                output_dic[key] = [value, score]
 
 
 def extend_deque(rec_pos, depths_deque, positions_deque,
@@ -144,6 +159,7 @@ def extend_deque(rec_pos, depths_deque, positions_deque,
     depths_idx = deque_idx-_TOTAL_WIN_LENGTH
     if depths_idx > _MAXLEN:
         depths_idx = _MAXLEN
+        depths_deque.clear()
     depths_deque.extend([0]*(depths_idx))
     positions_deque.extend((pos+1) for pos in xrange(start,
                            end))
@@ -188,7 +204,7 @@ def main(argv):
                 if depths_deque:
                     last_chrom = samfile.getrname(last_tid)
                     call_window(depths_deque, positions_deque,
-                                last_chrom, output_dic)
+                                output_dic)
                     writetofile(last_chrom, output_dic, f_output)
                     output_dic.clear()
 
@@ -196,17 +212,21 @@ def main(argv):
                 last_pos = -1
                 depths_deque = deque(maxlen=_MAXLEN)
                 positions_deque = deque(maxlen=_MAXLEN)
-                # extend_deque(record.pos, depths_deque,
-                # 			   positions_deque, _MAXLEN)
+                extend_deque(record.pos, depths_deque,
+                             positions_deque, _MAXLEN)
                 deque_idx = _TOTAL_WIN_LENGTH
 
             deque_idx += record.pos - last_pos
 
             if deque_idx + record.alen >= _MAXLEN:
-                if depths_deque and max(depths_deque) > _MINDEPTH:
-                    last_chrom = samfile.getrname(record.tid)
+                if depths_deque:  # and max(depths_deque) > _MINDEPTH:
                     call_window(depths_deque, positions_deque,
-                                last_chrom, output_dic)
+                                output_dic)
+                    if len(output_dic) > 100:
+                        last_chrom = samfile.getrname(record.tid)
+                        writetofile(last_chrom, output_dic, f_output)
+                        output_dic.clear()
+                        # print('hej')
                 extend_deque(record.pos, depths_deque, positions_deque,
                              deque_idx)
                 deque_idx = _TOTAL_WIN_LENGTH

@@ -7,7 +7,7 @@ import pysam
 import math
 import argparse
 from collections import deque
-from itertools import islice, izip, tee
+from itertools import islice
 #### Constants:
 _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
@@ -16,7 +16,6 @@ _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _MAXLEN = int(1e3)
 # _MINDEPTH = 2
 _MINDEPTH = 4
-_DYAD = 73
 
 
 def parse_args(argv):
@@ -24,7 +23,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('bam', help="...")
     parser.add_argument('bed', help="...")
-    parser.add_argument('--out', help='...', default='out_nucleomap.txt')
+    parser.add_argument('--out', help='...', default='out_bed_nucleomap.txt')
     return parser.parse_args(argv)
 
 
@@ -63,30 +62,18 @@ def call_max(mainwind):
     center_index = (len(mainwind)-1)/2
 
     if mainwind[center_index] == maxdepth:
+        # call[center_index] = mainwind[center_index]
         if (mainwind[(center_index - 1)] == maxdepth or
                 mainwind[(center_index + 1)] == maxdepth):
             return None
-        return maxdepth
-
-
-def nwise(deq, n=_TOTAL_WIN_LENGTH):
-    ''' produces a list of n=len and increment of 1
-        islice ensurest the increment of i, izip zips the first value
-        of all lists, the second value of all. Tee simply produces n
-        copies of deq '''
-    return izip(*(islice(g, i, None)
-                  for i, g in enumerate(tee(deq, n))))
-    # this is the same output:
-    # izip(*(islice(deq, i, None) for i in xrange(n)))
+        return mainwind[center_index]
 
 
 def window_yield(deque_depth, deque_position):
-    iterable_depth = nwise(deque_depth)
-    iterable_position = nwise(deque_position)
-    # iterable_depth = (islice(deque_depth, i,
-    #                   i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
-    # iterable_position = (islice(deque_position, i,
-    #                      i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
+    iterable_depth = (islice(deque_depth, i,
+                      i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
+    iterable_position = (islice(deque_position, i,
+                         i + _TOTAL_WIN_LENGTH) for i in range(0, _MAXLEN, 1))
     while True:
         try:
             output_depth = iterable_depth.next()
@@ -100,7 +87,8 @@ def call_window(depths_deque, positions_deque, output_dic):
     ''' docstring '''
     for win_depth, win_positions in window_yield(depths_deque, positions_deque):
         win_depth = list(win_depth)
-
+        if not len(win_depth) == _TOTAL_WIN_LENGTH:
+            continue
         calls_center = call_max(win_depth[_NEIGHBOR + _OFFSET: _NEIGHBOR +
                                           _OFFSET+_SIZE])
         if calls_center:  # checks if the center of nuclesome == maxdepth
@@ -109,13 +97,19 @@ def call_window(depths_deque, positions_deque, output_dic):
 
             if not (calls_spacerL is None or calls_spacerR is None):
                 mean_spacer = 1.0 + 0.5 * (calls_spacerL + calls_spacerR)
+
+
                 # because all values are the same
                 score = math.log(float(calls_center) / mean_spacer)
                 if score > 0:
-                    position_offset = _NEIGHBOR+_OFFSET
-                    key = islice(win_positions,
-                                 position_offset+_DYAD,
-                                 None).next()
+                    # math.log by default is natural
+                    # win_positions = list(win_positions)
+                    # only start positions is needed
+                    # as we only look at 0-wide nucleosomes
+                    # position_start = win_positions[_NEIGHBOR +
+                    #                                _OFFSET + min(calls_center)]
+                    key = islice(win_positions, 72, 73).next()
+                    # key = position_start
                     try:
                         output_dic[key] += 1
                     except KeyError:
@@ -129,7 +123,6 @@ def extend_deque(rec_pos, depths_deque,
     depths_idx = deque_idx-_TOTAL_WIN_LENGTH
     if depths_idx > _MAXLEN:
         depths_idx = _MAXLEN
-        depths_deque.clear()
     depths_deque.extend([0]*(depths_idx))
     positions_deque.extend((pos+1) for pos in xrange(start_pos,
                            end_pos))
@@ -137,9 +130,14 @@ def extend_deque(rec_pos, depths_deque,
 
 def writetofile(output_dic, f_output):
     ''' dfs '''
+    ## append to file instead
     mininum = min(output_dic.iterkeys())
     maximum = max(output_dic.iterkeys())
+    # key_values = iter(sorted(output_dic.iteritems()))
     fmt = '{0}\t{1}\n'
+    # for dat in key_values:
+        # f_output.write(fmt.format(*dat))
+
     for key in xrange(mininum, maximum, 1):
         value = output_dic.get(key, 0)
         f_output.write(fmt.format(key, value))
@@ -176,9 +174,7 @@ def main(argv):
             deque_idx += record.pos - last_pos
 
             if deque_idx + record.alen >= _MAXLEN:
-                # if depths_deque:
-                if max(depths_deque) > _MINDEPTH:
-                    call_window(depths_deque, positions_deque, output_dic)
+                call_window(depths_deque, positions_deque, output_dic)
                 extend_deque(record.pos, depths_deque, positions_deque, start,
                              deque_idx)
                 deque_idx = _TOTAL_WIN_LENGTH
