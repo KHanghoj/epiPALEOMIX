@@ -9,14 +9,19 @@ aligning in opposing orientation.
 
 from __future__ import print_function
 from itertools import product
-from collections import defaultdict
 import sys
 import pysam
 import argparse
-
+import gzip
 
 _MINMAPQUALI = 25
-_MIN_COVERAGE = 3
+_MIN_COVERAGE = 1
+_OUTLENGTH = int(1e6)  # a million numbers
+
+
+class Phaso_count():
+    def __init__(self):
+        self.count = 0
 
 
 def parse_args(argv):
@@ -31,21 +36,11 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def writetofile(output_dic, f_name):
+def writetofile(output_lst, f_name):
     ''' dfs '''
-    with open(f_name, 'w') as f_output:
-        for key in sorted(output_dic):
-            f_output.write('{}\t{}\n'.format(key, output_dic[key]))
-
-
-# def writenotabulate(notab, out):
-#     import gzip
-#     outf = 'out_notab{}.gz'.format(out[3:])
-#     tab = iter(notab)
-#     with gzip.open(outf, 'wb') as f:
-#         [f.write('{}\n'.format(val)) for val in tab]
-#         # for val in tab:
-#             # f.write('{}\n'.format(val))
+    with gzip.open('{}.gz'.format(f_name), 'w') as f_output:
+        for item in output_lst:
+            f_output.write('{}\n'.format(item))
 
 
 def read_bed(args):
@@ -65,14 +60,15 @@ def filter_by_count(dic):
     return (key for key, value in dic.iteritems() if value >= _MIN_COVERAGE)
 
 
-def call_output(plus, minus, output_dic):
+def call_output(plus, minus, output_lst, counter_idx):
         plus_good = filter_by_count(plus)
         minus_good = filter_by_count(minus)
 
         if minus_good and plus_good:
             for plus_pos, minus_pos in product(plus_good, minus_good):
                 var = abs(plus_pos-minus_pos)
-                output_dic[var] += 1  # this creates much smaller output files.
+                output_lst.append(var)
+                counter_idx.count += 1
 
 
 def update(dic, pos):
@@ -86,11 +82,10 @@ def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    output_dic = defaultdict(int)
-    plus = {}
-    minus = {}
+    output_lst = []
     last_tid = -1
     last_pos = -1
+    counter_idx = Phaso_count()
     for chrom, start, end in read_bed(args):
         plus = {}
         minus = {}
@@ -103,12 +98,12 @@ def main(argv):
             if last_tid != record.tid:
                 last_tid = record.tid
                 last_pos = record.aend
-                call_output(plus, minus, output_dic)
+                call_output(plus, minus, output_lst, counter_idx)
                 plus = {}
                 minus = {}
 
             if last_pos < record.pos:  # read not overlapping
-                call_output(plus, minus, output_dic)
+                call_output(plus, minus, output_lst, counter_idx)
                 plus = {}
                 minus = {}
 
@@ -117,8 +112,11 @@ def main(argv):
             else:
                 update(plus, record.pos)
             last_pos = record.aend
-        call_output(plus, minus, output_dic)
-    writetofile(output_dic, args.out)
+            if counter_idx.count > _OUTLENGTH:
+                writetofile(output_lst, args.out)
+                sys.exit()
+        call_output(plus, minus, output_lst, counter_idx)
+    writetofile(output_lst, args.out)
     samfile.close()
     return 0
 
