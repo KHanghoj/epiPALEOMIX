@@ -13,10 +13,8 @@ _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
 _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
-_MAXLEN = int(1e3)
-# _MINDEPTH = 2
 _MINDEPTH = 4
-_DYAD = 73
+_DYAD = _OFFSET+_NEIGHBOR+73
 
 
 def parse_args(argv):
@@ -38,12 +36,12 @@ def read_bed(args):
             yield (chrom, start, end)
 
 
-def update_depth(depths_deque, record, index):
+def update_depth(depths_lst, record, index):
     ## we increment the counts list with all the alli
     for (cigar, count) in record.cigar:
         if cigar in (0, 7, 8):
             for idx in xrange(index, index + count):
-                depths_deque[idx] += 1
+                depths_lst[idx] += 1
             index += count
         elif cigar in (2, 3, 6):
             index += count
@@ -91,16 +89,14 @@ def window_yield(deque_depth, deque_position):
         try:
             output_depth = iterable_depth.next()
             output_position = iterable_position.next()
-            yield output_depth, output_position
+            yield (output_depth, output_position)
         except StopIteration:
             break
 
 
-def call_window(depths_deque, positions_deque, output_dic):
+def call_window(depths_lst, positions_lst, output_dic):
     ''' docstring '''
-    for win_depth, win_positions in window_yield(depths_deque, positions_deque):
-        win_depth = list(win_depth)
-
+    for win_depth, win_positions in window_yield(depths_lst, positions_lst):
         calls_center = call_max(win_depth[_NEIGHBOR + _OFFSET: _NEIGHBOR +
                                           _OFFSET+_SIZE])
         if calls_center:  # checks if the center of nuclesome == maxdepth
@@ -112,83 +108,40 @@ def call_window(depths_deque, positions_deque, output_dic):
                 # because all values are the same
                 score = math.log(float(calls_center) / mean_spacer)
                 if score > 0:
-                    position_offset = _NEIGHBOR+_OFFSET
-                    key = islice(win_positions,
-                                 position_offset+_DYAD,
-                                 None).next()
+                    key = win_positions[_DYAD]
                     try:
                         output_dic[key] += 1
                     except KeyError:
                         output_dic[key] = 1
 
 
-def extend_deque(rec_pos, depths_deque,
-                 positions_deque, start, deque_idx):
-    start_pos = rec_pos-_TOTAL_WIN_LENGTH - start
-    end_pos = start_pos+_MAXLEN
-    depths_idx = deque_idx-_TOTAL_WIN_LENGTH
-    if depths_idx > _MAXLEN:
-        depths_idx = _MAXLEN
-        depths_deque.clear()
-    depths_deque.extend([0]*(depths_idx))
-    positions_deque.extend((pos+1) for pos in xrange(start_pos,
-                           end_pos))
-
-
-def writetofile(output_dic, f_output):
+def writetofile(output_dic, out):
     ''' dfs '''
-    mininum = min(output_dic.iterkeys())
-    maximum = max(output_dic.iterkeys())
-    fmt = '{0}\t{1}\n'
-    for key in xrange(mininum, maximum, 1):
-        value = output_dic.get(key, 0)
-        f_output.write(fmt.format(key, value))
+    with open(out, 'w') as f_output:
+        mininum = min(output_dic.iterkeys())
+        maximum = max(output_dic.iterkeys())
+        fmt = '{0}\t{1}\n'
+        for key in xrange(mininum, maximum, 1):
+            value = output_dic.get(key, 0)
+            f_output.write(fmt.format(key, value))
 
 
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
-    last_tid = ''
-    last_pos = -1
     output_dic = {}
     samfile = pysam.Samfile(args.bam, "rb")
     deque_idx = 0
     ## i want to write to file every chrom, to speed up:
-    f_output = open(args.out, 'w')
-    depths_deque = deque(maxlen=_MAXLEN)
-    positions_deque = deque(maxlen=_MAXLEN)
-
     for chrom, start, end in read_bed(args):
-        last_tid = ''
-        last_pos = -1
+        length = end-start
+        depths_lst = list([0]*(length+(2*_TOTAL_WIN_LENGTH)))
+        positions_lst = xrange(-_TOTAL_WIN_LENGTH, length+_TOTAL_WIN_LENGTH)
         for record in samfile.fetch(chrom, start, end):
-            if record.tid != last_tid:
-                if depths_deque:
-                    call_window(depths_deque, positions_deque, output_dic)
-                depths_deque = deque(maxlen=_MAXLEN)
-                positions_deque = deque(maxlen=_MAXLEN)
-                last_tid = record.tid
-                last_pos = -1
-                extend_deque(record.pos, depths_deque,
-                             positions_deque, start, _MAXLEN)
-                deque_idx = _TOTAL_WIN_LENGTH
-
-            deque_idx += record.pos - last_pos
-
-            if deque_idx + record.alen >= _MAXLEN:
-                # if depths_deque:
-                if max(depths_deque) > _MINDEPTH:
-                    call_window(depths_deque, positions_deque, output_dic)
-                extend_deque(record.pos, depths_deque, positions_deque, start,
-                             deque_idx)
-                deque_idx = _TOTAL_WIN_LENGTH
-
-            update_depth(depths_deque, record, deque_idx)
-
-            last_pos = record.pos
-            last_tid = record.tid
-    writetofile(output_dic, f_output)
-    f_output.close()
+            deque_idx = record.pos-start+_TOTAL_WIN_LENGTH
+            update_depth(depths_lst, record, deque_idx)
+        call_window(depths_lst, positions_lst, output_dic)
+    writetofile(output_dic, args.out)
     samfile.close()
     return 0
 
