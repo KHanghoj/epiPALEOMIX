@@ -18,6 +18,14 @@ from itertools import chain
 _PLUS_STRAND_BASES = ['CG', 'TG']
 _MINUS_STRAND_BASES = ['CG', 'CA']
 _BASES_CHECK = 6
+_SKIPBASES = 1
+_SIZE = _BASES_CHECK-_SKIPBASES-1
+
+
+class l_pos(object):
+    """docstring for l_pos"""
+    def __init__(self):
+        self.idx = -1
 
 
 class Cache(object):
@@ -60,7 +68,8 @@ def parse_args(argv):
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", type=int, default=None)
     parser.add_argument('--end', help="...", type=int, default=None)
-    parser.add_argument('--out', help='...', default='out_mapmethylX_bases.txt')
+    parser.add_argument('--out', help='...',
+                        default='out_mapmethylX_bases_USER.txt')
     return parser.parse_args(argv)
 
 
@@ -159,12 +168,59 @@ def create_lst_dic(nested=False, size=_BASES_CHECK-1):
         return [defaultdict(int) for _ in range(size)]
 
 
+def minusapproach(record, fasta, pres_chrom, lst_dic_lastpos):
+    bases = record.seq[-_BASES_CHECK:]
+    pos = record.aend-_BASES_CHECK
+    fast_string = fasta.fetch_string(pres_chrom,
+                                     pos, nbases=_BASES_CHECK)
+    fast_idx = list(get_index_rev(fast_string))
+    if fast_idx:
+        read_idx = [x for x in fast_idx if
+                    bases[x:x+2] in _MINUS_STRAND_BASES and
+                    x < _SIZE]
+        if read_idx:
+            max_pos = _BASES_CHECK - min(read_idx)
+            # because we look at the two following bases.
+            cigar_op, cigar_len = record.cigar[-1]
+            if (cigar_op == 0) and (cigar_len >= max_pos):
+                for base_idx in read_idx:
+                    (lst_dic_lastpos[_BASES_CHECK-base_idx-2]
+                        [record.aend-2][bases[base_idx+1]]) += 1
+
+
+def plusapproach(record, fasta, pres_chrom, lst_dic_lastpos, last_pos,
+                 idx_standard, lst_base_forward, start, dic_top, dic_lower):
+    bases = record.seq[:_BASES_CHECK]
+    pos = record.pos
+    fast_string = fasta.fetch_string(pres_chrom,
+                                     pos, nbases=_BASES_CHECK)
+    # fast_idx = list(get_XX_index(fast_string, pattern='CG'))
+    fast_idx = list(get_index_forw(fast_string))
+    if fast_idx:
+        read_idx = [x for x in fast_idx if
+                    bases[x:x+2] in _PLUS_STRAND_BASES and
+                    x >= _SKIPBASES]
+        if read_idx:
+            max_pos = max(read_idx)+2
+            # because we look at the two following bases.
+            cigar_op, cigar_len = record.cigar[0]
+            if cigar_op == 0 and cigar_len >= max_pos:
+                if record.pos != last_pos.idx and last_pos.idx != -1:
+                    call_ms(idx_standard, last_pos.idx, lst_dic_lastpos,
+                            lst_base_forward, start, dic_top,
+                            dic_lower)
+                    # lst_base_forward = create_lst_dic()  # reset dic
+                    [s.clear() for s in lst_base_forward]
+                for base_idx in read_idx:
+                    lst_base_forward[base_idx][bases[base_idx]] += 1
+                last_pos.idx = record.pos
+
+
 def main(argv):
     ''' docstring '''
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     fasta = Cache(args.fastafile)
-    # MS: Consider using WITH statements
     lst_dic_lastpos = create_lst_dic(nested=True)
     lst_base_forward = create_lst_dic()
     idx_standard = range(len(lst_dic_lastpos))
@@ -172,72 +228,34 @@ def main(argv):
     dic_lower = create_lst_dic()
     chrom_last = ''
     for chrom, start, end in read_bed(args):
-        last_pos = -1  # reset when starting a new bedfile line
+        # last_pos = -1  # reset when starting a new bedfile line
+        last_pos = l_pos()
         # this is for clearing the dics
         lst_dic_lastpos = create_lst_dic(nested=True)
         lst_base_forward = create_lst_dic()
         for record in samfile.fetch(chrom, start, end):
-            read_sequence = record.seq
             if record.tid != chrom_last:  # new chromosome or first record
                 chrom_last = record.tid
-                last_pos = -1
+                # last_pos = -1
+                last_pos = l_pos()
                 pres_chrom = samfile.getrname(record.tid)
-
-            # Call minus strand Ms with no plus strand information
-            # check if some dics are not empty and max
             if check_lst_dic(lst_dic_lastpos) and \
-                    max_lst_dic(lst_dic_lastpos) < last_pos:
-                call_minus_ms(idx_standard, last_pos, lst_dic_lastpos,
+                    max_lst_dic(lst_dic_lastpos) < last_pos.idx:
+                call_minus_ms(idx_standard, last_pos.idx, lst_dic_lastpos,
                               start, dic_top, dic_lower)
 
             if record.is_reverse:  # the minus strand
-                bases = read_sequence[-_BASES_CHECK:]
-                pos = record.aend-_BASES_CHECK
-                fast_string = fasta.fetch_string(pres_chrom,
-                                                 pos, nbases=_BASES_CHECK)
-                # fast_idx = list(get_XX_index(fast_string, forward=False,
-                #                 pattern='CG'))
-                fast_idx = list(get_index_rev(fast_string))
-                if fast_idx:
-                    read_idx = [x for x in fast_idx if
-                                bases[x:x+2] in _MINUS_STRAND_BASES]
-                    if read_idx:
-                        max_pos = _BASES_CHECK - min(read_idx)
-                        # because we look at the two following bases.
-                        cigar_op, cigar_len = record.cigar[-1]
-                        if (cigar_op == 0) and (cigar_len >= max_pos):
-                            for base_idx in read_idx:
-                                (lst_dic_lastpos[_BASES_CHECK-base_idx-2]
-                                 [record.aend-2][bases[base_idx+1]]) += 1
+                minusapproach(record, fasta, pres_chrom, lst_dic_lastpos)
             else:  # this is for the forward strand
-                bases = read_sequence[:_BASES_CHECK]
-                pos = record.pos
-                fast_string = fasta.fetch_string(pres_chrom,
-                                                 pos, nbases=_BASES_CHECK)
-                # fast_idx = list(get_XX_index(fast_string, pattern='CG'))
-                fast_idx = list(get_index_forw(fast_string))
-                if fast_idx:
-                    read_idx = [x for x in fast_idx if
-                                bases[x:x+2] in _PLUS_STRAND_BASES]
-                    if read_idx:
-                        max_pos = max(read_idx)+2
-                        # because we look at the two following bases.
-                        cigar_op, cigar_len = record.cigar[0]
-                        if cigar_op == 0 and cigar_len >= max_pos:
-                            if record.pos != last_pos and last_pos != -1:
-                                call_ms(idx_standard, last_pos, lst_dic_lastpos,
-                                        lst_base_forward, start, dic_top,
-                                        dic_lower)
-                                lst_base_forward = create_lst_dic()  # reset dic
-                            for base_idx in read_idx:
-                                lst_base_forward[base_idx][bases[base_idx]] += 1
-                            last_pos = record.pos
-
+                plusapproach(record, fasta, pres_chrom,
+                             lst_dic_lastpos, last_pos,
+                             idx_standard, lst_base_forward,
+                             start, dic_top, dic_lower)
         if check_lst_dic(lst_base_forward):  # if dics contain anything
-            call_ms(idx_standard, last_pos, lst_dic_lastpos,
+            call_ms(idx_standard, last_pos.idx, lst_dic_lastpos,
                     lst_base_forward, start, dic_top, dic_lower)
         if check_lst_dic(lst_dic_lastpos):
-            call_minus_ms(idx_standard, last_pos, lst_dic_lastpos,
+            call_minus_ms(idx_standard, last_pos.idx, lst_dic_lastpos,
                           start, dic_top, dic_lower)
     writetofile(idx_standard, dic_top, dic_lower, args.out)
     samfile.close()
