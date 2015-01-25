@@ -13,7 +13,7 @@ import gzip
 _MAX_SIZE = 3000
 _MINMAPQUALI = 25
 _MIN_COVERAGE = 3
-_OUTLENGTH = int(1e6)  # a million numbers
+_OUTLENGTH = int(1e4)  # a million numbers
 
 
 class Phaso_count():
@@ -46,13 +46,15 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
-def call_output(starts, output_lst, counter_idx,
+def call_output(starts, output_dic, counter_idx,
                 max_lst_range=_MAX_SIZE, max_size=_MAX_SIZE):
     if starts:
         starts_key_sort = sorted(starts)
         while max(starts_key_sort) - min(starts_key_sort) > max_lst_range:
+            # old_pos = min(starts)
             old_pos = starts_key_sort.pop(0)
             old_count = starts.pop(old_pos, None)
+            output_dic[old_pos] = []
             for current in starts_key_sort:
                 length = current - old_pos
                 if length >= max_size:
@@ -60,7 +62,10 @@ def call_output(starts, output_lst, counter_idx,
                     ## do no know if break or contiune
                 if old_count >= _MIN_COVERAGE:
                     counter_idx.count += 1
-                    output_lst.append(length)
+                    try:
+                        output_dic[old_pos].append(length)
+                    except KeyError:
+                        output_dic[old_pos] = [length]
 
 
 def update(dic, pos):
@@ -70,17 +75,18 @@ def update(dic, pos):
         dic[pos] = 1
 
 
-def writetofile(output_lst, f_name):
+def writetofile(output_dic, f_name):
     ''' dfs '''
     with gzip.open('{}.gz'.format(f_name), 'w') as f_output:
-        for item in output_lst:
-            f_output.write('{}\n'.format(item))
+        for k in sorted(output_dic.iterkeys()):
+            for v_each in output_dic[k]:
+                f_output.write('{}\t{}\n'.format(k, v_each))
 
 
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    output_lst = []
+    output_dic = {}
     starts = {}  # initialize the positions and counts
     ends = {}
     last_tid = -1
@@ -94,8 +100,8 @@ def main(argv):
                 continue  # do not analyze low quality records
             if last_tid != record.tid:
                 last_tid = record.tid
-                call_output(starts, output_lst, counter_idx, max_lst_range=0)
-                call_output(ends, output_lst, counter_idx, max_lst_range=0)
+                call_output(starts, output_dic, counter_idx, max_lst_range=0)
+                call_output(ends, output_dic, counter_idx, max_lst_range=0)
                 starts = {}
                 ends = {}
             if record.is_reverse:
@@ -107,14 +113,14 @@ def main(argv):
                 present_dic[pos] += 1
             else:
                 present_dic[pos] = 1
-                call_output(present_dic, output_lst, counter_idx)
+                call_output(present_dic, output_dic, counter_idx)
             if counter_idx.count > _OUTLENGTH:
-                writetofile(output_lst, args.out)
+                writetofile(output_dic, args.out)
                 sys.exit()
 
-        call_output(ends, output_lst, counter_idx, max_lst_range=0)
-        call_output(starts, output_lst, counter_idx, max_lst_range=0)
-    writetofile(output_lst, args.out)
+        call_output(ends, output_dic, counter_idx, max_lst_range=0)
+        call_output(starts, output_dic, counter_idx, max_lst_range=0)
+    writetofile(output_dic, args.out)
     samfile.close()
     return 0
 
