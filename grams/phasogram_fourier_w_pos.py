@@ -13,7 +13,7 @@ import gzip
 _MAX_SIZE = 3000
 _MINMAPQUALI = 25
 _MIN_COVERAGE = 3
-_OUTLENGTH = int(1e4)  # a million numbers
+_OUTLENGTH = int(1e6)  # a million numbers
 
 
 class Phaso_count():
@@ -51,7 +51,6 @@ def call_output(starts, output_dic, counter_idx,
     if starts:
         starts_key_sort = sorted(starts)
         while max(starts_key_sort) - min(starts_key_sort) > max_lst_range:
-            # old_pos = min(starts)
             old_pos = starts_key_sort.pop(0)
             old_count = starts.pop(old_pos, None)
             output_dic[old_pos] = []
