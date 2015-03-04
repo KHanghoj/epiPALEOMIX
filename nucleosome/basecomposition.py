@@ -19,7 +19,7 @@ _HALF_NUC = 120  # a bit larger because of genome aresearch paper.
 _SINGLENUCLEO = 1
 _DINUCLEO = 2
 _TETRANUCLEO = 4
-_SCORE = 0
+_SCORE = 2
 
 
 def parse_args(argv):
