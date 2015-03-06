@@ -16,9 +16,7 @@ _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
 _POSITION_OFFSET = _NEIGHBOR+_OFFSET
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _CENTERINDEX = (_SIZE-1)/2
-# _MAXLEN = int(4e2)+110
-# _MAXLEN = int(1e3)+110
-_MAXLEN = 500+110
+_MAXLEN = 500
 _MINDEPTH = 20
 
 
@@ -68,11 +66,9 @@ class nucleosome_prediction(object):
         self._output_dic = dict()
 
     def update_depth(self, record):
+        # this method receives all the reads and distribute
         self.jump = (record.pos-self._last_ini)-self._seq_len
-        # if self.jump+record.alen >= 0:
-        if self.jump+record.alen >= -110:
-            # it could be that we need to let the window slide to the end
-            # that means we need to add 110 zeros at the end
+        if self.jump+record.alen >= 0:
             self.call_window()
 
             if self.jump > _TOTAL_WIN_LENGTH:
@@ -98,37 +94,25 @@ class nucleosome_prediction(object):
             elif cigar in (2, 3, 6):
                 self._actual_idx += count
 
-    def move_deqs(self, record, var1):
-        # this is not being used
-        self._last_ini = record.pos-((_TOTAL_WIN_LENGTH-1)/var1)
-        pass
-
     def _nwise(self, n=_TOTAL_WIN_LENGTH):
         self.depths = izip(*(islice(g, i, None)
                            for i, g in enumerate(tee(self._deq_depth, n))))
         self.posis = izip(*(islice(g, i, None)
                             for i, g in enumerate(tee(self._deq_pos, n))))
+        # izip returns two tuples for each entry zipped together.
+        # unpacked by two variables in for loop in call_window
         return izip(self.depths, self.posis)
 
     def call_window(self):
         ''' docstring '''
         for self.win_depth, self.win_positions in self._nwise():
-            # if islice(self.win_depth,
-            #           _POSITION_OFFSET+_CENTERINDEX, None).next() <= _MINDEPTH:
-            #     continue
+            # returns two tuples that are unpacked by
+            # self.win_depth and self.win_positions
             if self.win_depth[_POSITION_OFFSET+_CENTERINDEX] <= _MINDEPTH:
                 continue
             calls_center = self._call_max(self.win_depth[_POSITION_OFFSET:
                                           _POSITION_OFFSET+_SIZE])
-            # calls_center = self._call_max(islice(self.win_depth,
-            #                               _POSITION_OFFSET,
-            #                               _POSITION_OFFSET+_SIZE))
-
             if calls_center:
-
-                # spacerL = islice(self.win_depth, 0, _NEIGHBOR)
-                # spacerR = islice(self.win_depth,
-                #                  _POSITION_OFFSET+_SIZE+_OFFSET, None)
                 spacerL = self.win_depth[:_NEIGHBOR]
                 spacerR = self.win_depth[-_NEIGHBOR:]
                 calls_spacerL = sum(spacerL)/float(_NEIGHBOR)
@@ -140,9 +124,6 @@ class nucleosome_prediction(object):
                 max_pos = _POSITION_OFFSET+max(calls_center)
                 start_pos = self.win_positions[min_pos]
                 end_pos = self.win_positions[max_pos]
-                # start_pos = islice(self.win_positions, min_pos, None).next()
-                # end_pos = islice(self.win_positions, max_pos, None).next()
-
                 key = start_pos
                 if key in self._output_dic.keys():
                     if self._output_dic[key][-1] < score:
@@ -174,12 +155,9 @@ class nucleosome_prediction(object):
         # append to file instead
         if self._output_dic:
             chrom = self.samf.getrname(self._present_tid)
-            key_values = iter(sorted([key]+value for key,
-                              value in
-                              self._output_dic.iteritems()))
             fmt = '{0}\t{1}\t{2}\t{3}\t{4}\n'
-            for dat in key_values:
-                self.f_output.write(fmt.format(chrom, *dat))
+            for key, val in iter(sorted(self._output_dic.iteritems())):
+                self.f_output.write(fmt.format(chrom, key, *val))
             self._output_dic.clear()
 
     def makeoutputfile(self):
@@ -192,6 +170,12 @@ class nucleosome_prediction(object):
 
     def closefile(self):
         return self.f_output.close()
+
+    def reset_deques(self):
+        self._deq_depth.clear()
+        self._deq_pos.clear()
+        self._output_dic.clear()
+        self._last_ini = -self._seq_len
 
 
 def parse_args(argv):
@@ -232,11 +216,12 @@ def main(argv):
         for record in samfile.fetch(chrom, start, end):
             if record.tid != last_tid:
                 nucl_pred_cls.writetofile()
-            last_tid = record.tid
+                # need to reset every when new chrom
+                nucl_pred_cls.reset_deques()
             nucl_pred_cls.update_depth(record)
+            last_tid = record.tid
         nucl_pred_cls.call_window()
         nucl_pred_cls.writetofile()
-    nucl_pred_cls.writetofile()
     nucl_pred_cls.closefile()
     return 0
 
