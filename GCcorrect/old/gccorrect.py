@@ -15,7 +15,7 @@ from collections import defaultdict
 
 # _READ_LENGTH = 180
 # _READ_LENGTH = 10
-_BUFFER = 2
+_BUFFER = 0
 # _N_RANDOM = 150  # 300 is maximum when frag_length is 130 and blocks are 40000
 # _MAPPABILITY = 0.9
 # no longer random, now every position in the chunk with high mappability.
@@ -181,11 +181,6 @@ def main(argv):
         # here we get all postions in minus strand and plus strand in a dict
         [update(record.aend, dic_minus) if record.is_reverse else
             update(record.pos, dic_plus) for record in records]
-
-        # if sum(dic_minus.values())+sum(dic_plus.values())\
-        #         < (lengthofregion)/100:
-            # need to have at least one read for every 100 bases on average
-            # continue
 
         if len(dic_minus)+len(dic_plus) < averagehit:
             # need to have at least one read
