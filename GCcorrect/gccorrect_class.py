@@ -4,10 +4,10 @@ import sys
 import pysam
 import argparse
 from collections import defaultdict
-from itertools import islice, izip, tee
+# from itertools import islice, izip, tee
 # import gzip
 
-_BUFFER = 0
+_BUFFER = 2
 
 
 class Cache_fasta(object):
@@ -59,8 +59,8 @@ class GCcorrect(object):
             # do not use chunks with 50 or less positions.
             self._retrieve_fastaseq()
             for rl in self._read_lengths():
-                for pos, rl_seq in self._short_seq(rl):
-                    curr_start = pos+self.start
+                for rela_pos, rl_seq in self._short_seq(rl):
+                    curr_start = rela_pos+self.start
                     curr_end = curr_start+rl
                     gc = rl_seq.count('C')+rl_seq.count('G')
                     self.dic_n_gc[rl][gc] += 2
