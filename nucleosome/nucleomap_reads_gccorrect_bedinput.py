@@ -191,7 +191,7 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = nucleosome_prediction(args)
-    nucl_pred_cls.gcmodel()
+    nucl_pred_cls.gcmodel_ini()
     for chrom, start, end in read_bed(args, ''):
         nucl_pred_cls.reset_deques(start, end)
         for record in samfile.fetch(chrom, start, end):
