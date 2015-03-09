@@ -2,27 +2,19 @@
 from __future__ import print_function
 
 #  from fileinput import inpua
-
-## python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect1.py chrome.fa test.bam --chrom 22 --start 16000000 --end 17000000 --out hmm.txt
-## python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect1.py chrome.fa test.bam --gcmodel gccorrect_saq.txt --chrom 22 --start 16000000 --end 17000000 --out hmm.txt
 import sys
 import pysam
-# import math
 import argparse
-from collections import deque
 from itertools import islice, izip, tee
-from os import remove
-# CONSTANTS:
+#### Constants:
 _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
 _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
 _POSITION_OFFSET = _NEIGHBOR+_OFFSET
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _CENTERINDEX = (_SIZE-1)/2
-_HALF_WIN_LENGTH = (_TOTAL_WIN_LENGTH-1)/2
-_MAXLEN = 500
-_READ_MAX_LEN = _MAXLEN-_HALF_WIN_LENGTH
-_MINDEPTH = 20
+_MINDEPTH = 50
+_GC_MODEL_LEN = 56
 
 
 class Cache(object):
@@ -57,45 +49,26 @@ class Cache(object):
 
 class nucleosome_prediction(object):
     """docstring for nucleosome_prediction"""
-    def __init__(self, arg, seq_len=_MAXLEN):
+    def __init__(self, samfile, arg):
         # if new chrom: reset every thing in main():
         self.arg = arg
         self.fasta = Cache(self.arg.fastafile)
-        self.outputpath = self.arg.out
-        self._seq_len = int(seq_len)
-        self._deq_depth = deque(maxlen=self._seq_len)
-        self._deq_pos = deque(maxlen=self._seq_len)
-        self._last_ini = -self._seq_len
+        self.samf = samfile
+        self._outputpath = self.arg.out
+        self._deq_depth = list()
+        self._deq_pos = list()
+        self._last_ini = None
         self._actual_idx = None
-        self._present_chrom = ''
-        self._zeros = [0]*self._seq_len
         self._output_dic = dict()
 
     def update_depth(self, record, chrom):
         self._present_chrom = chrom
-        # this method receives all the reads and distribute
-        self._actual_idx = (record.pos - self._last_ini)
-        if self._actual_idx+record.alen >= _READ_MAX_LEN:
-            self.call_window()
-
-            if self._actual_idx-_READ_MAX_LEN > _HALF_WIN_LENGTH:
-                # next read is further away than entire window
-                self._deq_depth.extend(self._zeros)  # RESTART
-                if len(self._output_dic) > 1000:
-                    self.writetofile()
-            else:
-                self._deq_depth.extend(self._zeros[:(self._actual_idx -
-                                       _HALF_WIN_LENGTH)])
-            self._last_ini = record.pos-_HALF_WIN_LENGTH
-            self._actual_idx = _HALF_WIN_LENGTH
-            self._deq_pos.extend((pos+1) for pos in xrange(self._last_ini,
-                                                           self._last_ini +
-                                                           self._seq_len))
+        self._actual_idx = (record.pos-self._last_ini)+_TOTAL_WIN_LENGTH
         if record.is_reverse:
             gc_idx = self.get_gc_count(record.aend-len(self.model))
         else:
             gc_idx = self.get_gc_count(record.pos+1)
-        corr_depth = (self.model[gc_idx])
+        corr_depth = (1 * self.model[gc_idx])
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
                 for idx in xrange(self._actual_idx, self._actual_idx + count):
@@ -122,84 +95,61 @@ class nucleosome_prediction(object):
                 continue
             calls_center = self._call_max(self.win_depth[_POSITION_OFFSET:
                                           _POSITION_OFFSET+_SIZE])
+            # here calls center is just a number. the max depth
             if calls_center:
                 spacerL = self.win_depth[:_NEIGHBOR]
                 spacerR = self.win_depth[-_NEIGHBOR:]
                 calls_spacerL = sum(spacerL)/float(_NEIGHBOR)
                 calls_spacerR = sum(spacerR)/float(_NEIGHBOR)
                 mean_spacer = 1.0 + 0.5 * (calls_spacerL + calls_spacerR)
-                center_depth = calls_center.itervalues().next()
-                score = float(center_depth) / mean_spacer
-                min_pos = _POSITION_OFFSET+min(calls_center)
-                max_pos = _POSITION_OFFSET+max(calls_center)
-                start_pos = self.win_positions[min_pos]
-                end_pos = self.win_positions[max_pos]
-                key = start_pos
-                if key in self._output_dic.keys():
-                    if self._output_dic[key][-1] < score:
-                        self._output_dic[key] = [end_pos, center_depth, score]
-                else:
-                    self._output_dic[key] = [end_pos, center_depth, score]
-
-    def _check_width(self, start, end, incre):
-        for idx in xrange(start, end, incre):
-            val = self.window[(_CENTERINDEX + idx)]
-            if val != self.maxdepth:
-                break
-            self.call[(_CENTERINDEX+idx)] = val
+                score = float(calls_center) / mean_spacer
+                key = self.win_positions[_POSITION_OFFSET+_CENTERINDEX]
+                if score > 1:
+                    try:
+                        self._output_dic[key] += 1
+                    except KeyError:
+                        self._output_dic[key] = 1
 
     def _call_max(self, lst):
         ''' docstring '''
-        self.call = {}  # this is the return dic with indexposition and depth
         self.window = lst
         self.maxdepth = max(self.window)
         if self.maxdepth > _MINDEPTH:
             if self.window[_CENTERINDEX] == self.maxdepth:
-                self.call[_CENTERINDEX] = self.window[_CENTERINDEX]
-                self._check_width(1, _CENTERINDEX, 1)
-                self._check_width(-1, -_CENTERINDEX, -1)
-                return self.call
+                if self.window[_CENTERINDEX-1] == self.maxdepth or \
+                        self.window[_CENTERINDEX+1] == self.maxdepth:
+                    return None
+                return self.maxdepth
 
     def writetofile(self):
         ''' dfs '''
         # append to file instead
-        if self._output_dic:
-            fmt = '{0}\t{1}\t{2}\t{3}\t{4}\n'
-            for key, val in iter(sorted(self._output_dic.iteritems())):
-                self.f_output.write(fmt.format(self._present_chrom, key, *val))
-            self._output_dic.clear()  # NOTE OUTPUTDIC IS CLEARED/EMPTIED
-            # AFTER WRITETOFILE
+        with open(self._outputpath, 'w') as f:
+            mininum = min(self._output_dic.iterkeys())
+            maximum = max(self._output_dic.iterkeys())
+            fmt = '{0}\t{1}\n'
+            for key in xrange(mininum, maximum+1, 1):
+                value = self._output_dic.get(key, 0)
+                f.write(fmt.format(key, value))
 
-    def makeoutputfile(self):
-        # i want to write to file every chrom, to speed up:
-        try:
-            remove(self.outputpath)
-            self.f_output = open(self.outputpath, 'a')
-        except OSError:
-            self.f_output = open(self.outputpath, 'a')
+    def reset_deques(self, start, end):
+        deq_length = end-start
+        self._deq_depth = list([0.0]*(deq_length+(2*_TOTAL_WIN_LENGTH)))
+        self._deq_pos = list(xrange(-_TOTAL_WIN_LENGTH,
+                                    deq_length+_TOTAL_WIN_LENGTH))
+        self._last_ini = start
 
-    def closefile(self):
-        return self.f_output.close()
-
-    def reset_deques(self):
-        self._deq_depth.clear()
-        self._deq_pos.clear()
-        self._output_dic.clear()
-        self._last_ini = -self._seq_len
-
-    def gcmodel_ini(self):
+    def gcmodel(self):
         if self.arg.gcmodel:
             with open(self.arg.gcmodel, 'r') as f:
                 self.model = [float(line.rstrip('\n').split('\t')[-1])
                               for line in f]
-                self._GC_model_len = len(self.model)
         else:
-            self._GC_model_len = 0  # this is default if not assign
-            self.model = [1]*(self._GC_model_len+1)
+            self.model = [1]*(_GC_MODEL_LEN+1)
 
     def get_gc_count(self, pos):
-        fasta_str = self.fasta.fetch_string(self._present_chrom,
-                                            pos, self._GC_model_len)
+        fasta_str = self.fasta.fetch_string(self._present_chrom, pos,
+                                            _GC_MODEL_LEN)
         return(fasta_str.count('G')+fasta_str.count('C'))
 
 
@@ -208,8 +158,8 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('fastafile', help="fastafile")
     parser.add_argument('bam', help="...")
-    parser.add_argument('--gcmodel', help="fastafile")
-    parser.add_argument('--bed', help="...")
+    parser.add_argument('bed', help="...")
+    parser.add_argument('--gcmodel', help="pathtogcfile", default=None)
     parser.add_argument('--chrom', help="...", default=None)
     parser.add_argument('--start', help="...", default=None)
     parser.add_argument('--end', help="...", default=None)
@@ -236,21 +186,14 @@ def read_bed(args, chromtype):
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    nucl_pred_cls = nucleosome_prediction(args)
-    nucl_pred_cls.makeoutputfile()
-    nucl_pred_cls.gcmodel_ini()
+    nucl_pred_cls = nucleosome_prediction(samfile, args)
+    nucl_pred_cls.gcmodel()
     for chrom, start, end in read_bed(args, ''):
-        last_tid = ''
+        nucl_pred_cls.reset_deques(start, end)
         for record in samfile.fetch(chrom, start, end):
-            if record.tid != last_tid:
-                nucl_pred_cls.writetofile()
-                # need to reset every when new chrom
-                nucl_pred_cls.reset_deques()
             nucl_pred_cls.update_depth(record, chrom)
-            last_tid = record.tid
         nucl_pred_cls.call_window()
-        nucl_pred_cls.writetofile()
-    nucl_pred_cls.closefile()
+    nucl_pred_cls.writetofile()
     return 0
 
 if __name__ == '__main__':

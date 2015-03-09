@@ -2,17 +2,14 @@
 from __future__ import print_function
 
 #  from fileinput import inpua
-
-## python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect1.py chrome.fa test.bam --chrom 22 --start 16000000 --end 17000000 --out hmm.txt
-## python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect1.py chrome.fa test.bam --gcmodel gccorrect_saq.txt --chrom 22 --start 16000000 --end 17000000 --out hmm.txt
 import sys
 import pysam
-# import math
+import math
 import argparse
 from collections import deque
 from itertools import islice, izip, tee
 from os import remove
-# CONSTANTS:
+#### Constants:
 _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
 _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
@@ -21,8 +18,8 @@ _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _CENTERINDEX = (_SIZE-1)/2
 _HALF_WIN_LENGTH = (_TOTAL_WIN_LENGTH-1)/2
 _MAXLEN = 500
-_READ_MAX_LEN = _MAXLEN-_HALF_WIN_LENGTH
 _MINDEPTH = 20
+_GC_MODEL_LEN = 56
 
 
 class Cache(object):
@@ -57,10 +54,11 @@ class Cache(object):
 
 class nucleosome_prediction(object):
     """docstring for nucleosome_prediction"""
-    def __init__(self, arg, seq_len=_MAXLEN):
+    def __init__(self, samfile, arg, seq_len=_MAXLEN):
         # if new chrom: reset every thing in main():
         self.arg = arg
         self.fasta = Cache(self.arg.fastafile)
+        self.samf = samfile
         self.outputpath = self.arg.out
         self._seq_len = int(seq_len)
         self._deq_depth = deque(maxlen=self._seq_len)
@@ -74,28 +72,30 @@ class nucleosome_prediction(object):
     def update_depth(self, record, chrom):
         self._present_chrom = chrom
         # this method receives all the reads and distribute
-        self._actual_idx = (record.pos - self._last_ini)
-        if self._actual_idx+record.alen >= _READ_MAX_LEN:
+        self.jump = (record.pos-self._last_ini)-self._seq_len
+        if self.jump+record.alen >= 0:
             self.call_window()
 
-            if self._actual_idx-_READ_MAX_LEN > _HALF_WIN_LENGTH:
+            if self.jump > _TOTAL_WIN_LENGTH:
                 # next read is further away than entire window
-                self._deq_depth.extend(self._zeros)  # RESTART
+                self._deq_depth.extend(self._zeros)
                 if len(self._output_dic) > 1000:
                     self.writetofile()
             else:
-                self._deq_depth.extend(self._zeros[:(self._actual_idx -
-                                       _HALF_WIN_LENGTH)])
-            self._last_ini = record.pos-_HALF_WIN_LENGTH
-            self._actual_idx = _HALF_WIN_LENGTH
+                self._deq_depth.extend(self._zeros[:self._seq_len -
+                                                   _TOTAL_WIN_LENGTH +
+                                                   self.jump])
+            self._last_ini = record.pos-_TOTAL_WIN_LENGTH
             self._deq_pos.extend((pos+1) for pos in xrange(self._last_ini,
                                                            self._last_ini +
                                                            self._seq_len))
+        self._actual_idx = (record.pos-self._last_ini)
+
         if record.is_reverse:
             gc_idx = self.get_gc_count(record.aend-len(self.model))
         else:
             gc_idx = self.get_gc_count(record.pos+1)
-        corr_depth = (self.model[gc_idx])
+        corr_depth = (1.0 * self.model[gc_idx])
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
                 for idx in xrange(self._actual_idx, self._actual_idx + count):
@@ -167,8 +167,7 @@ class nucleosome_prediction(object):
             fmt = '{0}\t{1}\t{2}\t{3}\t{4}\n'
             for key, val in iter(sorted(self._output_dic.iteritems())):
                 self.f_output.write(fmt.format(self._present_chrom, key, *val))
-            self._output_dic.clear()  # NOTE OUTPUTDIC IS CLEARED/EMPTIED
-            # AFTER WRITETOFILE
+            self._output_dic.clear()
 
     def makeoutputfile(self):
         # i want to write to file every chrom, to speed up:
@@ -187,19 +186,17 @@ class nucleosome_prediction(object):
         self._output_dic.clear()
         self._last_ini = -self._seq_len
 
-    def gcmodel_ini(self):
+    def gcmodel(self):
         if self.arg.gcmodel:
             with open(self.arg.gcmodel, 'r') as f:
                 self.model = [float(line.rstrip('\n').split('\t')[-1])
                               for line in f]
-                self._GC_model_len = len(self.model)
         else:
-            self._GC_model_len = 0  # this is default if not assign
-            self.model = [1]*(self._GC_model_len+1)
+            self.model = [1]*(_GC_MODEL_LEN+1)
 
     def get_gc_count(self, pos):
         fasta_str = self.fasta.fetch_string(self._present_chrom,
-                                            pos, self._GC_model_len)
+                                            pos, _GC_MODEL_LEN)
         return(fasta_str.count('G')+fasta_str.count('C'))
 
 
@@ -236,9 +233,9 @@ def read_bed(args, chromtype):
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    nucl_pred_cls = nucleosome_prediction(args)
+    nucl_pred_cls = nucleosome_prediction(samfile, args)
     nucl_pred_cls.makeoutputfile()
-    nucl_pred_cls.gcmodel_ini()
+    nucl_pred_cls.gcmodel()
     for chrom, start, end in read_bed(args, ''):
         last_tid = ''
         for record in samfile.fetch(chrom, start, end):
