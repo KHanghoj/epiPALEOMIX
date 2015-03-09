@@ -6,15 +6,17 @@ import sys
 import pysam
 import argparse
 from itertools import islice, izip, tee
-#### Constants:
+# CONSTANTS:
 _SIZE = 147  # the window
 _OFFSET = 12  # _OFFSET between spacer and nucleosomal DNA
 _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
 _POSITION_OFFSET = _NEIGHBOR+_OFFSET
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _CENTERINDEX = (_SIZE-1)/2
-_MINDEPTH = 50
-_GC_MODEL_LEN = 56
+_HALF_WIN_LENGTH = (_TOTAL_WIN_LENGTH-1)/2
+_MAXLEN = 500
+_READ_MAX_LEN = _MAXLEN-_HALF_WIN_LENGTH
+_MINDEPTH = 20
 
 
 class Cache(object):
@@ -49,11 +51,10 @@ class Cache(object):
 
 class nucleosome_prediction(object):
     """docstring for nucleosome_prediction"""
-    def __init__(self, samfile, arg):
+    def __init__(self, arg):
         # if new chrom: reset every thing in main():
         self.arg = arg
         self.fasta = Cache(self.arg.fastafile)
-        self.samf = samfile
         self._outputpath = self.arg.out
         self._deq_depth = list()
         self._deq_pos = list()
@@ -65,10 +66,11 @@ class nucleosome_prediction(object):
         self._present_chrom = chrom
         self._actual_idx = (record.pos-self._last_ini)+_TOTAL_WIN_LENGTH
         if record.is_reverse:
-            gc_idx = self.get_gc_count(record.aend-len(self.model))
+            # gc_idx = self.get_gc_count(record.aend-len(self.model))
+            gc_idx = self.get_gc_count(record.aend-self._GC_model_len)
         else:
             gc_idx = self.get_gc_count(record.pos+1)
-        corr_depth = (1 * self.model[gc_idx])
+        corr_depth = (self.model[gc_idx])
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
                 for idx in xrange(self._actual_idx, self._actual_idx + count):
@@ -139,17 +141,19 @@ class nucleosome_prediction(object):
                                     deq_length+_TOTAL_WIN_LENGTH))
         self._last_ini = start
 
-    def gcmodel(self):
+    def gcmodel_ini(self):
         if self.arg.gcmodel:
             with open(self.arg.gcmodel, 'r') as f:
                 self.model = [float(line.rstrip('\n').split('\t')[-1])
                               for line in f]
+                self._GC_model_len = len(self.model)
         else:
-            self.model = [1]*(_GC_MODEL_LEN+1)
+            self._GC_model_len = 0  # this is default if not assign
+            self.model = [1]*(self._GC_model_len+1)
 
     def get_gc_count(self, pos):
         fasta_str = self.fasta.fetch_string(self._present_chrom, pos,
-                                            _GC_MODEL_LEN)
+                                            self._GC_model_len)
         return(fasta_str.count('G')+fasta_str.count('C'))
 
 
@@ -186,7 +190,7 @@ def read_bed(args, chromtype):
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    nucl_pred_cls = nucleosome_prediction(samfile, args)
+    nucl_pred_cls = nucleosome_prediction(args)
     nucl_pred_cls.gcmodel()
     for chrom, start, end in read_bed(args, ''):
         nucl_pred_cls.reset_deques(start, end)

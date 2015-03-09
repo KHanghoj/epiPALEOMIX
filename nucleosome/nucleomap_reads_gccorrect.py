@@ -92,7 +92,8 @@ class nucleosome_prediction(object):
                                                            self._last_ini +
                                                            self._seq_len))
         if record.is_reverse:
-            gc_idx = self.get_gc_count(record.aend-len(self.model))
+            # gc_idx = self.get_gc_count(record.aend-len(self.model))
+            gc_idx = self.get_gc_count(record.aend-self._GC_model_len)
         else:
             gc_idx = self.get_gc_count(record.pos+1)
         corr_depth = (self.model[gc_idx])
