@@ -1,10 +1,11 @@
 #!/opt/local/bin/python
 from __future__ import print_function
+# python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect.py
+# chrome.fa test.bam --chrom 22 --start 16000000 --end 17000000 --out hmm.txt
 
-#  from fileinput import inpua
-
-# python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect1.py chrome.fa test.bam --chrom 22 --start 16000000 --end 17000000 --out hmm.txt
-# python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect1.py chrome.fa test.bam --gcmodel gccorrect_saq.txt --chrom 22 --start 16000000 --end 17000000 --out hmm.txt
+# python ~/research/projects/epiomix/nucleosome/nucleomap_reads_gccorrect.py
+# chrome.fa test.bam --gcmodel gccorrect_saq.txt --chrom 22 --start 16000000
+# --end 17000000 --out hmm.txt
 import sys
 import pysam
 # import math
@@ -71,8 +72,11 @@ class nucleosome_prediction(object):
         self._present_chrom = ''
         self._zeros = [0]*self._seq_len
         self._output_dic = dict()
-        # self.last_key = None
-        # self.count = 0
+        self.f_output = None
+        self.model = list()
+        self._GC_model_len = None
+        self._gcmodel_ini()
+        self._makeoutputfile()
 
     def update_depth(self, record, chrom):
         self._present_chrom = chrom
@@ -105,9 +109,9 @@ class nucleosome_prediction(object):
                                                            self._last_ini +
                                                            self._seq_len))
         if record.is_reverse:
-            gc_idx = self.get_gc_count(record.aend-self._GC_model_len)
+            gc_idx = self._get_gc_count(record.aend-self._GC_model_len)
         else:
-            gc_idx = self.get_gc_count(record.pos+1)
+            gc_idx = self._get_gc_count(record.pos+1)
         corr_depth = (self.model[gc_idx])
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
@@ -192,7 +196,7 @@ class nucleosome_prediction(object):
             # NOTE OUTPUTDIC IS CLEARED/EMPTIED
             # AFTER WRITETOFILE
 
-    def makeoutputfile(self):
+    def _makeoutputfile(self):
         # i want to write to file every chrom, to speed up:
         try:
             remove(self.outputpath)
@@ -210,7 +214,7 @@ class nucleosome_prediction(object):
         self._last_ini = -self._seq_len
         # self.last_key = None
 
-    def gcmodel_ini(self):
+    def _gcmodel_ini(self):
         if self.arg.gcmodel:
             with open(self.arg.gcmodel, 'r') as f:
                 self.model = [float(line.rstrip('\n').split('\t')[-1])
@@ -220,10 +224,10 @@ class nucleosome_prediction(object):
             self._GC_model_len = 0  # this is default if not assign
             self.model = [1]*(self._GC_model_len+1)
 
-    def get_gc_count(self, pos):
+    def _get_gc_count(self, pos):
         fasta_str = self.fasta.fetch_string(self._present_chrom,
                                             pos, self._GC_model_len)
-        return(fasta_str.count('G')+fasta_str.count('C'))
+        return fasta_str.count('G')+fasta_str.count('C')
 
 
 def parse_args(argv):
@@ -260,8 +264,8 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = nucleosome_prediction(args)
-    nucl_pred_cls.makeoutputfile()
-    nucl_pred_cls.gcmodel_ini()
+    # nucl_pred_cls.makeoutputfile()
+    # nucl_pred_cls.gcmodel_ini()
     for chrom, start, end in read_bed(args, ''):
         last_tid = ''
         nucl_pred_cls.reset_deques()
