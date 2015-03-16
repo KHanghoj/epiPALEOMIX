@@ -15,6 +15,61 @@ _MINMAPQUALI = 25
 _MIN_COVERAGE = 3
 
 
+class Phasogram(object):
+    """docstring for Phasogram"""
+    def __init__(self, arg):
+        self.arg = arg
+        self.outputdic = defaultdict(int)
+        self.forward_dic = {}
+        self.reverse_dic = {}
+        self.last_tid = None
+        # self.forward_dic = OrderedDict()
+        # self.reverse_dic = OrderedDict()
+
+    def _call_output(self, dic, max_lst_range=_MAX_SIZE, max_size=_MAX_SIZE):
+        if dic:
+            mdic = max(dic)
+            while mdic - min(dic) > max_lst_range:
+                old_pos = min(dic)
+                old_count = dic.pop(old_pos, None)
+                for current in sorted(dic.iterkeys()):
+                    length = current - old_pos
+                    if length >= max_size:
+                        break
+                        # do no know if break or contiune
+                    if old_count >= _MIN_COVERAGE:
+                        self.outputdic[length] += 1
+
+    def update(self, record):
+        if record.tid != self.last_tid and self.last_tid:
+            self.call()
+            self.reset()
+        if record.is_reverse:
+            curr_pos, temp_dic = record.aend, self.reverse_dic
+        else:
+            curr_pos, temp_dic = record.pos, self.forward_dic
+        try:
+            temp_dic[curr_pos] += 1
+        except KeyError:
+            temp_dic[curr_pos] = 1
+            self._call_output(temp_dic)
+        self.last_tid = record.tid
+
+    def writetofile(self):
+        with open(self.arg.out, 'w') as f_output:
+            for key, value in self.outputdic.iteritems():
+                f_output.write('{}\t{}\n'.format(key, value))
+
+    def call(self):
+        self._call_output(self.forward_dic, max_lst_range=0, max_size=0)
+        self._call_output(self.reverse_dic, max_lst_range=0, max_size=0)
+
+    def reset(self):
+        self.forward_dic = {}
+        self.reverse_dic = {}
+        self.last_tid = None
+
+
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -40,65 +95,18 @@ def read_bed(args):
         yield (args.chrom, args.start, args.end)
 
 
-def call_output(starts, output_dic,
-                max_lst_range=_MAX_SIZE, max_size=_MAX_SIZE):
-    if starts:
-        while max(starts) - min(starts) > max_lst_range:
-            old_pos = min(starts)
-            old_count = starts.pop(old_pos, None)
-            for current in sorted(starts.iterkeys()):
-                length = current - old_pos
-                if length >= max_size:
-                    break
-                    ## do no know if break or contiune
-                if old_count >= _MIN_COVERAGE:
-                    output_dic[length] += 1
-
-
-def writetofile(output_dic, f_name):
-    ''' dfs '''
-    f_output = open(f_name, 'w')
-    for key, value in output_dic.iteritems():
-        f_output.write('{}\t{}\n'.format(key, value))
-    f_output.close()
-
-
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    output_dic = defaultdict(int)
-    starts = {}  # initialize the positions and counts
-    ends = {}
-    last_tid = -1
-
+    phaso = Phasogram(args)
     for chrom, start, end in read_bed(args):
-        starts = {}
-        ends = {}
-
+        phaso.reset()
         for record in samfile.fetch(chrom, start, end):
             if record.mapq < _MINMAPQUALI:
                 continue  # do not analyze low quality records
-            if last_tid != record.tid:
-                last_tid = record.tid
-                call_output(starts, output_dic, max_lst_range=0)
-                call_output(ends, output_dic, max_lst_range=0)
-                starts = {}
-                ends = {}
-            if record.is_reverse:
-                pos, present_dic = record.aend, ends
-            else:
-                pos, present_dic = record.pos, starts
-
-            if present_dic.get(pos, 0):  # only True if present pos in dict
-                present_dic[pos] += 1
-            else:
-                present_dic[pos] = 1
-                call_output(present_dic, output_dic)
-
-        call_output(ends, output_dic, max_lst_range=0)
-        call_output(starts, output_dic, max_lst_range=0)
-
-    writetofile(output_dic, args.out)
+            phaso.update(record)
+        phaso.call()
+    phaso.writetofile()
     samfile.close()
     return 0
 
