@@ -42,7 +42,8 @@ class Cache(object):
     def fetch_string(self, chrom, start, nbases):
         ''' docstring '''
         if self._last_chrom != chrom or (start-self._last_start) >= \
-                self._seq_len or start >= self._end - nbases:
+                self._seq_len or start >= self._end - nbases or \
+                start < self._last_start:
 
             self._end = start + self._seq_len
             self._fasta_str = self._fasta.fetch(chrom,
@@ -197,7 +198,7 @@ class nucleosome_prediction(object):
             # AFTER WRITETOFILE
 
     def _makeoutputfile(self):
-        # i want to write to file every chrom, to speed up:
+        ''' want to write to file every chrom, to speed up'''
         try:
             remove(self.outputpath)
             self.f_output = open(self.outputpath, 'a')
@@ -219,7 +220,7 @@ class nucleosome_prediction(object):
             with open(self.arg.gcmodel, 'r') as f:
                 self.model = [float(line.rstrip('\n').split('\t')[-1])
                               for line in f]
-                self._GC_model_len = len(self.model)
+                self._GC_model_len = len(self.model)-1
         else:
             self._GC_model_len = 0  # this is default if not assign
             self.model = [1]*(self._GC_model_len+1)

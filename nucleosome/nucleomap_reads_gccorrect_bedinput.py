@@ -34,8 +34,8 @@ class Cache(object):
     def fetch_string(self, chrom, start, nbases):
         ''' docstring '''
         if self._last_chrom != chrom or (start-self._last_start) >= \
-                self._seq_len or start >= self._end - nbases:
-
+                self._seq_len or start >= self._end - nbases or \
+                start < self._last_start:
             self._end = start + self._seq_len
             self._fasta_str = self._fasta.fetch(chrom,
                                                 start=start, end=self._end)
@@ -66,7 +66,6 @@ class nucleosome_prediction(object):
         self._present_chrom = chrom
         self._actual_idx = (record.pos-self._last_ini)+_TOTAL_WIN_LENGTH
         if record.is_reverse:
-            # gc_idx = self.get_gc_count(record.aend-len(self.model))
             gc_idx = self.get_gc_count(record.aend-self._GC_model_len)
         else:
             gc_idx = self.get_gc_count(record.pos+1)
@@ -146,7 +145,7 @@ class nucleosome_prediction(object):
             with open(self.arg.gcmodel, 'r') as f:
                 self.model = [float(line.rstrip('\n').split('\t')[-1])
                               for line in f]
-                self._GC_model_len = len(self.model)
+                self._GC_model_len = len(self.model)-1
         else:
             self._GC_model_len = 0  # this is default if not assign
             self.model = [1]*(self._GC_model_len+1)
