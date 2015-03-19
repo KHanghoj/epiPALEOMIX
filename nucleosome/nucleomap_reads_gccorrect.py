@@ -100,8 +100,6 @@ class nucleosome_prediction(object):
                             islice(self._deq_pos,
                                    0, self._actual_idx))
                 self.call_window()  # call up to actual idx
-                # self._deq_depth.extend([0]*(_MAXLEN -
-                #                             _TOTAL_WIN_LENGTH-cut_size))
                 self._deq_depth.extend(self._zeros[:_MAXLEN -
                                        _TOTAL_WIN_LENGTH-cut_size])
                 self._actual_idx = _TOTAL_WIN_LENGTH
@@ -265,8 +263,6 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = nucleosome_prediction(args)
-    # nucl_pred_cls.makeoutputfile()
-    # nucl_pred_cls.gcmodel_ini()
     for chrom, start, end in read_bed(args, ''):
         last_tid = ''
         nucl_pred_cls.reset_deques()
