@@ -38,8 +38,8 @@ class Cache(object):
     def fetch_string(self, chrom, start, nbases):
         ''' docstring '''
         if self._last_chrom != chrom or (start-self._last_start) >= \
-                self._seq_len or start >= self._end - nbases:
-
+                self._seq_len or start >= self._end - nbases or \
+                start < self._last_start:
             self._end = start + self._seq_len
             self._fasta_str = self._fasta.fetch(chrom,
                                                 start=start, end=self._end)
@@ -65,6 +65,7 @@ class Methyl_Level(object):
         self.indexoflist = range(len(self.lst_dic_lastpos))
         self.record, self.start, self.chrom = None, None, None
         self.last_tid, self.last_pos = None, -1
+        self.pat = re.compile('CG')
 
     def reset_dicts(self, start, chrom):
         self.lst_dic_lastpos = self._create_lst_dic(nested=True)
@@ -79,9 +80,23 @@ class Methyl_Level(object):
         else:
             return [defaultdict(int) for _ in range(size)]
 
-    def _getindexes(self, bases_str, pat='CG'):
+    # def _max_lst_dic(self):
+    #     return max([max(x) for x in self.lst_dic_lastpos if x])
+
+    # def _check_lst_dic(self):
+    #     ''' checks which dics are not empty in list and return the idx'''
+    #     return [idx for idx, x in enumerate(self.lst_dic_lastpos) if x]
+
+    def _check_lst_dic(self):
+        dic_idx = [idx for idx, x in enumerate(self.lst_dic_lastpos) if x]
+        if dic_idx:
+            vals = [max(self.lst_dic_lastpos[x]) for x in dic_idx]
+            if vals and max(vals) < self.record.pos:
+                self.ms_reverse()
+
+    def _getindexes(self, bases_str):
         ''' returns the 0-based indeces of fasta read'''
-        return [m.start() for m in re.finditer(pat, bases_str)]
+        return [m.start() for m in self.pat.finditer(bases_str)]
 
     def update(self, record):
         self.record = record
@@ -92,30 +107,41 @@ class Methyl_Level(object):
                 self.ms_reverse()
                 self.reset_dicts()
 
+        self._check_lst_dic()
+
         if self.record.is_reverse:
             self._reverse_strand()
         else:
             self._forward_strand()
         self.last_tid = self.record.tid
 
+    def call_final_ms(self):
+        if self.last_pos != -1:
+            self.ms_forward()
+            self.ms_reverse()
+
     def ms_forward(self):
         for idx in self.indexoflist:
-            tempdic_last_pos = self.lst_dic_lastpos[idx].pop(self.last_pos, {})
-            self._call_ms(idx, self.lst_base_forward[idx], tempdic_last_pos)
+            tempdic_last_pos = \
+                self.lst_dic_lastpos[idx].pop(self.last_pos+idx, {})
+            self._call_ms(idx, self.lst_base_forward[idx],
+                          tempdic_last_pos, self.last_pos)
 
     def ms_reverse(self):
         for idx in self.indexoflist:
-            for last_pos in self.lst_dic_lastpos[idx].keys():
-                tempdic_last_pos = self.lst_dic_lastpos[idx].pop(last_pos, {})
-                self._call_ms(idx, {}, tempdic_last_pos)
+            for key in self.lst_dic_lastpos[idx].keys():
+                # if self.last_pos > key:
+                tempdic_last_pos = self.lst_dic_lastpos[idx].pop(key, {})
+                self._call_ms(idx, {}, tempdic_last_pos, key)
 
-    def _call_ms(self, idx, dic_forward, dic_lastpos):
+    def _call_ms(self, idx, dic_forward, dic_lastpos, lastpos):
         top = (dic_forward.get('T', 0) +
                dic_lastpos.get('A', 0))
         lower = (top+dic_forward.get('C', 0) +
                  dic_lastpos.get('G', 0))
-        self.dic_top[idx][self.last_pos-self.start] += top
-        self.dic_lower[idx][self.last_pos-self.start] += lower
+        # if lower > 0:  # i'm not sure i like this
+        self.dic_top[idx][lastpos-self.start+idx] += top
+        self.dic_lower[idx][lastpos-self.start+idx] += lower
 
     def writetofile(self):
         with open(self.arg.out, 'w') as f_output:
@@ -133,26 +159,22 @@ class Methyl_Level(object):
         #  advantage of defaultdict
 
     def _reverse_strand(self):
-        pos = self.record.aend-_BASES_CHECK
+        curr_pos = self.record.aend-_BASES_CHECK
         fast_string = self.fasta.fetch_string(self.chrom,
-                                              pos, _BASES_CHECK)
+                                              curr_pos, _BASES_CHECK)
         fast_idx = self._getindexes(fast_string)
         if fast_idx:
             bases = self.record.seq[-_BASES_CHECK:]
             read_idx = [x for x in fast_idx if
                         bases[x:x+2] in _MINUS_STRAND_BASES and
-                        x <= _SIZE]
+                        x < _SIZE]  # x <= _SIZE]
             if read_idx:
                 max_pos = _BASES_CHECK - min(read_idx)
                 cigar_op, cigar_len = self.record.cigar[-1]
                 if (cigar_op == 0) and (cigar_len >= max_pos):
                     for base_idx in read_idx:
-                        # (self.lst_dic_lastpos[_BASES_CHECK-base_idx-2]
-                        #     [self.record.aend-2][bases[base_idx+1]]) += 1
-                        # note that all bases are called to the same
-                        # position. This is not good
                         (self.lst_dic_lastpos[_BASES_CHECK-base_idx-2]
-                            [self.record.aend-(_BASES_CHECK-base_idx)]
+                            [curr_pos+base_idx]
                             [bases[base_idx+1]]) += 1
 
     def _forward_strand(self):
@@ -217,8 +239,9 @@ def main(argv):
         met_lev.reset_dicts(start, chrom)
         for record in samfile.fetch(chrom, start, end):
             met_lev.update(record)
-        met_lev.ms_forward()  # calling scores
-        met_lev.ms_reverse()  # calling remaining scores
+        # met_lev.ms_forward()  # calling scores
+        # met_lev.ms_reverse()  # calling remaining scores
+        met_lev.call_final_ms()
     met_lev.writetofile()
     samfile.close()
     met_lev.fasta.closefile()
