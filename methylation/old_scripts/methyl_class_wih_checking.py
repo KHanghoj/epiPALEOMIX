@@ -87,12 +87,12 @@ class Methyl_Level(object):
     #     ''' checks which dics are not empty in list and return the idx'''
     #     return [idx for idx, x in enumerate(self.lst_dic_lastpos) if x]
 
-    # def _check_lst_dic(self):
-    #     dic_idx = [idx for idx, x in enumerate(self.lst_dic_lastpos) if x]
-    #     if dic_idx:
-    #         vals = [max(self.lst_dic_lastpos[x]) for x in dic_idx]
-    #         if vals and max(vals) < self.record.pos:
-    #             self.ms_reverse()
+    def _check_lst_dic(self):
+        dic_idx = [idx for idx, x in enumerate(self.lst_dic_lastpos) if x]
+        if dic_idx:
+            vals = [max(self.lst_dic_lastpos[x]) for x in dic_idx]
+            if vals and max(vals) < self.record.pos:
+                self.ms_reverse()
 
     def _getindexes(self, bases_str):
         ''' returns the 0-based indeces of fasta read'''
@@ -107,7 +107,7 @@ class Methyl_Level(object):
                 self.ms_reverse()
                 self.reset_dicts()
 
-        # self._check_lst_dic()
+        self._check_lst_dic()
 
         if self.record.is_reverse:
             self._reverse_strand()
@@ -121,32 +121,27 @@ class Methyl_Level(object):
             self.ms_reverse()
 
     def ms_forward(self):
-        self.keypos = self.last_pos-self.start
         for idx in self.indexoflist:
             tempdic_last_pos = \
                 self.lst_dic_lastpos[idx].pop(self.last_pos+idx, {})
             self._call_ms(idx, self.lst_base_forward[idx],
-                          tempdic_last_pos)
+                          tempdic_last_pos, self.last_pos)
 
     def ms_reverse(self):
         for idx in self.indexoflist:
             for key in self.lst_dic_lastpos[idx].keys():
-                # if self.last_pos > key: ## ok because we call
-                # reverse only at the end of the bed file.
-                # this is the fastest solution
-                # i think
-                self.keypos = key-self.start
+                # if self.last_pos > key:
                 tempdic_last_pos = self.lst_dic_lastpos[idx].pop(key, {})
-                self._call_ms(idx, {}, tempdic_last_pos)
+                self._call_ms(idx, {}, tempdic_last_pos, key)
 
-    def _call_ms(self, idx, dic_forward, dic_lastpos):
+    def _call_ms(self, idx, dic_forward, dic_lastpos, lastpos):
         top = (dic_forward.get('T', 0) +
                dic_lastpos.get('A', 0))
         lower = (top+dic_forward.get('C', 0) +
                  dic_lastpos.get('G', 0))
         # if lower > 0:  # i'm not sure i like this
-        self.dic_top[idx][self.keypos+idx] += top
-        self.dic_lower[idx][self.keypos+idx] += lower
+        self.dic_top[idx][lastpos-self.start+idx] += top
+        self.dic_lower[idx][lastpos-self.start+idx] += lower
 
     def writetofile(self):
         with open(self.arg.out, 'w') as f_output:
