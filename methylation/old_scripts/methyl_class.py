@@ -58,22 +58,27 @@ class Methyl_Level(object):
     def __init__(self, arg):
         self.arg = arg
         self.fasta = Cache(self.arg.fastafile)
-        self.lst_dic_lastpos = self._create_lst_dic()
-        self.dic_top = [defaultdict(int) for _ in xrange(_BASES_CHECK-1)]
-        self.dic_lower = [defaultdict(int) for _ in xrange(_BASES_CHECK-1)]
+        self.lst_dic_lastpos = self._create_lst_dic(nested=True)
+        self.lst_base_forward = self._create_lst_dic()
+        self.dic_top = self._create_lst_dic()
+        self.dic_lower = self._create_lst_dic()
         self.indexoflist = range(len(self.lst_dic_lastpos))
-
         self.record, self.start, self.chrom = None, None, None
-        self.last_tid, self.last_aend = None, None
+        self.last_tid, self.last_pos = None, -1
         self.pat = re.compile('CG')
 
-    def reset_dict(self, start, chrom):
-        self.lst_dic_lastpos = self._create_lst_dic()
-        self.last_tid, self.last_aend = None, None
+    def reset_dicts(self, start, chrom):
+        self.lst_dic_lastpos = self._create_lst_dic(nested=True)
+        self.lst_base_forward = self._create_lst_dic()
+        self.last_tid, self.last_pos = None, -1
         self.chrom, self.start = chrom, start
 
-    def _create_lst_dic(self, size=_BASES_CHECK-1):
-        return [defaultdict(lambda: defaultdict(int)) for _ in range(size)]
+    def _create_lst_dic(self, nested=False, size=_BASES_CHECK-1):
+        if nested:
+            return [defaultdict(lambda: defaultdict(int))
+                    for _ in range(size)]
+        else:
+            return [defaultdict(int) for _ in range(size)]
 
     def _getindexes(self, bases_str):
         ''' returns the 0-based indeces of fasta read'''
@@ -81,31 +86,46 @@ class Methyl_Level(object):
 
     def update(self, record):
         self.record = record
-        if self.last_aend and self.record.pos > self.last_aend+_BASES_CHECK:
-            self.call_ms()
-            self.lst_dic_lastpos = self._create_lst_dic()
+        if self.record.tid != self.last_tid:
+            # new chromosome
+            if self.last_tid:
+                self.ms_forward()
+                self.ms_reverse()
+                self.reset_dicts()
 
         if self.record.is_reverse:
             self._reverse_strand()
         else:
             self._forward_strand()
-        self.last_tid, self.last_aend = self.record.tid, self.record.aend
+        self.last_tid = self.record.tid
 
-    def call_ms(self):
+    def call_final_ms(self):
+        if self.last_pos != -1:
+            self.ms_forward()
+            self.ms_reverse()
+
+    def ms_forward(self):
+        self.keypos = self.last_pos-self.start
         for idx in self.indexoflist:
-            curr_lst_idx = self.lst_dic_lastpos[idx]
-            curr_top = self.dic_top[idx]
-            curr_lower = self.dic_lower[idx]
-            for key in curr_lst_idx.iterkeys():
-                self.keypos = key-self.start
-                curr_dic = curr_lst_idx.get(key, {})
+            tempdic_last_pos = \
+                self.lst_dic_lastpos[idx].pop(self.last_pos, {})
+            self._call_ms(idx, self.lst_base_forward[idx],
+                          tempdic_last_pos)
 
-                top = (curr_dic.get('T', 0) +
-                       curr_dic.get('A', 0))
-                lower = (top+curr_dic.get('C', 0) +
-                         curr_dic.get('G', 0))
-                curr_top[self.keypos] += top
-                curr_lower[self.keypos] += lower
+    def ms_reverse(self):
+        for idx in self.indexoflist:
+            for key in self.lst_dic_lastpos[idx].keys():
+                self.keypos = key-self.start
+                tempdic_last_pos = self.lst_dic_lastpos[idx].pop(key, {})
+                self._call_ms(idx, {}, tempdic_last_pos)
+
+    def _call_ms(self, idx, dic_forward, dic_lastpos):
+        top = (dic_forward.get('T', 0) +
+               dic_lastpos.get('A', 0))
+        lower = (top+dic_forward.get('C', 0) +
+                 dic_lastpos.get('G', 0))
+        self.dic_top[idx][self.keypos] += top
+        self.dic_lower[idx][self.keypos] += lower
 
     def writetofile(self):
         ''' this is done to make sure we have all keys
@@ -137,8 +157,11 @@ class Methyl_Level(object):
                 act_idx = _BASES_CHECK-base_idx
                 if (cigar_op == 0) and (cigar_len >= act_idx):
                     (self.lst_dic_lastpos[act_idx-2]
-                        [curr_pos+base_idx]
+                        [curr_pos+base_idx]  # [self.record.aend-2]
                         [bases[base_idx+1]]) += 1
+                    # i'm not sure if we should change the record.aend
+                    # to fit the actual position.
+                    # i think it wil wash away the patterns
 
     def _forward_strand(self):
         curr_pos = self.record.pos
@@ -154,8 +177,14 @@ class Methyl_Level(object):
             cigar_op, cigar_len = self.record.cigar[0]
             for base_idx in read_idx:
                 if cigar_op == 0 and cigar_len >= base_idx:
-                    (self.lst_dic_lastpos[base_idx]
-                        [curr_pos+base_idx][bases[base_idx]]) += 1
+                    if curr_pos != self.last_pos and self.last_pos != -1:
+                        self.ms_forward()
+                        # RESET DICT:
+                        self.lst_base_forward = self._create_lst_dic()
+
+                    # for base_idx in read_idx:
+                    self.lst_base_forward[base_idx][bases[base_idx]] += 1
+                    self.last_pos = curr_pos
 
 
 def parse_args(argv):
@@ -191,16 +220,11 @@ def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     met_lev = Methyl_Level(args)
-    last_chrom = None
     for chrom, start, end in read_bed(args):
-        met_lev.reset_dict(start, chrom)
-        last_chrom = None
+        met_lev.reset_dicts(start, chrom)
         for record in samfile.fetch(chrom, start, end):
-            if last_chrom and last_chrom != record.tid:
-                met_lev.call_ms()
             met_lev.update(record)
-            last_chrom = record.tid
-        met_lev.call_ms()
+        met_lev.call_final_ms()
     met_lev.writetofile()
     samfile.close()
     met_lev.fasta.closefile()
