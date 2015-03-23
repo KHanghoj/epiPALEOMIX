@@ -21,9 +21,8 @@ _POSITION_OFFSET = _NEIGHBOR+_OFFSET
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _CENTERINDEX = (_SIZE-1)/2
 _HALF_WIN_LENGTH = (_TOTAL_WIN_LENGTH-1)/2
-# _MAXLEN = 500
-_MAXLEN = ((_TOTAL_WIN_LENGTH*2)-2)
-_READ_MAX_LEN = _MAXLEN-_HALF_WIN_LENGTH
+_MAXLEN = 4000
+_READ_MAX_LEN = _MAXLEN-(_TOTAL_WIN_LENGTH*2)
 _MINDEPTH = 4
 
 
@@ -58,60 +57,51 @@ class Cache(object):
         return self._fasta.close()
 
 
-class nucleosome_prediction(object):
-    """docstring for nucleosome_prediction"""
-    def __init__(self, arg, seq_len=_MAXLEN):
-        # if new chrom: reset every thing in main():
+class Nucleosome_Prediction(object):
+    """docstring for Nucleosome_Prediction"""
+    def __init__(self, arg, seq_len=_MAXLEN, mindepth=4):
         self.arg = arg
-        self.fasta = Cache(self.arg.fastafile)
-        self.outputpath = self.arg.out
-        self._seq_len = int(seq_len)
+        self._fasta = Cache(self.arg.fastafile)
+        self._outputpath = self.arg.out
+        self._mindepth, self._seq_len = int(mindepth), int(seq_len)
+        self._zeros = [0]*self._seq_len
+        self._read_max_len = self._seq_len-(_TOTAL_WIN_LENGTH*2)
         self._deq_depth = deque(maxlen=self._seq_len)
         self._deq_pos = deque(maxlen=self._seq_len)
         self._last_ini = -self._seq_len
-        self._actual_idx = None
+        self._actual_idx, self.f_output, self._GC_model_len = None, None, None
         self._present_chrom = ''
-        self._zeros = [0]*self._seq_len
+        self._model = list()
         self._output_dic = dict()
-        self.f_output = None
-        self.model = list()
-        self._GC_model_len = None
         self._gcmodel_ini()
         self._makeoutputfile()
 
     def update_depth(self, record, chrom):
         self._present_chrom = chrom
-        # this method receives all the reads and distribute
         self._actual_idx = (record.pos - self._last_ini)
-        if self._actual_idx >= _READ_MAX_LEN:
-            if self._actual_idx > _MAXLEN:
-                # next read is further away than entire window
+        if self._actual_idx > self._read_max_len:
+            if self._actual_idx > self._seq_len:
                 self._nwise(self._deq_depth, self._deq_pos)
                 self.call_window()  # call everything
-                self._deq_depth.extend(self._zeros)  # RESTART
-                self._last_ini = record.pos-_HALF_WIN_LENGTH
-                self._actual_idx = _HALF_WIN_LENGTH
-                if len(self._output_dic) > 1000:
-                    self.writetofile()
+                self._deq_depth.extend(self._zeros)
+                self.writetofile()
             else:
-                cut_size = _MAXLEN - self._actual_idx
                 self._nwise(islice(self._deq_depth,
                                    0, self._actual_idx),
                             islice(self._deq_pos,
                                    0, self._actual_idx))
                 self.call_window()  # call up to actual idx
-                self._deq_depth.extend(self._zeros[:_MAXLEN -
-                                       _TOTAL_WIN_LENGTH-cut_size])
-                self._actual_idx = _TOTAL_WIN_LENGTH
-                self._last_ini = record.pos-self._actual_idx
+                self._deq_depth.extend([0]*(self._actual_idx -
+                                            _TOTAL_WIN_LENGTH))
+            self._actual_idx = _TOTAL_WIN_LENGTH
+            self._last_ini = record.pos-_TOTAL_WIN_LENGTH
             self._deq_pos.extend((pos+1) for pos in xrange(self._last_ini,
                                                            self._last_ini +
                                                            self._seq_len))
         if record.is_reverse:
-            gc_idx = self._get_gc_count(record.aend-self._GC_model_len)
+            corr_depth = self._get_gc_corr_dep(record.aend-self._GC_model_len)
         else:
-            gc_idx = self._get_gc_count(record.pos+1)
-        corr_depth = (self.model[gc_idx])
+            corr_depth = self._get_gc_corr_dep(record.pos)
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
                 for idx in xrange(self._actual_idx, self._actual_idx + count):
@@ -132,14 +122,13 @@ class nucleosome_prediction(object):
     def call_final_window(self):
         self._nwise(self._deq_depth, self._deq_pos)
         self.call_window()
-        pass
 
     def call_window(self):
         ''' docstring '''
         for self.win_depth, self.win_position in self.nwise_dat:
             # returns two tuples that are unpacked by
             # self.win_depth and self.win_position
-            if self.win_depth[_POSITION_OFFSET+_CENTERINDEX] <= _MINDEPTH:
+            if self.win_depth[_POSITION_OFFSET+_CENTERINDEX] <= self._mindepth:
                 continue
             calls_center = self._call_max(self.win_depth[_POSITION_OFFSET:
                                           _POSITION_OFFSET+_SIZE])
@@ -155,16 +144,7 @@ class nucleosome_prediction(object):
                 max_pos = _POSITION_OFFSET+max(calls_center)
                 start_pos = self.win_position[min_pos]
                 end_pos = self.win_position[max_pos]
-                key = start_pos
-                if key in self._output_dic.keys():
-                    if self._output_dic[key][-1] < score:
-                        self._output_dic[key] = [end_pos, center_depth, score]
-                else:
-                    # if self._output_dic:
-                    #     if self._output_dic[self.last_key][0] == end_pos:
-                    #         del self._output_dic[self.last_key]
-                    self._output_dic[key] = [end_pos, center_depth, score]
-                # self.last_key = key
+                self._output_dic[start_pos] = [end_pos, center_depth, score]
 
     def _check_width(self, start, end, incre):
         for idx in xrange(start, end, incre):
@@ -178,7 +158,7 @@ class nucleosome_prediction(object):
         self.call = {}  # this is the return dic with indexposition and depth
         self.window = lst
         self.maxdepth = max(self.window)
-        if self.maxdepth > _MINDEPTH:
+        if self.maxdepth > self._mindepth:
             if self.window[_CENTERINDEX] == self.maxdepth:
                 self.call[_CENTERINDEX] = self.window[_CENTERINDEX]
                 self._check_width(1, _CENTERINDEX, 1)
@@ -198,10 +178,10 @@ class nucleosome_prediction(object):
     def _makeoutputfile(self):
         ''' want to write to file every chrom, to speed up'''
         try:
-            remove(self.outputpath)
-            self.f_output = open(self.outputpath, 'a')
+            remove(self._outputpath)
+            self.f_output = open(self._outputpath, 'a')
         except OSError:
-            self.f_output = open(self.outputpath, 'a')
+            self.f_output = open(self._outputpath, 'a')
 
     def closefile(self):
         return self.f_output.close()
@@ -211,22 +191,22 @@ class nucleosome_prediction(object):
         self._deq_pos.clear()
         self._output_dic.clear()
         self._last_ini = -self._seq_len
-        # self.last_key = None
 
     def _gcmodel_ini(self):
         if self.arg.gcmodel:
             with open(self.arg.gcmodel, 'r') as f:
-                self.model = [float(line.rstrip('\n').split('\t')[-1])
-                              for line in f]
-                self._GC_model_len = len(self.model)-1
+                self._model = [float(line.rstrip('\n').split('\t')[-1])
+                               for line in f]
+                self._GC_model_len = len(self._model)
         else:
             self._GC_model_len = 0  # this is default if not assign
-            self.model = [1]*(self._GC_model_len+1)
+            self._model = [1]*(self._GC_model_len+1)
 
-    def _get_gc_count(self, pos):
-        fasta_str = self.fasta.fetch_string(self._present_chrom,
-                                            pos, self._GC_model_len)
-        return fasta_str.count('G')+fasta_str.count('C')
+    def _get_gc_corr_dep(self, pos):
+        fasta_str = self._fasta.fetch_string(self._present_chrom,
+                                             pos, self._GC_model_len)
+        gc_idx = fasta_str.count('G')+fasta_str.count('C')
+        return self._model[gc_idx]
 
 
 def parse_args(argv):
@@ -262,7 +242,7 @@ def read_bed(args, chromtype):
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
-    nucl_pred_cls = nucleosome_prediction(args)
+    nucl_pred_cls = Nucleosome_Prediction(args)
     for chrom, start, end in read_bed(args, ''):
         last_tid = ''
         nucl_pred_cls.reset_deques()
