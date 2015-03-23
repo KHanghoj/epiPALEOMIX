@@ -8,7 +8,6 @@ from __future__ import print_function
 # --end 17000000 --out hmm.txt
 import sys
 import pysam
-# import math
 import argparse
 from collections import deque
 from itertools import islice, izip, tee
@@ -20,9 +19,9 @@ _NEIGHBOR = 25  # flanking regions to be considered for log-odd ration score
 _POSITION_OFFSET = _NEIGHBOR+_OFFSET
 _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _CENTERINDEX = (_SIZE-1)/2
-_HALF_WIN_LENGTH = (_TOTAL_WIN_LENGTH-1)/2
+# _HALF_WIN_LENGTH = (_TOTAL_WIN_LENGTH-1)/2
 _MAXLEN = 4000
-_READ_MAX_LEN = _MAXLEN-(_TOTAL_WIN_LENGTH*2)
+# _READ_MAX_LEN = _MAXLEN-(_TOTAL_WIN_LENGTH*2)
 _MINDEPTH = 4
 
 
@@ -59,7 +58,7 @@ class Cache(object):
 
 class Nucleosome_Prediction(object):
     """docstring for Nucleosome_Prediction"""
-    def __init__(self, arg, seq_len=_MAXLEN, mindepth=4):
+    def __init__(self, arg, seq_len=_MAXLEN, mindepth=_MINDEPTH):
         self.arg = arg
         self._fasta = Cache(self.arg.fastafile)
         self._outputpath = self.arg.out
@@ -93,6 +92,7 @@ class Nucleosome_Prediction(object):
                 self.call_window()  # call up to actual idx
                 self._deq_depth.extend([0]*(self._actual_idx -
                                             _TOTAL_WIN_LENGTH))
+
             self._actual_idx = _TOTAL_WIN_LENGTH
             self._last_ini = record.pos-_TOTAL_WIN_LENGTH
             self._deq_pos.extend((pos+1) for pos in xrange(self._last_ini,
@@ -111,12 +111,12 @@ class Nucleosome_Prediction(object):
                 self._actual_idx += count
 
     def _nwise(self, dep, pos, n=_TOTAL_WIN_LENGTH):
+        '''izip returns two tuples for each entry zipped together.
+        unpacked by two variables in for loop in call_window '''
         depths = izip(*(islice(g, i, None)
                       for i, g in enumerate(tee(dep, n))))
         posis = izip(*(islice(g, i, None)
                      for i, g in enumerate(tee(pos, n))))
-        # izip returns two tuples for each entry zipped together.
-        # unpacked by two variables in for loop in call_window
         self.nwise_dat = izip(depths, posis)
 
     def call_final_window(self):
@@ -176,7 +176,7 @@ class Nucleosome_Prediction(object):
             # AFTER WRITETOFILE
 
     def _makeoutputfile(self):
-        ''' want to write to file every chrom, to speed up'''
+        ''' want to write to file every chrom, to keep scalablility'''
         try:
             remove(self._outputpath)
             self.f_output = open(self._outputpath, 'a')
@@ -208,6 +208,9 @@ class Nucleosome_Prediction(object):
         gc_idx = fasta_str.count('G')+fasta_str.count('C')
         return self._model[gc_idx]
 
+    def _write_corr_depth(self):
+        pass
+
 
 def parse_args(argv):
     ''' docstring '''
@@ -223,7 +226,7 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-def read_bed(args, chromtype):
+def read_bed(args, chromtype=''):
     if args.bed:
         with open(args.bed, 'r') as myfile:
             for line in myfile.readlines():
@@ -233,17 +236,14 @@ def read_bed(args, chromtype):
                 end = int(input_line.pop(0))
                 yield (chrom, start, end)
     else:
-        try:
-            yield (args.chrom, int(args.start), int(args.end))
-        except TypeError:
-            yield (args.chrom, args.start, args.end)
+        yield (args.chrom, int(args.start), int(args.end))
 
 
 def main(argv):
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = Nucleosome_Prediction(args)
-    for chrom, start, end in read_bed(args, ''):
+    for chrom, start, end in read_bed(args):
         last_tid = ''
         nucl_pred_cls.reset_deques()
         for record in samfile.fetch(chrom, start, end):
