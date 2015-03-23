@@ -5,8 +5,9 @@ import pysam
 import argparse
 import gzip
 from collections import deque
+# from itertools import islice, izip, tee
 from os import remove
-_MAXLEN = 400
+_MAXLEN = 500
 
 
 class Cache(object):
@@ -48,11 +49,12 @@ class Write_Depth(object):
         self._f_output, self._model, self._GC_model_len = None, None, None
         self._seq_len = int(seq_len)
         self._last_pos = -self._seq_len
-        self._corrected_depth = deque(maxlen=self._seq_len)
+        self._zeros = [0] * self._seq_len
+        self._corrected_depth = deque(self._zeros, maxlen=self._seq_len)
         self._genomic_positions = deque(maxlen=self._seq_len)
         self._cache_list = list()
         self._output_size = self._seq_len * 10
-        self.counter = 0
+        self.counter, self.deque_idx = 0, 0
         self._output_fmt = '{0}\t{1}\t{2}\n'
         self._makeoutputfile()
         self._gcmodel_ini()
@@ -73,58 +75,73 @@ class Write_Depth(object):
         gc_idx = fasta_str.count('G')+fasta_str.count('C')
         return self._model[gc_idx]
 
-    def update_depth(self, record):
+    def update_depth(self, record, start, chrom):
+        self._present_chrom, self.start = chrom, start
+        curr_pos = record.pos
         self.jump = (record.pos - self._last_pos)
         if self.jump > 0:
-            if self.jump > self._seq_len:
+            if self.jump >= self._seq_len:
                 self.jump = self._seq_len
-                pos = record.pos
+                if self._genomic_positions:
+                    self._append_cache_lst()
+                self._corrected_depth = deque(self._zeros,
+                                              maxlen=self._seq_len)
+                self._genomic_positions = deque(((pos+1) for pos in
+                                                xrange(curr_pos,
+                                                       curr_pos +
+                                                       self._seq_len)),
+                                                maxlen=self._seq_len)
             else:
-                pos = self._genomic_positions[-1]+1
-                # because we need to start from the next position
-            if self._genomic_positions:  # retrieving depths
-                self._retrieve_depth()
-            self._corrected_depth.extend([0]*self.jump)
-            self._genomic_positions.extend(xrange(pos, pos+self.jump))
-            if self.counter > self._output_size:
-                self._write_to_file()
-        self._last_pos = record.pos
+                self._append_cache_lst()
+                self._corrected_depth.extend([0]*self.jump)
+                position_values = curr_pos+self._seq_len
+                self._genomic_positions.extend((pos+1) for pos in
+                                               xrange(position_values,
+                                                      position_values +
+                                                      self.jump))
 
         if record.is_reverse:
             corr_depth = self._get_gc_corr_dep(record.aend-self._GC_model_len)
         else:
             corr_depth = self._get_gc_corr_dep(record.pos)
 
-        deque_idx = 0
+        self.deque_idx = 0
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
-                for idx in xrange(deque_idx, deque_idx + count):
+                for idx in xrange(self.deque_idx, self.deque_idx + count):
                     self._corrected_depth[idx] += corr_depth
-                deque_idx += count
+                self.deque_idx += count
             elif cigar in (2, 3, 6):
-                deque_idx += count
+                self.deque_idx += count
+        self._last_pos = record.pos
 
-    def _retrieve_depth(self):
-        for _ in xrange(self.jump):
-            dep = self._corrected_depth.popleft()
-            pos = self._genomic_positions.popleft()+1
-            if dep and pos >= self.start and pos <= self.end:
+    def adjust_deques(self, jump):
+        while jump:
+            yield (self._genomic_positions.popleft(),
+                   self._corrected_depth.popleft())
+            jump -= 1
+
+    def _append_cache_lst(self):
+        for pos, dep in self.adjust_deques(self.jump):
+            if dep and pos >= self.start:
+                # self.f_output.write(self._output_fmt.format(pos, dep))
                 self._cache_list.append((pos, dep))
                 self.counter += 1
+        if self.counter > self._output_size:
+            self._write_to_file()
 
     def _write_to_file(self):
         ''' dfs '''
-        for p, d in iter(self._cache_list):
-            self.f_output.write(
-                self._output_fmt.format(self._present_chrom, p, d))
-        self._cache_list = list()
-        self.counter = 0
-
-    def call_depths(self):
-        if self._genomic_positions:
-            self._retrieve_depth()
         if self._cache_list:
-            self._write_to_file()
+            for p, d in iter(self._cache_list):
+                self.f_output.write(self._output_fmt.
+                                    format(self._present_chrom, p, d))
+            self._cache_list = list()
+            self.counter = 0
+
+    def call_final(self):
+        self._append_cache_lst()
+        self._write_to_file()
 
     def _makeoutputfile(self):
         ''' want to write to file every chrom, to keep scalablility'''
@@ -134,8 +151,7 @@ class Write_Depth(object):
         except OSError:
             self.f_output = gzip.open(self.arg.out, 'ab')
 
-    def reset_deques(self, chrom, start, end):
-        self._present_chrom, self.start, self.end = chrom, start, end
+    def reset_deques(self):
         self._corrected_depth.clear()
         self._genomic_positions.clear()
         self._last_pos = -self._seq_len
@@ -177,15 +193,15 @@ def main(argv):
     corrected_depth = Write_Depth(args)
     for chrom, start, end in read_bed(args):
         last_tid = None
-        corrected_depth.reset_deques(chrom, start, end)
+        corrected_depth.reset_deques()
         for record in samfile.fetch(chrom, start, end):
             if record.tid != last_tid:
                 if last_tid:
-                    corrected_depth.call_depths()
+                    corrected_depth.call_final()
                     corrected_depth.reset_deques()
-            corrected_depth.update_depth(record)
+            corrected_depth.update_depth(record, start, chrom)
             last_tid = record.tid
-        corrected_depth.call_depths()
+        corrected_depth.call_final()
     corrected_depth.closefile()
     return 0
 
