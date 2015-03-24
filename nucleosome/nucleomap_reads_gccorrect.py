@@ -208,9 +208,6 @@ class Nucleosome_Prediction(object):
         gc_idx = fasta_str.count('G')+fasta_str.count('C')
         return self._model[gc_idx]
 
-    def _write_corr_depth(self):
-        pass
-
 
 def parse_args(argv):
     ''' docstring '''
