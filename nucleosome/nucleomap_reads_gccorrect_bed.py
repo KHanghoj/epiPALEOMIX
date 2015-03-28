@@ -105,7 +105,7 @@ class Nucleosome_Prediction(object):
 
     def _nwise(self, deque_lst, n=_TOTAL_WIN_LENGTH):
         '''izip returns two tuples for each entry zipped together.
-        unpacked by two variables in for loop in __call_window '''
+        unpacked by two variables in for loop in _call_window '''
         return izip(*(islice(g, i, None)
                       for i, g in enumerate(tee(deque_lst, n))))
 
