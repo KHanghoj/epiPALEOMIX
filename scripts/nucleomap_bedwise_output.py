@@ -79,10 +79,15 @@ class Nucleosome_Prediction(object):
                 self._deq_depth.extend(self._zeros)
                 self.writetofile()
             else:
-                nwisedat = self._nwise_zip(islice(self._deq_depth,
-                                           0, self._actual_idx-1),
-                                           islice(self._deq_pos,
-                                           0, self._actual_idx-1))
+                tmp_deq_dep = islice(self._deq_depth, 0, self._actual_idx-1)
+                tmp_deq_pos = islice(self._deq_pos, 0, self._actual_idx-1)
+                nwisedat = self._nwise_zip(tmp_deq_dep,
+                                           tmp_deq_pos)
+
+                # nwisedat = self._nwise_zip(islice(self._deq_depth,
+                #                            0, self._actual_idx-1),
+                #                            islice(self._deq_pos,
+                #                            0, self._actual_idx-1))
                 self._call_window(nwisedat)  # call up to actual idx
                 self._deq_depth.extend([0]*(self._actual_idx -
                                             _TOTAL_WIN_LENGTH))

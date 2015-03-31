@@ -51,13 +51,15 @@ class Write_Depth(object):
         self._corrected_depth = deque(maxlen=self._seq_len)
         self._genomic_positions = deque(maxlen=self._seq_len)
         self._cache_list = list()
+        self._cache_list_app = self._cache_list.append
         self._output_size = self._seq_len * 10
         self.counter = 0
-        self._output_fmt = '{0}\t{1}\t{2}\n'
+        self._output_fmt = '{0}\t{1}\t{2}\t{3}\n'
         self._makeoutputfile()
         self._gcmodel_ini()
 
     def _gcmodel_ini(self):
+        self._model = list()
         if self.arg.gcmodel:
             with open(self.arg.gcmodel, 'r') as f:
                 self._model = [float(line.rstrip('\n').split('\t')[-1])
@@ -68,10 +70,13 @@ class Write_Depth(object):
             self._model = [1]*(self._GC_model_len+1)
 
     def _get_gc_corr_dep(self, pos):
-        fasta_str = self._fasta.fetch_string(self._present_chrom,
-                                             pos, self._GC_model_len)
-        gc_idx = fasta_str.count('G')+fasta_str.count('C')
-        return self._model[gc_idx]
+        if self._GC_model_len:
+            fasta_str = self._fasta.fetch_string(self.chrom,
+                                                 pos, self._GC_model_len)
+            gc_idx = fasta_str.count('G')+fasta_str.count('C')
+            return self._model[gc_idx]
+        else:
+            return 1
 
     def update_depth(self, record):
         self.jump = (record.pos - self._last_pos)
@@ -81,7 +86,6 @@ class Write_Depth(object):
                 pos = record.pos
             else:
                 pos = self._genomic_positions[-1]+1
-                # because we need to start from the next position
             if self._genomic_positions:  # retrieving depths
                 self._retrieve_depth()
             self._corrected_depth.extend([0]*self.jump)
@@ -109,15 +113,17 @@ class Write_Depth(object):
             dep = self._corrected_depth.popleft()
             pos = self._genomic_positions.popleft()+1
             if dep and pos >= self.start and pos <= self.end:
-                self._cache_list.append((pos, dep))
+                self._cache_list_app((pos, dep))
                 self.counter += 1
 
     def _write_to_file(self):
         ''' dfs '''
+        # p=pos, d=depth
         for p, d in iter(self._cache_list):
             self.f_output.write(
-                self._output_fmt.format(self._present_chrom, p, d))
-        self._cache_list = list()
+                self._output_fmt.format(self.chrom, p,
+                                        d, self.bedcoord))
+        del self._cache_list[:]
         self.counter = 0
 
     def call_depths(self):
@@ -135,10 +141,11 @@ class Write_Depth(object):
             self.f_output = gzip.open(self.arg.out, 'ab')
 
     def reset_deques(self, chrom, start, end):
-        self._present_chrom, self.start, self.end = chrom, start, end
+        self.chrom, self.start, self.end = chrom, start, end
         self._corrected_depth.clear()
         self._genomic_positions.clear()
         self._last_pos = -self._seq_len
+        self.bedcoord = '{}_{}_{}'.format(self.chrom, self.start, self.end)
 
     def closefile(self):
         self.f_output.close()
