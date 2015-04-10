@@ -1,16 +1,21 @@
 # -*- mode: Yaml; -*-
 Prefixes:
-    "--FastaPath": ../reference/hs.build37.1.fa
+#    "--FastaPath": ../reference/hs.build37.1.fa
+    "--FastaPath": ../../reference/hs.build37.1.fa
     "--FastaChromType": False # if True 'chr1' else '1'
-    "--MappabilityPath": chr22_31_50.40000-20000.mappability
+#    "--MappabilityPath": ../bedfiles/chrom22_51_50.40000-20000.mappability
+    "--MappabilityPath": ../chr22_31_50.40000-20000.mappability
 BedFiles:
-    CTCFbed: ../bedfiles/testhg19ctcf.bed
-#    CTCGbed1: ../bedfiles/testhg19ctcf.bed
-
+    EnabledFilter: True
+    UniquenessFilter: 0.9
+    #CTCFbed: ../bedfiles/testhg19ctcf.bed
+#    CTCGbed1: ../bedfiles/testhg19ctcf1.bed
+#    CTCGbed2: ../bedfiles/testhg19ctcf2.bed
+    CTCFbed: ../../bedfiles/testhg19ctcf.bed
 BamInputs:
     BAM1:
         BamInfo:
-            "BamPath": Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+            "BamPath": ../Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
             "--MinMappingQuality": 30
             "--BamChromType": False 
             "--LibraryConstruction": DS
@@ -18,7 +23,7 @@ BamInputs:
             "Enabled": True
 #            "--MapReadLengthMin": 56
 #            "--MapReadLengthMax": 57
-            "MapMinMaxReadLength": [56, 57]
+            "MapMinMaxReadLength": [60, 85]
             "--MappaUniqueness": 0.9
         NucleoMap:
             "Enabled": True
@@ -34,7 +39,7 @@ BamInputs:
             "--MaxRange": 3000
         WriteDepth:
             "Enabled": False
-   # BAM1:
+#    BAM2:
 #        BamInfo:
 #            "BamPath": Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
 #            "--MinMappingQuality": 30

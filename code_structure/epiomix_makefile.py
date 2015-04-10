@@ -78,6 +78,8 @@ _VALIDATION = {
         "--MappabilityPath": IsStr
     },
     "BedFiles": {
+        'EnabledFilter': IsBoolean(default=True),
+        'UniquenessFilter': IsFloat(default=0.9),
         _VALID_BED_NAME: IsStr
     }
 }

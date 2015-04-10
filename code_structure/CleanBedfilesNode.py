@@ -1,18 +1,18 @@
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.command import AtomicCmd
-from pypeline.atomiccmd.sets import ParallelCmds
-import tempfile
-import os
-import shutil
 
 
 class CleanFilesNode(CommandNode):
-    def __init__(self, makefile, destfile, dependencies=()):
-        
-        pass
-
-        pass
-        # CommandNode.__init__(self,
-        #                      description=description,
-        #                      command=cmd,
-        #                      dependencies=dependencies)
+    def __init__(self, mappa, unique, inbedfile, outbedfile, dependencies=()):
+        call = ['Rscript', './cleanbedfiles.R',
+                '%(IN_MAPPA)s', str(unique), '%(IN_BED)s', '%(OUT_BED)s']
+        cmd = AtomicCmd(call, IN_MAPPA=mappa,
+                        IN_BED=inbedfile,  OUT_BED=outbedfile)
+        description = "<CreateGCModel: '%s' -> '%s', Uniqueness: '%s'" % \
+                      (inbedfile,
+                       outbedfile,
+                       unique)
+        CommandNode.__init__(self,
+                             description=description,
+                             command=cmd,
+                             dependencies=dependencies)

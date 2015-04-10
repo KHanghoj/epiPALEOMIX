@@ -3,13 +3,7 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
-# import tempfile
 from collections import defaultdict
-# from itertools import repeat, izip
-# import os
-# import shutil
-# import multiprocessing as mp
-# import subprocess as sp
 _BUFFER = 2
 
 
@@ -52,27 +46,6 @@ class GCcorrect(object):
         self.fasta = Cache_fasta(self.arg.FastaPath)
         self.rl = self.arg.ReadLength
 
-    def getreads_old(self, chrom, start, end):
-        self.dic_forward = {}
-        self.dic_reverse = {}
-        records = self.samfile.fetch(chrom, start, end)
-        # they need to be 0-based for fetching fasta seq:
-        self.chrom, self.start, self.end = chrom, start-1, end-1
-
-        [self._update(record.aend-1, self.dic_reverse)
-            if record.is_reverse else
-            self._update(record.pos, self.dic_forward) for record in records]
-        if len(self.dic_forward)+len(self.dic_reverse) > 50:
-            # do not use chunks with 50 or less positions.
-            for rl in self._read_lengths():
-                for rela_pos, gc in self._short_seq(rl):
-                    curr_start = rela_pos+self.start
-                    curr_end = curr_start+rl
-                    self.dic_n_gc[rl][gc] += 2
-                    self.dic_f_gc[rl][gc] += \
-                        (self.dic_forward.pop(curr_start, 0) +
-                         self.dic_reverse.pop(curr_end, 0))
-
     def getreads(self, chrom, start, end):
         self.dic_forward, self.dic_reverse = {}, {}
         records = self.samfile.fetch(chrom, start, end)
@@ -98,9 +71,7 @@ class GCcorrect(object):
 
     def _retrieve_fastaseq(self):
         length = self.end-self.start
-        seq = self.fasta.fetch_string(self.chrom,
-                                      self.start-1,
-                                      length)
+        seq = self.fasta.fetch_string(self.chrom, self.start-1, length)
         return(length, seq)
 
     def _short_seq(self, rl):
@@ -129,11 +100,11 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(prog='GCcorrection')
     parser.add_argument('BamPath', type=str)
     parser.add_argument('--FastaPath', type=str)
-    parser.add_argument("--MappabilityPath", type=str)
+    parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
     # parser.add_argument("--FastaChromType", help="...", type=bool)
-    parser.add_argument("--BamChromType", help="...", type=bool)
+    parser.add_argument('--BamChromType', help="...", type=bool)
     # parser.add_argument('--TempFolder', help='...', type=str)
     return parser.parse_known_args(argv)
 
@@ -166,7 +137,6 @@ def run(args):
     GC = GCcorrect(args)
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1
-    # for chrom, start, end, score in read_bed(args, BamChrom):
     for chrom, start, end, score in read_bed(args):
         if score >= mappability:
             # because chunks can overlap
