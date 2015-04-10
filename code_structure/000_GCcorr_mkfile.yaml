@@ -1,0 +1,63 @@
+# -*- mode: Yaml; -*-
+Prefixes:
+    "--FastaPath": ../reference/hs.build37.1.fa
+    "--FastaChromType": False # if True 'chr1' else '1'
+    "--MappabilityPath": chr22_31_50.40000-20000.mappability
+BedFiles:
+    CTCFbed: ../bedfiles/testhg19ctcf.bed
+#    CTCGbed1: ../bedfiles/testhg19ctcf.bed
+
+BamInputs:
+    BAM1:
+        BamInfo:
+            "BamPath": Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+            "--MinMappingQuality": 30
+            "--BamChromType": False 
+            "--LibraryConstruction": DS
+        GCcorrect:
+            "Enabled": True
+#            "--MapReadLengthMin": 56
+#            "--MapReadLengthMax": 57
+            "MapMinMaxReadLength": [56, 57]
+            "--MappaUniqueness": 0.9
+        NucleoMap:
+            "Enabled": True
+            "--MinDepth": 20
+            "--DequeLen": 2000
+        MethylMap:
+            "Enabled": True
+            "--ReadBases": 6
+            "--SkipBases": 0
+        Phasogram:
+            "Enabled": True
+            "--SubsetPileup": 3
+            "--MaxRange": 3000
+        WriteDepth:
+            "Enabled": False
+   # BAM1:
+#        BamInfo:
+#            "BamPath": Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+#            "--MinMappingQuality": 30
+#            "--BamChromType": False 
+#            "--LibraryConstruction": DS
+#        GCcorrect:
+#            "Enabled": True
+##            "--MapReadLengthMin": 56
+##            "--MapReadLengthMax": 57
+#            "MapMinMaxReadLength": [56, 57]
+#            "--MappaUniqueness": 0.9
+#        NucleoMap:
+#            "Enabled": True
+#            "--MinDepth": 20
+#            "--DequeLen": 2000
+#        MethylMap:
+#            "Enabled": True
+#            "--ReadBases": 6
+#            "--SkipBases": 0
+#        Phasogram:
+#            "Enabled": True
+#            "--SubsetPileup": 3
+#            "--MaxRange": 3000
+#        WriteDepth:
+#            "Enabled": False
+
