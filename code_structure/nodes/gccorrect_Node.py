@@ -7,10 +7,12 @@ import os
 class GccorrectNode(CommandNode):
     def __init__(self, gc_dic, bamfile, destination_pref, rl, dependencies=()):
         destination = destination_pref+'_'+str(rl)
-        call = ['python', './gccorrect.py', '%(IN_BAM)s', '%(OUT_STDOUT)s']
+        call = ['python', './tools/gccorrect.py',
+                '%(IN_BAM)s', '%(OUT_STDOUT)s']
         call.extend(("--ReadLength", rl))
-        for item in gc_dic.iteritems():
-            call.extend(item)
+        for option, argument in gc_dic.iteritems():
+            if option.startswith('-'):
+                call.extend((option, argument))
         cmd = AtomicCmd(call, IN_BAM=bamfile, OUT_STDOUT=destination)
         description = "<Gccorrect: '%s' -> '%s'>" % (bamfile, str(rl))
         CommandNode.__init__(self,
@@ -22,7 +24,7 @@ class GccorrectNode(CommandNode):
 class CreateGCModelNode(CommandNode):
     def __init__(self, source_dest, outputfolder, dependencies=()):
         source, pattern = os.path.split(source_dest)
-        call = ['Rscript', './model_gc.R',
+        call = ['Rscript', './tools/model_gc.R',
                 '%(IN_SOURCE)s', str(pattern), outputfolder, '%(OUT_STDOUT)s']
         destination = os.path.join(outputfolder,
                                    'GC_Model_%s.txt' % (str(pattern)))

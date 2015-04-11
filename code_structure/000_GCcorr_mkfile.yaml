@@ -7,7 +7,7 @@ Prefixes:
     "--MappabilityPath": ../chr22_31_50.40000-20000.mappability
 BedFiles:
     EnabledFilter: True
-    UniquenessFilter: 0.9
+    UniquenessFilter: 0.9  # filteranalysis should be replace with bedtools
     #CTCFbed: ../bedfiles/testhg19ctcf.bed
 #    CTCGbed1: ../bedfiles/testhg19ctcf1.bed
 #    CTCGbed2: ../bedfiles/testhg19ctcf2.bed
@@ -21,8 +21,6 @@ BamInputs:
             "--LibraryConstruction": DS
         GCcorrect:
             "Enabled": True
-#            "--MapReadLengthMin": 56
-#            "--MapReadLengthMax": 57
             "MapMinMaxReadLength": [60, 85]
             "--MappaUniqueness": 0.9
         NucleoMap:

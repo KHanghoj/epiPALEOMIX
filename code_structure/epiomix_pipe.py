@@ -5,9 +5,9 @@ import time
 import pypeline.yaml
 import pypeline.logger
 import optparse
-from gccorrect_Node import \
+from nodes.gccorrect_Node import \
     GccorrectNode, CreateGCModelNode
-from CleanBedfilesNode import CleanFilesNode
+from nodes.CleanBedfilesNode import CleanFilesNode
 from pypeline.node import MetaNode
 from pypeline.common.console import print_err
 from epiomix_makefile import read_epiomix_makefile
@@ -44,6 +44,15 @@ def upd_dic(dic, *args):
         dic.update(arg)
 
 
+def coerce_to_dic(*args):
+    dic = {}
+    for arg in args:
+        if not isinstance(arg, dict):
+            arg = dict([arg])
+        dic.update(arg)
+    return dic
+
+
 def dest_prefix(*args):
     return(os.path.join(*args))
 
@@ -64,7 +73,8 @@ def filter_bedfiles(bedfiles, destination_pref, mappapath):
 def calc_gccorrectionmodel(bamfile, opts, fasta_opt, temp_root, bamname):
     nodes, gc_dic = [], {}
     temp_gcpath = dest_prefix(temp_root, bamname+'_GCcorrect')
-    upd_dic(gc_dic, fasta_opt, opts['BamInfo'], opts['GCcorrect'])
+    # upd_dic(gc_dic, fasta_opt, opts['BamInfo'], opts['GCcorrect'])
+    gc_dic = coerce_to_dic(fasta_opt, opts['BamInfo'], opts['GCcorrect'])
     rlmin, rlmax = gc_dic.pop('MapMinMaxReadLength', [56, 57])
     for rl in xrange(rlmin, rlmax+1, 5):  # this is each readlength
 
@@ -75,6 +85,18 @@ def calc_gccorrectionmodel(bamfile, opts, fasta_opt, temp_root, bamname):
                                                 % (str(bamname)))
     return [CreateGCModelNode(temp_gcpath, bamname,
             dependencies=nodes)]
+
+ANALYSES = ('NucleoMap', 'MethylMap', 'Phasogram', 'WriteDepth')
+EXECUABLE_DIC = {
+    'NucleoMap': ['python', '.tools/nucleomap.py', '%(IN_BAM)s',
+                  '%(OUT_MERGE)s', '%(OUT_RAW)s'],
+    'MethylMap': ['python', '.tools/methylmap.py', '%(IN_BAM)s',
+                  '%(OUT_MERGE)s', '%(OUT_RAW)s'],
+    'Phasogram': ['python', '.tools/phasogram.py', '%(IN_BAM)s',
+                  '%(OUT_STD)s'],
+    'WriteDepth': ['python', '.tools/pileupdepth.py', '%(IN_BAM)s',
+                   '%(OUT_STD)s']
+}
 
 
 def main(argv):
@@ -107,17 +129,26 @@ def main(argv):
                                                  config.temp_root, bam_name)
                 topnodes = gcnodes+bednodes if bednodes else gcnodes
                 # GCmodel is in the makefile now
-            # mNode = MetaNode(description="'%s': metanode for Gccorrection and "
-            #                              "bedfiles corrected for UNIQUENESS"
-            #                              % (bam_name, ),
-            #                  dependencies=topnodes)
-            # print(mNode)
+            mNode = MetaNode(description="'%s': metanode for correction of "
+                                         "GC and bedfiles" % (bam_name, ),
+                             dependencies=topnodes)
+            print(mNode)
 
-            # put this mnode into every script from now on.
-            # make a meta node here of all the files above and start
-            # the actual analysis.
-            # dependenciNode = MetaNode()
-            # for bed in makefile['BedFiles']:
+            # # put this mnode into every script from now on.
+            # # make a meta node here of all the files above and start
+            # # the actual analysis.
+            # # dependenciNode = MetaNode()
+            bam_analyses = [key for key, val in opts.iteritems() if
+                            key in ANALYSES and
+                            val['Enabled']]
+            for bedfile in makefile['BedFiles'].items():
+                dic = coerce_to_dic(fasta_opt, bedfile, opts["BamInfo"])
+                for analysis in bam_analyses:
+                    # input:
+                    dic = EXECUABLE_DIC[analysis]
+                    print(dic)
+                    # bamfile, bedfile,outputpaths
+                    # mNode to each analysis
 
     pipeline.add_nodes(topnodes)
     pipeline.run(dry_run=False, max_running=config.max_threads)
