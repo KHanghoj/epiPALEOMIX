@@ -9,9 +9,6 @@ from pypeline.common.makefile import \
     ValueGE, \
     ValuesSubsetOf, \
     IsListOf
-# IsDictOf
-# Or, \
-# StringStartsWith, \
 
 
 def _alphanum_check(whitelist):
@@ -42,6 +39,7 @@ _VALIDATION_GCCORRECT = {
 }
 _VALIDATION_NUCLEO = {
     "Enabled": IsBoolean(default=True),
+    "Apply_GC_Correction": IsBoolean(default=True),
     "--MinDepth": IsUnsignedInt(default=20),
     "--DequeLen": IsUnsignedInt(default=2000)
 }
@@ -52,11 +50,14 @@ _VALIDATION_METHYL = {
 }
 _VALIDATION_PHASO = {
     "Enabled": IsBoolean(default=True),
+    "Apply_GC_Correction": IsBoolean(default=False),
     "--SubsetPileup": IsUnsignedInt(default=3),
     "--MaxRange": IsUnsignedInt(default=3000)
 }
 _VALIDATION_WRITEDEPTH = {
-    "Enabled": IsBoolean(default=False)
+    "Enabled": IsBoolean(default=False),
+    "Apply_GC_Correction": IsBoolean(default=True),
+    "--DequeLength": IsUnsignedInt(default=500)
 }
 
 _VALIDATION_TOOLS = {

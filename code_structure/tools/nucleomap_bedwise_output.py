@@ -246,6 +246,23 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
+# def parse_args(argv):
+#     ''' docstring '''
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('bam', help="...", type=str)
+#     parser.add_argument('bed', help="...", type=str)
+#     parser.add_argument('outputfile', help='...', type=str)
+#     parser.add_argument('--FastaPath', help="fastafile", type=str)
+#     parser.add_argument('--GCmodel', help='...', type=str, default=None)
+#     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
+#     parser.add_argument('--MaxRange', help="...", type=int, default=3000)
+#     parser.add_argument('--BamChromType', help="...", type=bool)
+#     parser.add_argument('--FastaChromType', help="...", type=bool)
+#     parser.add_argument('--MinMappingQuality', help="...", type=int,
+#                         default=25)
+#     return parser.parse_known_args(argv)
+
+
 def read_bed(args, chromtype=''):
     if args.bed:
         with open(args.bed, 'r') as myfile:

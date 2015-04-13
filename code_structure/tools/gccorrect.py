@@ -154,10 +154,6 @@ def main(argv):
     print('split', file=sys.stderr)
     print(unknown, file=sys.stderr)
     run(args)
-    # Rscript, scriptname, inputfolder, pattern
-    # cmd_str = ['Rscript', 'plot_gc.R', tempf, os.path.basename(args.bam)]
-    # sp.check_call(cmd_str)
-    # shutil.rmtree(tempf)
     return 0
 
 if __name__ == '__main__':

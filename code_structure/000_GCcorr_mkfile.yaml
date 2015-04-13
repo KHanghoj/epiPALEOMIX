@@ -11,7 +11,8 @@ BedFiles:
     #CTCFbed: ../bedfiles/testhg19ctcf.bed
 #    CTCGbed1: ../bedfiles/testhg19ctcf1.bed
 #    CTCGbed2: ../bedfiles/testhg19ctcf2.bed
-    CTCFbed: ../../bedfiles/testhg19ctcf.bed
+#    CTCFbed: ../../bedfiles/testhg19ctcf.bed
+    small: small_bed.bed
 BamInputs:
     BAM1:
         BamInfo:
@@ -25,6 +26,7 @@ BamInputs:
             "--MappaUniqueness": 0.9
         NucleoMap:
             "Enabled": True
+            "Apply_GC_Correction": False
             "--MinDepth": 20
             "--DequeLen": 2000
         MethylMap:
@@ -33,10 +35,13 @@ BamInputs:
             "--SkipBases": 0
         Phasogram:
             "Enabled": True
+            "Apply_GC_Correction": False
             "--SubsetPileup": 3
             "--MaxRange": 3000
         WriteDepth:
             "Enabled": False
+            "Apply_GC_Correction": True
+            "--DequeLength": 500
 #    BAM2:
 #        BamInfo:
 #            "BamPath": Saqqaq.hg19.flt.sort.rmdup.realign.md.bam

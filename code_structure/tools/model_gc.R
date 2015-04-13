@@ -85,4 +85,5 @@ invisible(dev.off())
 
 df = cbind('count'=0:winsize,'newpts'=newpts, 'pred_ratio'=predvec, 'pred_ratio_inv'=1/predvec)
 df[,4][is.infinite(df[,4])] = 0
+write.table(df, file=paste(outputpath, 'GCCORRECT_RAWDATA.pdf',sep='/'),row.names=F,col.names=T,quote=F,sep='\t')
 write(df[,4],stdout(), ncolumn=1)
