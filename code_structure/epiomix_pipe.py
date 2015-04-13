@@ -23,13 +23,6 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
-class analyses_dic_arguments(object):
-    """docstring for analyses_dic_arguments"""
-    def __init__(self, arg):
-        super(analyses_dic_arguments, self).__init__()
-        self.arg = arg
-
-
 def check_path(temp_dir):
     if not os.path.exists(temp_dir):
         try:
@@ -73,7 +66,6 @@ def filter_bedfiles(bedfiles, destination_pref, mappapath):
 def calc_gccorrectionmodel(bamfile, opts, fasta_opt, temp_root, bamname):
     nodes, gc_dic = [], {}
     temp_gcpath = dest_prefix(temp_root, bamname+'_GCcorrect')
-    # upd_dic(gc_dic, fasta_opt, opts['BamInfo'], opts['GCcorrect'])
     gc_dic = coerce_to_dic(fasta_opt, opts['BamInfo'], opts['GCcorrect'])
     rlmin, rlmax = gc_dic.pop('MapMinMaxReadLength', [56, 57])
     for rl in xrange(rlmin, rlmax+1, 5):  # this is each readlength
