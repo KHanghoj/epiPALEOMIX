@@ -60,3 +60,22 @@ class Cache(object):
     def closefile(self):
         ''' docstring '''
         return self._fasta.close()
+
+
+class GC_correction(object):
+    """docstring for GC_correction"""
+    def _GCmodel_ini(self):
+        if self.arg.GCmodel:
+            with open(self.arg.GCmodel, 'r') as f:
+                self._model = [float(line.rstrip('\n').split('\t')[-1])
+                               for line in f]
+                self._GC_model_len = len(self._model)
+
+    def _get_gc_corr_dep(self, pos):
+        if self.arg.GCmodel:
+            fasta_str = self._fasta.fetch_string(self.chrom,
+                                                 pos, self._GC_model_len-1)
+            gc_idx = fasta_str.count('G')+fasta_str.count('C')
+            return self._model[gc_idx]
+        else:
+            return 1

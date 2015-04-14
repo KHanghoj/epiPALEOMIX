@@ -8,16 +8,18 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
+import gzip
 from collections import defaultdict, deque
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache
+    read_bed_WO, strtobool, Cache, GC_correction
 
 
-class Phasogram(object):
+class Phasogram(GC_correction):
     """docstring for Phasogram"""
     def __init__(self, arg):
         self.arg = arg
         self._fasta = Cache(self.arg.FastaPath)
+        GC_correction.__init__(self)
         self.outputdic = defaultdict(int)
         self.forward_dic = {}
         self.reverse_dic = {}
@@ -57,7 +59,7 @@ class Phasogram(object):
             self._call_output(temp_dic)
 
     def writetofile(self):
-        with open(self.arg.outputfile, 'w') as f_output:
+        with gzip.open(self.arg.outputfile, 'w') as f_output:
             for key, value in self.outputdic.iteritems():
                 f_output.write('{}\t{}\n'.format(key, value))
 
@@ -70,38 +72,10 @@ class Phasogram(object):
         self.forward_dic = {}
         self.reverse_dic = {}
 
-    def _GCmodel_ini(self):
-        if self.arg.GCmodel:
-            with open(self.arg.GCmodel, 'r') as f:
-                self._model = [float(line.rstrip('\n').split('\t')[-1])
-                               for line in f]
-                self._GC_model_len = len(self._model)
-
-    def _get_gc_corr_dep(self, pos):
-        if self.arg.GCmodel:
-            fasta_str = self._fasta.fetch_string(self.chrom,
-                                                 pos, self._GC_model_len)
-            gc_idx = fasta_str.count('G')+fasta_str.count('C')
-            return self._model[gc_idx]
-        else:
-            return 1
-
     def _check_fasta_chr(self, chrom):
         if not self.arg.FastaChromType:
             chrom = chrom.replace('chr', '')
         return chrom
-
-
-# def strtobool(val):
-#     if isinstance(val, bool) or isinstance(val, int):
-#         return(val)
-#     val = val.lower()
-#     if val in ('y', 'yes', 't', 'true', 'on', '1'):
-#         return 1
-#     elif val in ('n', 'no', 'f', 'false', 'off', '0'):
-#         return 0
-#     else:
-#         raise ValueError("invalid truth value %r" % (val,))
 
 
 def parse_args(argv):
@@ -114,29 +88,11 @@ def parse_args(argv):
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
     parser.add_argument('--MaxRange', help="...", type=int, default=3000)
-    parser.add_argument('--FastaChromType', dest='FastaChromType')
-    parser.add_argument('--BamChromType', dest='BamChromType')
+    parser.add_argument('--FastaChromType', help="...")
+    parser.add_argument('--BamChromType', help="...")
     parser.add_argument('--MinMappingQuality', help="...", type=int,
                         default=25)
     return parser.parse_known_args(argv)
-
-
-# def read_bed_W(args):
-#     if args.bed:
-#         with open(args.bed, 'r') as myfile:
-#             for line in myfile:
-#                 input_line = (line.rstrip('\n')).split('\t')[:3]
-#                 chrom, start, end = input_line
-#                 yield (str(chrom), int(start), int(end))
-
-
-# def read_bed_WO(args):
-#     if args.bed:
-#         with open(args.bed, 'r') as myfile:
-#             for line in myfile:
-#                 input_line = (line.rstrip('\n')).split('\t')[:3]
-#                 chrom, start, end = input_line
-#                 yield (str(chrom.replace('chr', '')), int(start), int(end))
 
 
 def run(args):

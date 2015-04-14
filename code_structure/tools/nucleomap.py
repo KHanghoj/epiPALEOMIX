@@ -8,7 +8,7 @@ from itertools import islice, izip, tee
 from os.path import exists, splitext
 from shutil import move
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache
+    read_bed_WO, strtobool, Cache, GC_correction
 import gzip
 # CONSTANTS:
 _SIZE = 147  # the window
@@ -19,11 +19,12 @@ _TOTAL_WIN_LENGTH = _SIZE+(2*_OFFSET)+(2*_NEIGHBOR)
 _CENTERINDEX = (_SIZE-1)/2
 
 
-class Nucleosome_Prediction(object):
+class Nucleosome_Prediction(GC_correction):
     """docstring for Nucleosome_Prediction"""
     def __init__(self, arg):
         self.arg = arg
         self._fasta = Cache(self.arg.FastaPath)
+        GC_correction.__init__(self)
         self._mindepth = int(self.arg.MinDepth)
         self._seq_len = int(self.arg.DequeLen)
         self._zeros = [0]*self._seq_len
@@ -102,7 +103,7 @@ class Nucleosome_Prediction(object):
                 spacerL = sum(self.win_depth[:_NEIGHBOR])/float(_NEIGHBOR)
                 spacerR = sum(self.win_depth[-_NEIGHBOR:])/float(_NEIGHBOR)
                 mean_spacer = 1.0 + (0.5 * (spacerL + spacerR))
-                # divide by width of nucleosome called
+                # dividing by width of nucleosome called
                 score = (float(center_depth) / mean_spacer)/(sizeofwindow+1.0)
 
                 start_pos = self.win_position[min_idx]
@@ -159,66 +160,10 @@ class Nucleosome_Prediction(object):
         self.start, self.end = start, end
         self.bedcoord = '{}_{}_{}'.format(self.chrom, self.start, self.end)
 
-    def _GCmodel_ini(self):
-        if self.arg.GCmodel:
-            with open(self.arg.GCmodel, 'r') as f:
-                self._model = [float(line.rstrip('\n').split('\t')[-1])
-                               for line in f]
-                self._GC_model_len = len(self._model)
-
-    def _get_gc_corr_dep(self, pos):
-        if self.arg.GCmodel:
-            fasta_str = self._fasta.fetch_string(self.chrom,
-                                                 pos, self._GC_model_len)
-            gc_idx = fasta_str.count('G')+fasta_str.count('C')
-            return self._model[gc_idx]
-        else:
-            return 1
-
     def _check_fasta_chr(self, chrom):
         if not self.arg.FastaChromType:
             chrom = chrom.replace('chr', '')
         return chrom
-
-
-# def parse_args(argv):
-#     ''' docstring '''
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('bam', help="..", type=str)
-#     parser.add_argument('bed', help="..", type=str)
-#     parser.add_argument('outputfile', help='..', type=str)
-#     parser.add_argument('--MaxReadLen', help="..", type=int, default=150)
-#     parser.add_argument('--DequeLen', help="..", type=int, default=2000)
-#     parser.add_argument('--MinDepth', help="..", type=int, default=5)
-#     parser.add_argument('--FastaPath', help="FastaPath", type=str)
-#     parser.add_argument('--GCmodel', help='..', type=str, default=None)
-#     parser.add_argument('--BamChromType', help="..", type=bool)
-#     parser.add_argument('--FastaChromType', help="..", type=bool)
-#     # parser.add_argument('--BamChromType', help="..", action='store_true',
-#     #                     default=False)
-#     # parser.add_argument('--FastaChromType', help="..", action='store_true',
-#     #                     default=False)
-#     parser.add_argument('--FastaChromType', dest='FastaChromType',
-#                         action='store_true', default=False)
-#     parser.add_argument('--BamChromType', dest='BamChromType',
-#                         action='store_true', default=False)
-#     # parser.add_argument('--no-BamChromType', dest='BamChromType',
-#     #                     action='store_false')
-#     # parser.set_defaults(BamChromType=False)
-#     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
-#     return parser.parse_known_args(argv)
-
-
-# def strtobool(val):
-#     if isinstance(val, bool) or isinstance(val, int):
-#         return(val)
-#     val = val.lower()
-#     if val in ('y', 'yes', 't', 'true', 'on', '1'):
-#         return 1
-#     elif val in ('n', 'no', 'f', 'false', 'off', '0'):
-#         return 0
-#     else:
-#         raise ValueError("invalid truth value %r" % (val,))
 
 
 def parse_args(argv):

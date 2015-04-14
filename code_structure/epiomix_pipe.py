@@ -94,9 +94,12 @@ def calc_gccorrectionmodel(opts, fasta_opt, io_paths):
 
 
 # def nucleofunc(NucleoNode):
+    #
     # return RUNRSCRIPTNODE(dependencies=NucleoNode)
     # append this function to topnodes and done deal
     # within the loop.
+
+
 
 # ANALYSES = {'NucleoMap': NucleoFunc,
 #             'MethylMap': MethylFunc,
