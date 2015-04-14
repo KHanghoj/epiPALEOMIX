@@ -9,37 +9,8 @@ import sys
 import pysam
 import argparse
 from collections import defaultdict, deque
-
-
-class Cache(object):
-    ''' class doc '''
-
-    def __init__(self, filename, seq_len=1e6):
-        self._fasta = pysam.Fastafile(filename)
-        self._seq_len = int(seq_len)
-        self._last_chrom = None
-        self._fasta_str = None
-        self._last_start = None
-        self._actual_pos = None
-        self._end = None
-
-    def fetch_string(self, chrom, start, nbases):
-        ''' docstring '''
-        if self._last_chrom != chrom or (start-self._last_start) >= \
-                self._seq_len or start >= self._end - nbases or \
-                start < self._last_start:
-
-            self._end = start + self._seq_len
-            self._fasta_str = self._fasta.fetch(chrom,
-                                                start=start, end=self._end)
-            self._last_start = start
-            self._last_chrom = chrom
-        self._actual_pos = start-self._last_start
-        return self._fasta_str[self._actual_pos:self._actual_pos+nbases]
-
-    def closefile(self):
-        ''' docstring '''
-        return self._fasta.close()
+from epiomix_commonutils import read_bed_W, \
+    read_bed_WO, strtobool, Cache
 
 
 class Phasogram(object):
@@ -121,6 +92,18 @@ class Phasogram(object):
         return chrom
 
 
+# def strtobool(val):
+#     if isinstance(val, bool) or isinstance(val, int):
+#         return(val)
+#     val = val.lower()
+#     if val in ('y', 'yes', 't', 'true', 'on', '1'):
+#         return 1
+#     elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+#         return 0
+#     else:
+#         raise ValueError("invalid truth value %r" % (val,))
+
+
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -131,33 +114,34 @@ def parse_args(argv):
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
     parser.add_argument('--MaxRange', help="...", type=int, default=3000)
-    parser.add_argument('--BamChromType', help="...", type=bool)
-    parser.add_argument('--FastaChromType', help="...", type=bool)
+    parser.add_argument('--FastaChromType', dest='FastaChromType')
+    parser.add_argument('--BamChromType', dest='BamChromType')
     parser.add_argument('--MinMappingQuality', help="...", type=int,
                         default=25)
     return parser.parse_known_args(argv)
 
 
-def read_bed_W(args):
-    if args.bed:
-        with open(args.bed, 'r') as myfile:
-            for line in myfile:
-                input_line = (line.rstrip('\n')).split('\t')[:3]
-                chrom, start, end = input_line
-                yield (str(chrom), int(start), int(end))
+# def read_bed_W(args):
+#     if args.bed:
+#         with open(args.bed, 'r') as myfile:
+#             for line in myfile:
+#                 input_line = (line.rstrip('\n')).split('\t')[:3]
+#                 chrom, start, end = input_line
+#                 yield (str(chrom), int(start), int(end))
 
 
-def read_bed_WO(args):
-    if args.bed:
-        with open(args.bed, 'r') as myfile:
-            for line in myfile:
-                input_line = (line.rstrip('\n')).split('\t')[:3]
-                chrom, start, end = input_line
-                yield (str(chrom.replace('chr', '')), int(start), int(end))
+# def read_bed_WO(args):
+#     if args.bed:
+#         with open(args.bed, 'r') as myfile:
+#             for line in myfile:
+#                 input_line = (line.rstrip('\n')).split('\t')[:3]
+#                 chrom, start, end = input_line
+#                 yield (str(chrom.replace('chr', '')), int(start), int(end))
 
 
 def run(args):
-    read_bed = read_bed_W if args.BamChromType else read_bed_WO
+    read_bed = read_bed_W if strtobool(args.BamChromType) else read_bed_WO
+    args.FastaChromType = strtobool(args.FastaChromType)
     samfile = pysam.Samfile(args.bam, "rb")
     Phaso = Phasogram(args)
     for chrom, start, end in read_bed(args):

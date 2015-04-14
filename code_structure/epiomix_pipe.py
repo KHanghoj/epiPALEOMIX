@@ -1,5 +1,5 @@
 from __future__ import print_function
-NucleoNode, MethylNode, PhasoNode, WriteNode = object(), object(), object(), object()
+# NucleoNode, MethylNode, PhasoNode, WriteNode = object(), object(), object(), object()
 import sys
 import os
 import time
@@ -10,7 +10,8 @@ from nodes.gccorrect_Node import \
     GccorrectNode, CreateGCModelNode
 from nodes.execute_Node import \
     PhasoNode, \
-    WriteNode
+    WriteNode, \
+    NucleoNode
 from nodes.cleanbedfiles_Node import CleanFilesNode
 from pypeline.node import MetaNode
 from pypeline.common.console import print_err
@@ -91,19 +92,31 @@ def calc_gccorrectionmodel(opts, fasta_opt, io_paths):
     return [CreateGCModelNode(suffix, io_paths,
             dependencies=nodes)]
 
+
+# def nucleofunc(NucleoNode):
+    # return RUNRSCRIPTNODE(dependencies=NucleoNode)
+    # append this function to topnodes and done deal
+    # within the loop.
+
+# ANALYSES = {'NucleoMap': NucleoFunc,
+#             'MethylMap': MethylFunc,
+#             'Phasogram': PhasoFunc,
+#             'WriteDepth': WriteFunc}
+
 # ANALYSES = {'NucleoMap': NucleoNode,
 #             'MethylMap': MethylNode,
 #             'Phasogram': PhasoNode,
 #             'WriteDepth': WriteNode}
 
 ANALYSES = {'Phasogram': PhasoNode,
-            'WriteDepth': WriteNode}
+            'WriteDepth': WriteNode,
+            'NucleoMap': NucleoNode}
 
 EXECUTABLES = {
     'NucleoMap': ['python', './tools/nucleomap.py', '%(IN_BAM)s',
-                  '%(OUT_MERGE)s', '%(OUT_RAW)s'],
+                  '%(IN_BED)s', '%(OUT_FILEPATH)s'],
     'MethylMap': ['python', './tools/methylmap.py', '%(IN_BAM)s',
-                  '%(OUT_MERGE)s', '%(OUT_RAW)s'],
+                  '%(IN_BED)s', '%(OUT_FILEPATH)s'],
     'Phasogram': ['python', './tools/phasogram.py', '%(IN_BAM)s',
                   '%(IN_BED)s', '%(OUT_FILEPATH)s'],
     'WriteDepth': ['python', './tools/pileupdepth.py', '%(IN_BAM)s',

@@ -2,7 +2,7 @@
 Prefixes:
 #    "--FastaPath": ../reference/hs.build37.1.fa
     "--FastaPath": ../../reference/hs.build37.1.fa
-    "--FastaChromType": False # if True 'chr1' else '1'
+    "--FastaChromType": False # if 'chr1' true; if '1' false
 #    "--MappabilityPath": ../bedfiles/chrom22_51_50.40000-20000.mappability
     "--MappabilityPath": ../chr22_31_50.40000-20000.mappability
 BedFiles:
@@ -11,22 +11,22 @@ BedFiles:
     #CTCFbed: ../bedfiles/testhg19ctcf.bed
 #    CTCGbed1: ../bedfiles/testhg19ctcf1.bed
 #    CTCGbed2: ../bedfiles/testhg19ctcf2.bed
-#    CTCFbed: ../../bedfiles/testhg19ctcf.bed
-    small: small_bed.bed
+    CTCFbed: ../../bedfiles/testhg19ctcf.bed
+#    small: small_bed.bed
 BamInputs:
     BAM1:
         BamInfo:
             "BamPath": ../Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
             "--MinMappingQuality": 30
-            "--BamChromType": False 
+            "--BamChromType": False # if 'chr1' true; if '1' false
             "--LibraryConstruction": DS
         GCcorrect:
             "Enabled": True
-            "MapMinMaxReadLength": [60, 85]
+            "MapMinMaxReadLength": [45, 60]
             "--MappaUniqueness": 0.9
         NucleoMap:
             "Enabled": True
-            "Apply_GC_Correction": False
+            "Apply_GC_Correction": True
             "--MinDepth": 20
             "--DequeLen": 2000
         MethylMap:
@@ -37,11 +37,11 @@ BamInputs:
             "Enabled": True
             "Apply_GC_Correction": False
             "--SubsetPileup": 3
-            "--MaxRange": 3000
+            "--MaxRange": 1000
         WriteDepth:
             "Enabled": False
             "Apply_GC_Correction": True
-            "--DequeLength": 500
+            "--DequeLength": 500    
 #    BAM2:
 #        BamInfo:
 #            "BamPath": Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
