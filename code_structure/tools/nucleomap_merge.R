@@ -16,7 +16,8 @@ plotting = function(df){
 
 # need to add x and 0 for when data not available. add a 0
 
-a=read.table('Saqqaq_CTCFbed1_NucleoMap.txt.gz')
+#a=read.table('Saqqaq_CTCFbed1_NucleoMap.txt.gz')
+a=read.table('BAM1_CTCFbed_NucleoMap.txt.gz')
 a$bedstart = sapply(strsplit(as.character(a[,6]), "_"), "[[", 2)
 a$rela_pos = as.integer(a[,2])-as.integer(a$bedstart)
 # if cutoff

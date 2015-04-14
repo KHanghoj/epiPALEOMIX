@@ -21,15 +21,15 @@ class Methyl_Level(object):
     """docstring for Methyl_Level"""
     def __init__(self, arg):
         self.arg = arg
-        self._ReadBases, self._SkipBases = \
-            self.arg.ReadBases, self.arg.SkipBases
+        self._ReadBases = self.arg.ReadBases
+        self._SkipBases = self.arg.SkipBases
         self._size = self._ReadBases-self._SkipBases-1
-        self.fasta = Cache(self.arg.FastaPath)
+        self._fasta = Cache(self.arg.FastaPath)
         self.dic_pos = defaultdict(lambda: defaultdict(int))
         self.pat = re.compile('CG')
         self.rows = list()
         self.rowsapp = self.rows.append
-        self.na_tup = namedtuple('row', ('chr pos top lower bedcoord'))
+        self.na_tup = namedtuple('row', ('pos top lower'))
         self._makeoutputfile()
 
     def reset_dict(self, chrom, start, end):
@@ -37,7 +37,6 @@ class Methyl_Level(object):
         self.chrom = self._check_fasta_chr(chrom)
         self.start, self.end = start, end
         self.bedcoord = '{}_{}_{}'.format(self.chrom, self.start, self.end)
-        self.counter = 0
         self.bed_list = list()
 
     def _getindexes(self, bases_str):
@@ -46,56 +45,53 @@ class Methyl_Level(object):
 
     def update(self, record):
         self.record = record
-        func = (self._reverse_strand if self.record.is_reverse
-                else self._forward_strand)
-        func()
-        # if self.record.is_reverse:
-        #     self._reverse_strand()
-        # else:
-        #     self._forward_strand()
+        if self.record.is_reverse:
+            # self._reverse_strand()
+            self._minus_or_threeprime()
+        else:
+            self._forward_strand()
 
     def update_ss(self, record):
         self.record = record
-        self._threeprime_ss()
+        self._minus_or_threeprime(inbases=_PLUS_STRAND_BASES)
         self._forward_strand()
 
     def call_ms(self):
         for pos, basescore in self.dic_pos.iteritems():
             top = basescore.get('T', 0)+basescore.get('A', 0)
             low = top+basescore.get('C', 0)+basescore.get('G', 0)
-            self.rowsapp(self.na_tup(self.chrom, pos, top, low,
-                         self.bedcoord))
+            self.rowsapp(self.na_tup(pos, top, low))
 
-    def _reverse_strand(self):
+    # def _reverse_strand(self):
+    #     curr_pos = self.record.aend-self._ReadBases
+    #     fast_string = self._fasta.fetch_string(self.chrom,
+    #                                            curr_pos, self._ReadBases)
+    #     cigar_op, cigar_len = self.record.cigar[-1]
+    #     bases = self.record.seq[-self._ReadBases:]
+    #     for fast_idx in self._getindexes(fast_string):
+    #         inverse_idx = self._ReadBases - fast_idx
+    #         if (fast_idx <= self._size and
+    #                 cigar_op == 0 and cigar_len >= inverse_idx and
+    #                 bases[fast_idx:fast_idx+2] in _MINUS_STRAND_BASES):
+    #             self.dic_pos[curr_pos+fast_idx][bases[fast_idx+1]] += 1
+
+    def _minus_or_threeprime(self, inbases=_MINUS_STRAND_BASES):
         curr_pos = self.record.aend-self._ReadBases
-        fast_string = self.fasta.fetch_string(self.chrom,
-                                              curr_pos, self._ReadBases)
+        fast_string = self._fasta.fetch_string(self.chrom,
+                                               curr_pos, self._ReadBases)
         cigar_op, cigar_len = self.record.cigar[-1]
         bases = self.record.seq[-self._ReadBases:]
         for fast_idx in self._getindexes(fast_string):
             inverse_idx = self._ReadBases - fast_idx
             if (fast_idx <= self._size and
                     cigar_op == 0 and cigar_len >= inverse_idx and
-                    bases[fast_idx:fast_idx+2] in _MINUS_STRAND_BASES):
-                self.dic_pos[curr_pos+fast_idx][bases[fast_idx+1]] += 1
-
-    def _threeprime_ss(self):
-        curr_pos = self.record.aend-self._ReadBases
-        fast_string = self.fasta.fetch_string(self.chrom,
-                                              curr_pos, self._ReadBases)
-        cigar_op, cigar_len = self.record.cigar[-1]
-        bases = self.record.seq[-self._ReadBases:]
-        for fast_idx in self._getindexes(fast_string):
-            inverse_idx = self._ReadBases - fast_idx
-            if (fast_idx <= self._size and
-                    cigar_op == 0 and cigar_len >= inverse_idx and
-                    bases[fast_idx:fast_idx+2] in _PLUS_STRAND_BASES):
+                    bases[fast_idx:fast_idx+2] in inbases):
                 self.dic_pos[curr_pos+fast_idx][bases[fast_idx]] += 1
 
     def _forward_strand(self):
         curr_pos = self.record.pos
-        fast_string = self.fasta.fetch_string(self.chrom,
-                                              curr_pos, self._ReadBases)
+        fast_string = self._fasta.fetch_string(self.chrom,
+                                               curr_pos, self._ReadBases)
         bases = self.record.seq[:self._ReadBases]
         cigar_op, cigar_len = self.record.cigar[0]
         for fast_idx in self._getindexes(fast_string):
@@ -112,13 +108,16 @@ class Methyl_Level(object):
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
         header = '#chrom\tgenomicpos\tdeaminated\ttotal\tbedcoord\n'
         self.f_output.write(header)
+        self.fmt = "{chr}\t{r.pos}\t{r.top}\t{r.lower}\t{bed}\n".format
 
     def writetofile(self):
         ''' every row contain chrom, genomicpos, top, lower, bedcoord'''
-        fmt = "{r.chr}\t{r.pos}\t{r.top}\t{r.lower}\t{r.bedcoord}\n".format
-        with gzip.open(self.arg.outputfile, 'ab') as f:
-            for row in self.rows:
-                f.write(fmt(r=row))
+        for row in self.rows:
+            f_output.write(self.fmt(r=row, chr=self.chrom, bed=self.bedcoord))
+
+    def closefiles(self):
+        self._fasta.closefile()
+        self.f_output.close()
 
     def _check_fasta_chr(self, chrom):
         if not self.arg.FastaChromType:
@@ -156,8 +155,8 @@ def run(args):
             update(record)
         Met_Score.call_ms()
         Met_Score.writetofile()
+    Met_Score.closefiles()
     samfile.close()
-    Met_Score.fasta.closefile()
     return 0
 
 
