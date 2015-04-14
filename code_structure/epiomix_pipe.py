@@ -1,5 +1,4 @@
 from __future__ import print_function
-# NucleoNode, MethylNode, PhasoNode, WriteNode = object(), object(), object(), object()
 import sys
 import os
 import time
@@ -8,10 +7,10 @@ import pypeline.logger
 import optparse
 from nodes.gccorrect_Node import \
     GccorrectNode, CreateGCModelNode
-from nodes.execute_Node import \
-    PhasoNode, \
-    WriteNode, \
-    NucleoNode
+from nodes.execute_Node import GeneralExecuteNode
+# PhasoNode, \
+# WriteNode, \
+# NucleoNode
 from nodes.cleanbedfiles_Node import CleanFilesNode
 from pypeline.node import MetaNode
 from pypeline.common.console import print_err
@@ -20,9 +19,11 @@ from pypeline.pipeline import Pypeline
 
 
 def parse_args(argv):
+    ''' simpleparser '''
     parser = optparse.OptionParser()
     parser.add_option('--temp-root', type=str, default='./temp')
-    parser.add_option('--outputfolder', type=str, default='./output')
+    parser.add_option('--dry-run', action='store_true', default=False)
+    parser.add_option('--outputfolder', type=str, default='./OUTPUT')
     parser.add_option('--max-threads', type=int, default=2)
     pypeline.logger.add_optiongroup(parser)
     return parser.parse_args(argv)
@@ -85,6 +86,7 @@ def calc_gccorrectionmodel(opts, fasta_opt, io_paths):
     temp_dest_pref = os.path.join(io_paths['temp'], suffix)
     gc_dic = coerce_to_dic(fasta_opt, opts['BamInfo'], opts['GCcorrect'])
     rlmin, rlmax = gc_dic.pop('MapMinMaxReadLength', [56, 57])
+    opts["NucleoMap"]["--MaxReadLen"] = rlmax  # to be used as nucleomap option
     for rl in xrange(rlmin, rlmax+1, 5):  # this is each readlength
         nodes.append(GccorrectNode(gc_dic, temp_dest_pref, rl))
     opts['BamInfo']['--GCmodel'] = \
@@ -100,7 +102,6 @@ def calc_gccorrectionmodel(opts, fasta_opt, io_paths):
     # within the loop.
 
 
-
 # ANALYSES = {'NucleoMap': NucleoFunc,
 #             'MethylMap': MethylFunc,
 #             'Phasogram': PhasoFunc,
@@ -111,9 +112,14 @@ def calc_gccorrectionmodel(opts, fasta_opt, io_paths):
 #             'Phasogram': PhasoNode,
 #             'WriteDepth': WriteNode}
 
-ANALYSES = {'Phasogram': PhasoNode,
-            'WriteDepth': WriteNode,
-            'NucleoMap': NucleoNode}
+# ANALYSES = {'Phasogram': PhasoNode,
+#             'WriteDepth': WriteNode,
+#             'NucleoMap': NucleoNode,
+#             'MethylMap': MethylNode}
+ANALYSES = {'Phasogram': GeneralExecuteNode,
+            'WriteDepth': GeneralExecuteNode,
+            'NucleoMap': GeneralExecuteNode,
+            'MethylMap': GeneralExecuteNode}
 
 EXECUTABLES = {
     'NucleoMap': ['python', './tools/nucleomap.py', '%(IN_BAM)s',
@@ -170,12 +176,12 @@ def main(argv):
             for BedInfo in checkbedfiles_ext(makefile['BedFiles']):
                 for analysis, Nodeclass in bam_analyses.iteritems():
                     call = EXECUTABLES[analysis]
-                    analysis_options = [io_paths['o_out'], analysis, outputfmt,
-                                        coerce_to_dic(general_opts,
-                                                      opts[analysis])]
+                    analysis_options = \
+                        [io_paths['o_out'], analysis, outputfmt,
+                         coerce_to_dic(general_opts, opts[analysis])]
                     topnodes.append(Nodeclass(call, analysis_options,
                                     BedInfo, dependencies=mNode))
     pipeline.add_nodes(topnodes)
-    pipeline.run(dry_run=True, max_running=config.max_threads)
+    pipeline.run(dry_run=config.dry_run, max_running=config.max_threads)
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

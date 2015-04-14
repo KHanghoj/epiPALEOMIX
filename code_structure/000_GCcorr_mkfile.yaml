@@ -19,7 +19,7 @@ BamInputs:
             "BamPath": ../Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
             "--MinMappingQuality": 30
             "--BamChromType": False # if 'chr1' true; if '1' false
-            "--LibraryConstruction": DS
+            "--LibraryConstruction": DS  # DS if double strand, SS if single strand
         GCcorrect:
             "Enabled": True
             "MapMinMaxReadLength": [45, 60]

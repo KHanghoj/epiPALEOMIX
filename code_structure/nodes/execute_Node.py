@@ -88,8 +88,9 @@ class GeneralExecuteNode(CommandNode):
         base_bam = os.path.split(bam_name)[-1]
         destination = \
             os.path.join(bam_name, outfmt(base_bam, bed_name, anal_name))
-        if not options['Apply_GC_Correction']:
+        if not options.get('Apply_GC_Correction', True):
             options.pop('--GCmodel', None)
+
 
         for option, argument in options.iteritems():
             if isinstance(option, str) and option.startswith('-'):
