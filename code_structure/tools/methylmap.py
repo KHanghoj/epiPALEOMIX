@@ -23,7 +23,7 @@ class Methyl_Level(object):
         self.arg = arg
         self._ReadBases = self.arg.ReadBases
         self._SkipBases = self.arg.SkipBases
-        self._size = self._ReadBases-self._SkipBases-1
+        self._Size = self._ReadBases-self._SkipBases-1
         self._fasta = Cache(self.arg.FastaPath)
         self.dic_pos = defaultdict(lambda: defaultdict(int))
         self.pat = re.compile('CG')
@@ -64,6 +64,8 @@ class Methyl_Level(object):
         if self.last_end < self.record.pos:
             self._call_ms()
             self.dic_pos.clear()
+            if len(self.rows) > int(1e6):
+                self._writetofile()
         self._minus_or_threeprime(inbases=_PLUS_STRAND_BASES, libtype=0)
         self._forward_strand()
         self.last_end = record.aend
@@ -89,7 +91,7 @@ class Methyl_Level(object):
     #     bases = self.record.seq[-self._ReadBases:]
     #     for fast_idx in self._getindexes(fast_string):
     #         inverse_idx = self._ReadBases - fast_idx
-    #         if (fast_idx <= self._size and
+    #         if (fast_idx <= self._Size and
     #                 cigar_op == 0 and cigar_len >= inverse_idx and
     #                 bases[fast_idx:fast_idx+2] in _MINUS_STRAND_BASES):
     #             self.dic_pos[curr_pos+fast_idx][bases[fast_idx+1]] += 1
@@ -102,7 +104,7 @@ class Methyl_Level(object):
         bases = self.record.seq[-self._ReadBases:]
         for fast_idx in self._getindexes(fast_string):
             inverse_idx = self._ReadBases - fast_idx
-            if (fast_idx <= self._size and cigar_op == 0 and
+            if (fast_idx <= self._Size and cigar_op == 0 and
                     cigar_len >= inverse_idx and
                     bases[fast_idx:fast_idx+2] in inbases):
                 self.dic_pos[curr_pos+fast_idx][bases[fast_idx+libtype]] += 1

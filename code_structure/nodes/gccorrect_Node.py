@@ -5,15 +5,16 @@ import os
 
 
 class GccorrectNode(CommandNode):
-    def __init__(self, gc_dic, destination_pref, rl, dependencies=()):
-        destination = destination_pref+'_'+str(rl)
+    def __init__(self, gc_dic, suffix, io_paths, rl, dependencies=()):
+        destination = os.path.join(io_paths['temp'], suffix+'_'+str(rl))
         call = ['python', './tools/gccorrect.py', '%(IN_BAM)s',
                 '%(OUT_STDOUT)s']
         call.extend(("--ReadLength", rl))
         for option, argument in gc_dic.iteritems():
             if isinstance(option, str) and option.startswith('-'):
                 call.extend((option, argument))
-        cmd = AtomicCmd(call, IN_BAM=gc_dic["BamPath"],
+        cmd = AtomicCmd(call,
+                        IN_BAM=gc_dic["BamPath"],
                         OUT_STDOUT=destination)
         description = "<Gccorrect: '%s' -> '%s'>" % (gc_dic["BamPath"], str(rl))
         CommandNode.__init__(self,
@@ -23,7 +24,7 @@ class GccorrectNode(CommandNode):
 
 
 class CreateGCModelNode(CommandNode):
-    def __init__(self, pattern, io_paths, dependencies=()):
+    def __init__(self, pattern, io_paths, dependencies=(), subnodes=()):
         call = ['Rscript', './tools/model_gc.R',
                 '%(IN_SOURCE)s', str(pattern),
                 io_paths['o_out'], '%(OUT_STDOUT)s']
@@ -36,4 +37,5 @@ class CreateGCModelNode(CommandNode):
         CommandNode.__init__(self,
                              description=description,
                              command=cmd,
-                             dependencies=dependencies)
+                             dependencies=dependencies,
+                             subnodes=subnodes)
