@@ -175,14 +175,6 @@ def main(argv):
                              run_gc(opts, prefix_opt, io_paths))
             bam_analyses = analyses_to_run(opts)
             general_opts = coerce_to_dic(prefix_opt, opts["BamInfo"])
-            # for BedInfo in checkbedfiles_ext(bedfiles):
-            #     for analysis, aux_path in bam_analyses.iteritems():
-            #         analysis_options = \
-            #             [io_paths['o_out'], analysis, GEN_OUTPUT_FMT,
-            #              coerce_to_dic(general_opts, opts[analysis])]
-            #         topnodes.append(GeneralExecuteNode(aux_path,
-            #                         analysis_options, BedInfo,
-            #                         dependencies=mNode))
             for BedInfo in checkbedfiles_ext(bedfiles):
                 for analysis, aux_paths in bam_analyses.iteritems():
                     analysis_options = \
