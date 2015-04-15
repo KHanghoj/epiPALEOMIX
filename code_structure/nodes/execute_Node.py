@@ -1,6 +1,5 @@
 from pypeline.node import CommandNode
 from pypeline.atomiccmd.command import AtomicCmd
-# from pypeline.atomiccmd.sets import ParallelCmds
 import os
 from copy import deepcopy
 

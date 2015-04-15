@@ -188,27 +188,5 @@ def main(argv):
     return 0
 
 
-# def main(argv):
-#     ''' docstring '''
-#     args = parse_args(argv)
-#     samfile = pysam.Samfile(args.bam, "rb")
-#     met_lev = Methyl_Level(args)
-#     last_chrom = None
-#     for chrom, start, end in read_bed(args):
-#         met_lev.reset_dict(chrom, start, end)
-#         last_chrom = None
-#         for record in samfile.fetch(chrom, start, end):
-#             if last_chrom and last_chrom != record.tid:
-#                 met_lev.call_ms()
-#                 met_lev.reset_dict(chrom, start, end)
-#             met_lev.update(record)
-#             last_chrom = record.tid
-#         met_lev.call_ms()
-#     met_lev.write_bed()
-#     met_lev._writetofile()
-#     samfile.close()
-#     met_lev.fasta.closefile()
-#     return 0
-
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
