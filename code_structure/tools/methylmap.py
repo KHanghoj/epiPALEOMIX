@@ -37,7 +37,8 @@ class Methyl_Level(object):
         self.chrom = self._check_fasta_chr(chrom)
         self.start, self.end = start, end
         self.bedcoord = '{}_{}_{}'.format(self.chrom, self.start, self.end)
-        self.bed_list = list()
+        del self.rows[:]  # clear all data
+        self.last_end = 0
 
     def _getindexes(self, bases_str):
         ''' returns the 0-based indeces of fasta read'''
@@ -45,22 +46,40 @@ class Methyl_Level(object):
 
     def update(self, record):
         self.record = record
+        if self.last_end < self.record.pos:
+            self._call_ms()
+            self.dic_pos.clear()
+            if len(self.rows) > int(1e6):
+                self._writetofile()
+
         if self.record.is_reverse:
             # self._reverse_strand()
             self._minus_or_threeprime()
         else:
             self._forward_strand()
+        self.last_end = record.aend
 
     def update_ss(self, record):
         self.record = record
-        self._minus_or_threeprime(inbases=_PLUS_STRAND_BASES)
+        if self.last_end < self.record.pos:
+            self._call_ms()
+            self.dic_pos.clear()
+        self._minus_or_threeprime(inbases=_PLUS_STRAND_BASES, libtype=0)
         self._forward_strand()
+        self.last_end = record.aend
 
-    def call_ms(self):
+    def _call_ms(self):
         for pos, basescore in self.dic_pos.iteritems():
             top = basescore.get('T', 0)+basescore.get('A', 0)
             low = top+basescore.get('C', 0)+basescore.get('G', 0)
-            self.rowsapp(self.na_tup(pos, top, low))
+            self.rowsapp(self.na_tup(pos+1, top, low))
+
+    def call_final_ms(self):
+        for pos, basescore in self.dic_pos.iteritems():
+            top = basescore.get('T', 0)+basescore.get('A', 0)
+            low = top+basescore.get('C', 0)+basescore.get('G', 0)
+            self.rowsapp(self.na_tup(pos+1, top, low))
+        self._writetofile()
 
     # def _reverse_strand(self):
     #     curr_pos = self.record.aend-self._ReadBases
@@ -75,23 +94,23 @@ class Methyl_Level(object):
     #                 bases[fast_idx:fast_idx+2] in _MINUS_STRAND_BASES):
     #             self.dic_pos[curr_pos+fast_idx][bases[fast_idx+1]] += 1
 
-    def _minus_or_threeprime(self, inbases=_MINUS_STRAND_BASES):
+    def _minus_or_threeprime(self, inbases=_MINUS_STRAND_BASES, libtype=1):
         curr_pos = self.record.aend-self._ReadBases
-        fast_string = self._fasta.fetch_string(self.chrom,
-                                               curr_pos, self._ReadBases)
+        fast_string = \
+            self._fasta.fetch_string(self.chrom, curr_pos, self._ReadBases)
         cigar_op, cigar_len = self.record.cigar[-1]
         bases = self.record.seq[-self._ReadBases:]
         for fast_idx in self._getindexes(fast_string):
             inverse_idx = self._ReadBases - fast_idx
-            if (fast_idx <= self._size and
-                    cigar_op == 0 and cigar_len >= inverse_idx and
+            if (fast_idx <= self._size and cigar_op == 0 and
+                    cigar_len >= inverse_idx and
                     bases[fast_idx:fast_idx+2] in inbases):
-                self.dic_pos[curr_pos+fast_idx][bases[fast_idx]] += 1
+                self.dic_pos[curr_pos+fast_idx][bases[fast_idx+libtype]] += 1
 
     def _forward_strand(self):
         curr_pos = self.record.pos
-        fast_string = self._fasta.fetch_string(self.chrom,
-                                               curr_pos, self._ReadBases)
+        fast_string = \
+            self._fasta.fetch_string(self.chrom, curr_pos, self._ReadBases)
         bases = self.record.seq[:self._ReadBases]
         cigar_op, cigar_len = self.record.cigar[0]
         for fast_idx in self._getindexes(fast_string):
@@ -110,10 +129,12 @@ class Methyl_Level(object):
         self.f_output.write(header)
         self.fmt = "{chr}\t{r.pos}\t{r.top}\t{r.lower}\t{bed}\n".format
 
-    def writetofile(self):
+    def _writetofile(self):
         ''' every row contain chrom, genomicpos, top, lower, bedcoord'''
         for row in self.rows:
-            f_output.write(self.fmt(r=row, chr=self.chrom, bed=self.bedcoord))
+            self.f_output.write(self.fmt(r=row, chr=self.chrom,
+                                         bed=self.bedcoord))
+        del self.rows[:]  # EMPTY LIST AFTER WRITING TO FILE
 
     def closefiles(self):
         self._fasta.closefile()
@@ -147,14 +168,13 @@ def run(args):
     args.FastaChromType = strtobool(args.FastaChromType)
     samfile = pysam.Samfile(args.bam, "rb")
     Met_Score = Methyl_Level(args)
-    update = (Met_Score.update if args.LibraryConstruction is 'DS'
+    update = (Met_Score.update if args.LibraryConstruction == 'DS'
               else Met_Score.update_ss)
     for chrom, start, end in read_bed(args):
         Met_Score.reset_dict(chrom, start, end)
         for record in samfile.fetch(chrom, start, end):
             update(record)
-        Met_Score.call_ms()
-        Met_Score.writetofile()
+        Met_Score.call_final_ms()
     Met_Score.closefiles()
     samfile.close()
     return 0
@@ -183,7 +203,7 @@ def main(argv):
 #             last_chrom = record.tid
 #         met_lev.call_ms()
 #     met_lev.write_bed()
-#     met_lev.writetofile()
+#     met_lev._writetofile()
 #     samfile.close()
 #     met_lev.fasta.closefile()
 #     return 0
