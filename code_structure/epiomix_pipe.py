@@ -21,9 +21,9 @@ def parse_args(argv):
     ''' simpleparser '''
     parser = optparse.OptionParser()
     parser.add_option('--temp-root', type=str, default='./temp')
-    parser.add_option('--dry-run', action='store_true', default=False)
+    parser.add_option('--run', action='store_false', default=True)
     parser.add_option('--outputfolder', type=str, default='./OUTPUT')
-    parser.add_option('--max-threads', type=int, default=2)
+    parser.add_option('--max-threads', type=int, default=4)
     pypeline.logger.add_optiongroup(parser)
     return parser.parse_args(argv)
 
@@ -37,11 +37,6 @@ def check_path(temp_dir):
             return 1
 
 
-def upd_dic(dic, *args):
-    for arg in args:
-        dic.update(arg)
-
-
 def coerce_to_dic(*args):
     dic = {}
     for arg in args:
@@ -49,10 +44,6 @@ def coerce_to_dic(*args):
             arg = dict([arg])
         dic.update(arg)
     return dic
-
-
-# def dest_prefix(*args):
-#     return(os.path.join(*args))
 
 
 def filter_bedfiles(bedfiles, destination_pref, mappapath):
@@ -73,7 +64,7 @@ def checkbedfiles_ext(bedfiles):
             yield bedname, bedpath
 
 
-def analyses_to_run(opts):
+def main_anal_to_run(opts):
     return {key: ANALYSES[key] for key, val in opts.iteritems() if
             key in ANALYSES.keys() and val['Enabled']}
 
@@ -103,7 +94,7 @@ def get_io_paths(config, bam_name):
     return io_paths
 
 
-def run_gc(opts, prefix_opt, io_paths):
+def make_gcnode(opts, prefix_opt, io_paths):
     gc_bedfile_node = []
     if opts['GCcorrect'].get('Enabled', False):
         gc_bedfile_node.extend(calc_gccorrectionmodel(opts, prefix_opt,
@@ -119,30 +110,23 @@ def run_filterbed(bedfiles, config, prefix_opt):
                            prefix_opt["--MappabilityPath"]))
     return bedfilenode
 
-# def nucleofunc(NucleoNode):
-    #
-    # return RUNRSCRIPTNODE(dependencies=NucleoNode)
-    # append this function to topnodes and done deal
-    # within the loop.
-NucleoFunc, MethylFunc, PhasoFunc, WriteFunc =\
-    object(), object(), object(), object()
 
-# ANALYSES = {'NucleoMap': NucleoFunc,
-#             'MethylMap': MethylFunc,
-#             'Phasogram': PhasoFunc,
-#             'WriteDepth': WriteFunc}
-
-
-def main_anal(aux_paths, analysis_options, BedInfo, mNode):
+def run_analyses(aux_paths, analysis_options, BedInfo, mNode):
     aux_python, aux_R = aux_paths
     node = GeneralExecuteNode(aux_python, analysis_options, BedInfo,
                               dependencies=mNode)
-    infile = list(node.output_files)[0]
-    if aux_R == '_':
+    curr_anal = analysis_options[1]
+    if aux_R == '_':  # we have no plotting for writedepth
         return node
-    return General_Plot_Node(aux_R, infile, analysis_options[1],
-                             dependencies=node)
+    return General_Plot_Node(aux_R, list(node.output_files)[0],
+                             curr_anal, dependencies=node)
 
+
+def makemetanode(gcnode, dependenNode, bamname):
+    descrip_fmt = 'Metanode: {}: correction of GC and bedfile'.format
+    mNode = MetaNode(description=descrip_fmt(bamname),
+                     dependencies=dependenNode + gcnode)
+    return mNode
 
 ANALYSES = {'Phasogram': ['./tools/phasogram.py', './tools/phaso.R'],
             'WriteDepth': ['./tools/pileupdepth.py', '_'],
@@ -169,20 +153,17 @@ def main(argv):
         dependenNode.extend(run_filterbed(bedfiles, config, prefix_opt))
         for bam_name, opts in makefile['BamInputs'].items():
             io_paths = get_io_paths(config, bam_name)
-            descrip_fmt = 'Metanode: {}: correction of GC and bedfile'.format
-            mNode = MetaNode(description=descrip_fmt(io_paths['bamname']),
-                             dependencies=dependenNode +
-                             run_gc(opts, prefix_opt, io_paths))
-            bam_analyses = analyses_to_run(opts)
+            mNode = makemetanode(make_gcnode(opts, prefix_opt, io_paths),
+                                 dependenNode, bam_name)
+            bam_analyses = main_anal_to_run(opts)
             general_opts = coerce_to_dic(prefix_opt, opts["BamInfo"])
             for BedInfo in checkbedfiles_ext(bedfiles):
                 for analysis, aux_paths in bam_analyses.iteritems():
-                    analysis_options = \
-                        [io_paths['o_out'], analysis, GEN_OUTPUT_FMT,
-                         coerce_to_dic(general_opts, opts[analysis])]
-                    topnodes.append(main_anal(aux_paths, analysis_options,
-                                              BedInfo, mNode))
+                    anal_opt = [io_paths['o_out'], analysis, GEN_OUTPUT_FMT,
+                                coerce_to_dic(general_opts, opts[analysis])]
+                    topnodes.append(run_analyses(aux_paths, anal_opt,
+                                                 BedInfo, mNode))
     pipeline.add_nodes(topnodes)
-    pipeline.run(dry_run=config.dry_run, max_running=config.max_threads)
+    pipeline.run(dry_run=config.run, max_running=config.max_threads)
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
