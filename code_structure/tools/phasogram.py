@@ -11,7 +11,7 @@ import argparse
 import gzip
 from collections import defaultdict, deque
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache, GC_correction
+    read_bed_WO, strtobool, Cache, GC_correction, corr_fasta_chr
 
 
 class Phasogram(GC_correction):
@@ -68,14 +68,9 @@ class Phasogram(GC_correction):
         self._call_output(self.reverse_dic, max_lst_range=0, max_size=0)
 
     def reset(self, chrom):
-        self.chrom = self._check_fasta_chr(chrom)
+        self.chrom = chrom
         self.forward_dic = {}
         self.reverse_dic = {}
-
-    def _check_fasta_chr(self, chrom):
-        if not self.arg.FastaChromType:
-            chrom = chrom.replace('chr', '')
-        return chrom
 
 
 def parse_args(argv):
@@ -101,7 +96,7 @@ def run(args):
     samfile = pysam.Samfile(args.bam, "rb")
     Phaso = Phasogram(args)
     for chrom, start, end in read_bed(args):
-        Phaso.reset(chrom)
+        Phaso.reset(corr_fasta_chr(args, chrom))
         for record in samfile.fetch(chrom, start, end):
             if record.mapq < args.MinMappingQuality:
                 continue  # do not analyze low quality records

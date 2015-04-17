@@ -40,6 +40,7 @@ nam = unlist(strsplit(IN_path,'/'))
 nam = nam[length(nam)]
 nam = unlist(strsplit(nam,'\\.'))[1]
 
+if (file.info(IN_path)$size>55){
 a=read.table(IN_path)
 a$bedstart = sapply(strsplit(as.character(a[,6]), "_"), "[[", 2)
 a$rela_pos = as.integer(a[,2])-as.integer(a$bedstart)
@@ -66,3 +67,8 @@ grid.arrange(plotting(df),
 			 nrow=2)
 # grid.arrange(pl1,pl2)
 dev.off()
+} else{
+	pdf(OUT_path)
+	plot(1, type="n", axes=F, xlab=sprintf("NODATA in %s",nam), ylab="")
+	dev.off()
+}

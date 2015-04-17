@@ -5,11 +5,8 @@ args <- commandArgs(trailingOnly = TRUE)
 input_path = args[1]
 pat = args[2]
 outputpath = args[3]
-# output_file = file.path(getwd(), sprintf('GC_model_%s.txt',pat))
+outputplot = args[4]
 listf = list.files(input_path, pattern=pat, full.names=TRUE)
-# a=read.table('out_gc_content.txt')
-# a=read.table('out_gc_content_labrana.txt')
-write(listf,stderr())
 read.dat = function(x) {
 	a=read.table(x)
 	a
@@ -79,11 +76,11 @@ p2 = ggplot(m_dat, aes(newpts,value, col=variable,group=variable)) + geom_line()
 ###  second plot
 
 
-pdf(paste(outputpath, 'GCCORRECT_modelplot.pdf',sep='/'))
-grid.arrange(p1,p2,nrow=1)
+pdf(outputplot)
+grid.arrange(p1,p2,ncol=1, nrow=2)
 invisible(dev.off())
 
 df = cbind('count'=0:winsize,'newpts'=newpts, 'pred_ratio'=predvec, 'pred_ratio_inv'=1/predvec)
 df[,4][is.infinite(df[,4])] = 0
-write.table(df, file=paste(outputpath, 'GCCORRECT_RAWDATA.pdf',sep='/'),row.names=F,col.names=T,quote=F,sep='\t')
-write(df[,4],stdout(), ncolumn=1)
+write.table(df, file=outputpath,row.names=F,col.names=T,quote=F,sep='\t')
+# write(df[,4],stdout(), ncolumn=1)

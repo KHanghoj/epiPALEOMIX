@@ -81,7 +81,8 @@ def calc_gccorrectionmodel(opts, prefix_opt, io_paths):
     topnode = CreateGCModelNode(suffix, io_paths, subnodes=nodes)
 
     opts['NucleoMap']['--MaxReadLen'] = rlmax
-    opts['BamInfo']['--GCmodel'] = list(topnode.output_files)[0]
+    GCmodf = (out for out in topnode.output_files if out.endswith('.txt'))
+    opts['BamInfo']['--GCmodel'] = GCmodf.next()
     return [topnode]
 
 

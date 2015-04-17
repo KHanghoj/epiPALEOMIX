@@ -4,36 +4,9 @@ import sys
 import pysam
 import argparse
 from collections import defaultdict
+from epiomix_commonutils import \
+    strtobool, Cache, corr_fasta_chr
 _BUFFER = 2
-
-
-class Cache_fasta(object):
-    ''' class doc '''
-    def __init__(self, filename, seq_len=1e6):
-        self._fasta = pysam.Fastafile(filename)
-        self._seq_len = int(seq_len)
-        self._last_chrom = None
-        self._fasta_str = None
-        self._last_start = None
-        self._actual_pos = None
-        self._end = None
-
-    def fetch_string(self, chrom, start, nbases):
-        ''' docstring '''
-        if self._last_chrom != chrom or (start-self._last_start) >= \
-                self._seq_len or start >= self._end - nbases or \
-                start < self._last_start:
-            self._end = start + self._seq_len
-            self._fasta_str = self._fasta.fetch(chrom,
-                                                start=start, end=self._end)
-            self._last_start = start
-            self._last_chrom = chrom
-        self._actual_pos = start-self._last_start
-        return self._fasta_str[self._actual_pos:self._actual_pos+nbases]
-
-    def closefile(self):
-        ''' docstring '''
-        return self._fasta.close()
 
 
 class GCcorrect(object):
@@ -43,14 +16,15 @@ class GCcorrect(object):
         self.dic_n_gc = defaultdict(int)
         self.dic_f_gc = defaultdict(int)
         self.samfile = pysam.Samfile(self.arg.BamPath, "rb")
-        self.fasta = Cache_fasta(self.arg.FastaPath)
+        self.fasta = Cache(self.arg.FastaPath)
         self.rl = self.arg.ReadLength
 
     def getreads(self, chrom, start, end):
         self.dic_forward, self.dic_reverse = {}, {}
         records = self.samfile.fetch(chrom, start, end)
         # they need to be 0-based for fetching fasta seq:
-        self.chrom, self.start, self.end = chrom, start-1, end-1
+        self.chrom = corr_fasta_chr(self.arg, chrom)
+        self.start, self.end = start-1, end-1
         [self._update(record.aend-1, self.dic_reverse)
             if record.is_reverse else
             self._update(record.pos, self.dic_forward) for record in records]
@@ -103,28 +77,30 @@ def parse_args(argv):
     parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
-    # parser.add_argument("--FastaChromType", help="...", type=bool)
-    parser.add_argument('--BamChromType', help="...", type=bool)
-    # parser.add_argument('--TempFolder', help='...', type=str)
+    parser.add_argument('--FastaChromType', dest='FastaChromType')
+    parser.add_argument('--BamChromType', dest='BamChromType')
+    parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     return parser.parse_known_args(argv)
 
 
-def read_bed_W(args):
+def read_mappa_W(args):
     with open(args.MappabilityPath, 'r') as myfile:
         for line in myfile:
             input_line = (line.rstrip('\n')).split('\t')
-            chrom = input_line.pop(0)
-            start = int(input_line.pop(0))
-            end = int(input_line.pop(0))
+            chrom, start, end = input_line[:3]
+            if 'chr' not in chrom:
+                chrom = 'chr{}'.format(chrom)
             score = float(input_line[-1])
-            yield (chrom, start, end, score)
+            yield (str(chrom), int(start), int(end), score)
 
 
-def read_bed_WO(args):
+def read_mappa_WO(args):
     with open(args.MappabilityPath, 'r') as myfile:
         for line in myfile:
             input_line = (line.rstrip('\n')).split('\t')
             chrom = input_line.pop(0).replace('chr', '')
+            if 'chr' in chrom:
+                chrom = chrom.replace('chr', '')
             start = int(input_line.pop(0))
             end = int(input_line.pop(0))
             score = float(input_line[-1])
@@ -132,8 +108,8 @@ def read_bed_WO(args):
 
 
 def run(args):
-    # BamChrom = 'chr' if args.BamChromType else ''
-    read_bed = read_bed_W if args.BamChromType else read_bed_WO
+    read_bed = read_mappa_W if strtobool(args.BamChromType) else read_mappa_WO
+    args.FastaChromType = strtobool(args.FastaChromType)
     GC = GCcorrect(args)
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1
@@ -150,9 +126,6 @@ def run(args):
 
 def main(argv):
     args, unknown = parse_args(argv)
-    print(args, file=sys.stderr)
-    print('split', file=sys.stderr)
-    print(unknown, file=sys.stderr)
     run(args)
     return 0
 

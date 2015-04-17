@@ -8,7 +8,7 @@ from itertools import islice, izip, tee
 from os.path import exists, splitext
 from shutil import move
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache, GC_correction
+    read_bed_WO, strtobool, Cache, GC_correction, corr_fasta_chr
 import gzip
 # CONSTANTS:
 _SIZE = 147  # the window
@@ -28,8 +28,6 @@ class Nucleosome_Prediction(GC_correction):
         self._mindepth = int(self.arg.MinDepth)
         self._seq_len = int(self.arg.DequeLen)
         self._zeros = [0]*self._seq_len
-        # this script needs to know the maximum length of the sample
-        # can be fixed later on.
         self._read_max_len = self._seq_len-(self.arg.MaxReadLen+50)
         self._deq_depth = deque(maxlen=self._seq_len)
         self._deq_pos = deque(maxlen=self._seq_len)
@@ -96,19 +94,20 @@ class Nucleosome_Prediction(GC_correction):
                                                             _POSITION_OFFSET +
                                                             _SIZE])
             if dep_min_max_pos:
-                # WE MIGHT NEED TO REMOVE SITES WITH NO READS
-                # ON EITHER FLANKS. THEIR SCORES IS ISANELY HIGH
-                center_depth, min_idx, max_idx = dep_min_max_pos
-                sizeofwindow = (max_idx-min_idx)
                 spacerL = sum(self.win_depth[:_NEIGHBOR])/float(_NEIGHBOR)
                 spacerR = sum(self.win_depth[-_NEIGHBOR:])/float(_NEIGHBOR)
-                mean_spacer = 1.0 + (0.5 * (spacerL + spacerR))
-                # dividing by width of nucleosome called
-                score = (float(center_depth) / mean_spacer)/(sizeofwindow+1.0)
+                # both cannot be 0
+                if spacerL or spacerR:
+                    center_depth, min_idx, max_idx = dep_min_max_pos
+                    sizeofwindow = (max_idx-min_idx)
+                    mean_spacer = 1.0 + (0.5 * (spacerL + spacerR))
+                    # dividing by width of nucleosome called
+                    score = ((float(center_depth) / mean_spacer) /
+                             (sizeofwindow+1.0))
 
-                start_pos = self.win_position[min_idx]
-                end_pos = self.win_position[max_idx]
-                self._output_dic[start_pos] = [end_pos, center_depth, score]
+                    start_pos = self.win_position[min_idx]
+                    end_pos = self.win_position[max_idx]
+                    self._output_dic[start_pos] = [end_pos, center_depth, score]
 
     def _check_width(self, start, end, incre):
         for idx in xrange(start, end, incre):
@@ -156,14 +155,8 @@ class Nucleosome_Prediction(GC_correction):
         self._deq_pos.clear()
         self._output_dic.clear()
         self._last_ini = -(self._seq_len+1)
-        self.chrom = self._check_fasta_chr(chrom)
-        self.start, self.end = start, end
+        self.start, self.end, self.chrom = start, end, chrom
         self.bedcoord = '{}_{}_{}'.format(self.chrom, self.start, self.end)
-
-    def _check_fasta_chr(self, chrom):
-        if not self.arg.FastaChromType:
-            chrom = chrom.replace('chr', '')
-        return chrom
 
 
 def parse_args(argv):
@@ -189,7 +182,7 @@ def run(args):
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = Nucleosome_Prediction(args)
     for chrom, start, end in read_bed(args):
-        nucl_pred_cls.reset_deques(chrom, start, end)
+        nucl_pred_cls.reset_deques(corr_fasta_chr(args, chrom), start, end)
         for record in samfile.fetch(chrom, start, end):
             nucl_pred_cls.update_depth(record)
         nucl_pred_cls.call_final_window()

@@ -6,12 +6,13 @@ Prefixes:
 #    "--MappabilityPath": ../bedfiles/chrom22_51_50.40000-20000.mappability
     "--MappabilityPath": ../chr22_31_50.40000-20000.mappability
 BedFiles:
-    EnabledFilter: True
+    EnabledFilter: False
     UniquenessFilter: 0.9  # filteranalysis should be replace with bedtools
     #CTCFbed: ../bedfiles/testhg19ctcf.bed
 #    CTCGbed1: ../bedfiles/testhg19ctcf1.bed
 #    CTCGbed2: ../bedfiles/testhg19ctcf2.bed
-    CTCFbed: ../../bedfiles/testhg19ctcf.bed
+#    CTCFbed: ../../bedfiles/testhg19ctcf.bed
+    CTCFbed: ../../bedfiles/CTCFsites_2KB_overlap_rm.bed
 #    small: small_bed.bed
 BamInputs:
     BAM1:
@@ -26,21 +27,21 @@ BamInputs:
             "Resolution": 5  # if 1, checks all sizes from 45 to 60, now checks every 5th
             "--MappaUniqueness": 0.9
         NucleoMap:
-            "Enabled": False
+            "Enabled": True
             "Apply_GC_Correction": True
             "--MinDepth": 20
             "--DequeLen": 2000
         MethylMap:
-            "Enabled": False
+            "Enabled": True
             "--ReadBases": 6
             "--SkipBases": 0
         Phasogram:
-            "Enabled": False
+            "Enabled": True
             "Apply_GC_Correction": False
             "--SubsetPileup": 3
             "--MaxRange": 1000
         WriteDepth:
-            "Enabled": True
+            "Enabled": False
             "Apply_GC_Correction": True
             "--DequeLength": 500    
 #    BAM2:

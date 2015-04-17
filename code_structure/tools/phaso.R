@@ -46,21 +46,27 @@ nam = unlist(strsplit(IN_path,'/'))
 nam = nam[length(nam)]
 nam = unlist(strsplit(nam,'\\.'))[1]
 
-a=read.table(IN_path)
-df = data.frame(a)
-colnames(df) = c('x','y')
-df$names = nam
+if (file.info(IN_path)$size>55){
+	a=read.table(IN_path)
+	df = data.frame(a)
+	colnames(df) = c('x','y')
+	df$names = nam
 
-keep = !is.na(df$y)
-df=df[keep,]
-SHORT = 125
-xshort = 'periodogram: %1.01f peak (bases) measure from 0 to %1.0f'
-xlong = 'periodogram: %1.01f peak (bases) measured from %1.0f and onward'
+	keep = !is.na(df$y)
+	df=df[keep,]
+	SHORT = 125
+	xshort = 'periodogram: %1.01f peak (bases) measure from 0 to %1.0f'
+	xlong = 'periodogram: %1.01f peak (bases) measured from %1.0f and onward'
 
 
-pdf(OUT_path)
-grid.arrange(plotting(df[df$x>=0&df$x<=CUTOFF,]), 
-			 plot.periodo(periodo.short(df), 100, xshort),
-		     plot.periodo(periodo.long(df), 400, xlong),
-		     nrow=3)
-dev.off()
+	pdf(OUT_path)
+	grid.arrange(plotting(df[df$x>=0&df$x<=CUTOFF,]), 
+				 plot.periodo(periodo.short(df), 100, xshort),
+			     plot.periodo(periodo.long(df), 400, xlong),
+			     nrow=3)
+	dev.off()
+} else{
+	pdf(OUT_path)
+	plot(1, type="n", axes=F, xlab=sprintf("NODATA in %s",nam), ylab="")
+	dev.off()
+}

@@ -12,7 +12,7 @@ from os.path import exists, splitext
 from shutil import move
 from collections import defaultdict, namedtuple
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache
+    read_bed_WO, strtobool, Cache, corr_fasta_chr
 _PLUS_STRAND_BASES = ['CG', 'TG']
 _MINUS_STRAND_BASES = ['CG', 'CA']
 
@@ -34,8 +34,7 @@ class Methyl_Level(object):
 
     def reset_dict(self, chrom, start, end):
         self.dic_pos = defaultdict(lambda: defaultdict(int))
-        self.chrom = self._check_fasta_chr(chrom)
-        self.start, self.end = start, end
+        self.start, self.end, self.chrom = start, end, chrom
         self.bedcoord = '{}_{}_{}'.format(self.chrom, self.start, self.end)
         del self.rows[:]  # clear all data
         self.last_end = 0
@@ -53,7 +52,6 @@ class Methyl_Level(object):
                 self._writetofile()
 
         if self.record.is_reverse:
-            # self._reverse_strand()
             self._minus_or_threeprime()
         else:
             self._forward_strand()
@@ -71,16 +69,13 @@ class Methyl_Level(object):
         self.last_end = record.aend
 
     def _call_ms(self):
-        for pos, basescore in self.dic_pos.iteritems():
+        for pos, basescore in sorted(self.dic_pos.iteritems()):
             top = basescore.get('T', 0)+basescore.get('A', 0)
             low = top+basescore.get('C', 0)+basescore.get('G', 0)
             self.rowsapp(self.na_tup(pos+1, top, low))
 
     def call_final_ms(self):
-        for pos, basescore in self.dic_pos.iteritems():
-            top = basescore.get('T', 0)+basescore.get('A', 0)
-            low = top+basescore.get('C', 0)+basescore.get('G', 0)
-            self.rowsapp(self.na_tup(pos+1, top, low))
+        self._call_ms()
         self._writetofile()
 
     # def _reverse_strand(self):
@@ -142,11 +137,6 @@ class Methyl_Level(object):
         self._fasta.closefile()
         self.f_output.close()
 
-    def _check_fasta_chr(self, chrom):
-        if not self.arg.FastaChromType:
-            chrom = chrom.replace('chr', '')
-        return chrom
-
 
 def parse_args(argv):
     ''' docstring '''
@@ -173,7 +163,7 @@ def run(args):
     update = (Met_Score.update if args.LibraryConstruction == 'DS'
               else Met_Score.update_ss)
     for chrom, start, end in read_bed(args):
-        Met_Score.reset_dict(chrom, start, end)
+        Met_Score.reset_dict(corr_fasta_chr(args, chrom), start, end)
         for record in samfile.fetch(chrom, start, end):
             update(record)
         Met_Score.call_final_ms()

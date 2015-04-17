@@ -1,12 +1,22 @@
 import pysam
 
 
+def corr_fasta_chr(args, chrom):
+    if not args.FastaChromType:
+        chrom = chrom.replace('chr', '')
+    elif 'chr' not in chrom:
+            chrom = 'chr{}'.format(chrom)
+    return chrom
+
+
 def read_bed_W(args):
     if args.bed:
         with open(args.bed, 'r') as bedfile:
             for line in bedfile:
                 input_line = (line.rstrip('\n')).split('\t')[:3]
                 chrom, start, end = input_line
+                if 'chr' not in chrom:
+                    chrom = 'chr{}'.format(chrom)
                 yield (str(chrom), int(start), int(end))
 
 
@@ -16,7 +26,9 @@ def read_bed_WO(args):
             for line in bedfile:
                 input_line = (line.rstrip('\n')).split('\t')[:3]
                 chrom, start, end = input_line
-                yield (str(chrom.replace('chr', '')), int(start), int(end))
+                if 'chr' in chrom:
+                    chrom = chrom.replace('chr', '')
+                yield (str(chrom), int(start), int(end))
 
 
 def strtobool(val):
@@ -67,6 +79,7 @@ class GC_correction(object):
     def _GCmodel_ini(self):
         if self.arg.GCmodel:
             with open(self.arg.GCmodel, 'r') as f:
+                next(f)  # do not need the header
                 self._model = [float(line.rstrip('\n').split('\t')[-1])
                                for line in f]
                 self._GC_model_len = len(self._model)
