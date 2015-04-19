@@ -61,13 +61,14 @@ def coerce_to_dic(*args):
     return dic
 
 
-def filter_bedfiles(bedfiles, destination_pref, mappapath):
+def filter_bedfiles(temp_root, dat_make):
     bednodes = []
-    uniqueness = bedfiles.get('UniquenessFilter', 0)
-    for bedname, in_bedpath in checkbedfiles_ext(bedfiles):
-        out_bedpath = os.path.join(destination_pref,
+    uniqueness = dat_make.bedfiles.get('UniquenessFilter', 0)
+    mappapath = dat_make.prefix.get('--MappabilityPath', '')
+    for bedname, in_bedpath in checkbedfiles_ext(dat_make.bedfiles):
+        out_bedpath = os.path.join(temp_root,
                                    os.path.basename(in_bedpath))
-        bedfiles[bedname] = out_bedpath  # renew the path to the bedfiles
+        dat_make.bedfiles[bedname] = out_bedpath  # RENEW BEDFILE PATH
         bednodes.append(CleanFilesNode(mappapath, uniqueness,
                                        in_bedpath, out_bedpath))
     return bednodes
@@ -90,20 +91,19 @@ def main_anal_to_run(opts):
             yield analysis, ANALYSES[analysis]
 
 
-def calc_gcmodel(opts, prefix_opt, io_paths):
+def calc_gcmodel(dat_bam, dat_make):
     nodes = []
-    scale = opts['GCcorrect']['Resolution']
-    suffix = io_paths['bamname']+'_GCcorrect'
-    gc_dic = coerce_to_dic(prefix_opt, opts['BamInfo'], opts['GCcorrect'])
-    rlmin, rlmax = gc_dic.pop('MapMinMaxReadLength', [56, 57])
+    scale = dat_bam.opts['GCcorrect']['Resolution']
+    rlmin, rlmax = \
+        dat_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
 
     for rl in xrange(rlmin, rlmax+1, scale):  # this is each readlength
-        nodes.append(GccorrectNode(gc_dic, suffix, io_paths, rl))
-    topnode = CreateGCModelNode(suffix, io_paths, subnodes=nodes)
+        nodes.append(GccorrectNode(dat_bam, dat_make, rl))
+    topnode = CreateGCModelNode(dat_bam, subnodes=nodes)
 
-    opts['NucleoMap']['--MaxReadLen'] = rlmax
+    dat_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
     gcoutfile = (out for out in topnode.output_files if out.endswith('.txt'))
-    opts['BamInfo']['--GCmodel'] = gcoutfile.next()
+    dat_bam.opts['BamInfo']['--GCmodel'] = gcoutfile.next()
     return [topnode]
 
 
@@ -116,29 +116,29 @@ def get_io_paths(config, bam_name):
     return io_paths
 
 
-def make_gcnode(opts, prefix_opt, io_paths):
-    if opts['GCcorrect'].get('Enabled', False):
-        return calc_gcmodel(opts, prefix_opt, io_paths)
+def make_gcnode(dat_bam, dat_make):
+    if dat_bam.opts['GCcorrect'].get('Enabled', False):
+        return calc_gcmodel(dat_bam, dat_make)
     return []
 
 
-def run_filterbed(bedfiles, config, prefix_opt):
-    if bedfiles.get('EnabledFilter', False):
-        return filter_bedfiles(bedfiles, config.temp_root,
-                               prefix_opt["--MappabilityPath"])
+def run_filterbed(config, dat_make):
+    if dat_make.bedfiles.get('EnabledFilter', False):
+        # return filter_bedfiles(bedfiles, config.temp_root,
+        #                        prefix["--MappabilityPath"])
+        return filter_bedfiles(config.temp_root, dat_make)
     return []
 
 
-def run_analyses(aux_paths, analysis_options, bedinfo, m_node):
-    aux_python, aux_R = aux_paths
-    node = GeneralExecuteNode(aux_python, analysis_options, bedinfo,
+def run_analyses(anal, a_path, dat_bam, bedinfo, m_node):
+    aux_python, aux_R = a_path
+    node = GeneralExecuteNode(anal, aux_python, dat_bam, bedinfo,
                               dependencies=m_node)
-    curr_anal = analysis_options[1]
     if aux_R == '_':  # we have no plotting for writedepth
         return node
     infile = (out for out in node.output_files if
               out.endswith('txt.gz')).next()
-    return General_Plot_Node(aux_R, infile, curr_anal, dependencies=node)
+    return General_Plot_Node(aux_R, infile, anal, dependencies=node)
 
 
 def make_metanode(depen_nodes, bamname):
@@ -155,6 +155,28 @@ ANALYSES = {'Phasogram': ['./tools/phasogram.py', './tools/phaso.R'],
 GEN_OUTPUT_FMT = '{}_{}_{}'.format
 
 
+class makef_collect(object):
+    def __init__(self, make):
+        self.makefile = make.pop('Makefile', {})
+        self.prefix = self.makefile.pop('Prefixes', {})
+        self.bedfiles = self.makefile.pop('BedFiles', {})
+
+
+class bam_collect(object):
+    def __init__(self, config, bam_name, opts, dat_make):
+        self.bam_name = bam_name
+        self.i_path = os.path.join(config.temp_root, self.bam_name)
+        self.o_path = os.path.join(config.destination, self.bam_name)
+        self.baminfo = opts['BamInfo']
+        self.opts = opts
+        self.dat_make = dat_make  # comes from makef_collect class
+        self.fmt = GEN_OUTPUT_FMT
+
+    def retrievedat(self, analtype):
+        # potentially retrieve data from makef_collect prefix.
+        return self.opts[analtype]+self.baminfo+self.dat_make.prefix
+
+
 def run(config, makefiles):
     # config, makefiles = parse_args(argv)
     # this is not what we normally want:
@@ -165,23 +187,24 @@ def run(config, makefiles):
     pipeline = Pypeline(config)
     topnodes = []
     for make in read_epiomix_makefile(makefiles):
-        filternode = []
-        makefile = make.get('Makefile')
-        prefix_opt = makefile.get('Prefixes')
-        bedfiles = makefile.get('BedFiles')
-        filternode.extend(run_filterbed(bedfiles, config, prefix_opt))
-        for bam_name, opts in makefile['BamInputs'].items():
-            io_paths = get_io_paths(config, bam_name)
-            m_node = make_metanode(make_gcnode(opts, prefix_opt, io_paths) +
-                                   filternode, bam_name)
-            # bam_analyses = main_anal_to_run(opts)
-            general_opts = coerce_to_dic(prefix_opt, opts["BamInfo"])
-            for bedinfo in checkbedfiles_ext(bedfiles):
-                # for analysis, aux_paths in bam_analyses.iteritems():
-                for analysis, aux_paths in main_anal_to_run(opts):
-                    anal_opt = [io_paths['o_out'], analysis, GEN_OUTPUT_FMT,
-                                coerce_to_dic(general_opts, opts[analysis])]
-                    topnodes.append(run_analyses(aux_paths, anal_opt,
+        dat_make = makef_collect(make)
+        # makefile = make.get('Makefile')
+        # prefix = makefile.get('Prefixes')
+        # bedfiles = makefile.get('BedFiles')
+        # filternode.extend(run_filterbed(bedfiles, config, prefix))
+        filternode = run_filterbed(config, dat_make)
+        for bam_name, opts in dat_make.makefile['BamInputs'].items():
+            dat_bam = bam_collect(config, bam_name, opts, dat_make)
+            # io_paths = get_io_paths(config, bam_name)
+            m_node = make_metanode(make_gcnode(dat_bam, dat_make) +
+                                   filternode)
+            # general_opts = coerce_to_dic(prefix, opts["BamInfo"])
+            for bedinfo in checkbedfiles_ext(dat_make.bedfiles):
+                for anal, a_path in main_anal_to_run(opts):
+                    # anal_opt = [io_paths['o_out'], anal, GEN_OUTPUT_FMT,
+                    #             coerce_to_dic(general_opts, opts[anal])]
+                    t_node = run_analyses(anal, a_path, dat_bam, bedinfo, m_node)
+                    topnodes.append(run_analyses(a_path, anal_opt,
                                                  bedinfo, m_node))
     pipeline.add_nodes(topnodes)
     logger.info("Running BAM pipeline ...")
