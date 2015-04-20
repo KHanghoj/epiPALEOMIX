@@ -6,6 +6,7 @@ input_path = args[1]
 pat = args[2]
 outputpath = args[3]
 outputplot = args[4]
+
 listf = list.files(input_path, pattern=pat, full.names=TRUE)
 read.dat = function(x) {
 	a=read.table(x)

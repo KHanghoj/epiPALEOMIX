@@ -6,7 +6,7 @@ require(ggplot2); require(TSA); require(zoo); require(gridExtra)
 plotting = function(df){
  p <- ggplot(df,aes(x,smooth,col=names,
  group=names, fill=names))+
- geom_area()+ facet_wrap(~names,ncol=3)+
+ geom_line()+ facet_wrap(~names,ncol=3)+
  theme(legend.position="none")+
  labs(title='',
  y='Predicted Nucleosome Count',

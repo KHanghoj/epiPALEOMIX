@@ -7,6 +7,7 @@ import logging
 import pypeline.yaml
 import pypeline.logger
 import optparse
+from copy import deepcopy
 from set_procname import set_procname
 from nodes.gccorrect_Node import \
     GccorrectNode, CreateGCModelNode
@@ -16,7 +17,7 @@ from nodes.execute_Node import \
 from nodes.cleanbedfiles_Node import CleanFilesNode
 from pypeline.node import MetaNode
 from pypeline.common.console import print_err
-from epiomix_makefile import read_epiomix_makefile
+from epiomix_makefile1 import read_epiomix_makefile
 from pypeline.pipeline import Pypeline
 from pypeline.common.console import \
     print_err, \
@@ -52,25 +53,17 @@ def check_path(temp_dir):
             return 1
 
 
-def coerce_to_dic(*args):
-    dic = {}
-    for arg in args:
-        if not isinstance(arg, dict):
-            arg = dict([arg])
-        dic.update(arg)
-    return dic
-
-
-def filter_bedfiles(temp_root, dat_make):
+def filter_bedfiles(temp_root, d_make):
     bednodes = []
-    uniqueness = dat_make.bedfiles.get('UniquenessFilter', 0)
-    mappapath = dat_make.prefix.get('--MappabilityPath', '')
-    for bedname, in_bedpath in checkbedfiles_ext(dat_make.bedfiles):
-        out_bedpath = os.path.join(temp_root,
-                                   os.path.basename(in_bedpath))
-        dat_make.bedfiles[bedname] = out_bedpath  # RENEW BEDFILE PATH
-        bednodes.append(CleanFilesNode(mappapath, uniqueness,
-                                       in_bedpath, out_bedpath))
+    if d_make.bedfiles.get('EnabledFilter', False):
+        uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
+        mappapath = d_make.prefix.get('--MappabilityPath', '')
+        for bedname, in_bedpath in checkbedfiles_ext(d_make.bedfiles):
+            out_bedpath = os.path.join(temp_root,
+                                       os.path.basename(in_bedpath))
+            d_make.bedfiles[bedname] = out_bedpath  # RENEW BEDFILE PATH
+            bednodes.append(CleanFilesNode(mappapath, uniqueness,
+                                           in_bedpath, out_bedpath))
     return bednodes
 
 
@@ -80,61 +73,37 @@ def checkbedfiles_ext(bedfiles):
             yield bedname, bedpath
 
 
-# def main_anal_to_run(opts):
-#     return {key: ANALYSES[key] for key, val in opts.iteritems() if
-#             key in ANALYSES.keys() and val['Enabled']}
-
-
 def main_anal_to_run(opts):
     for analysis, options in opts.iteritems():
         if analysis in ANALYSES.keys() and options['Enabled']:
             yield analysis, ANALYSES[analysis]
 
 
-def calc_gcmodel(dat_bam, dat_make):
-    nodes = []
-    scale = dat_bam.opts['GCcorrect']['Resolution']
-    rlmin, rlmax = \
-        dat_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
+def calc_gcmodel(d_bam, d_make):
+    if d_bam.opts['GCcorrect'].get('Enabled', False):
+        nodes = []
+        scale = d_bam.opts['GCcorrect']['Resolution']
+        rlmin, rlmax = \
+            d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
 
-    for rl in xrange(rlmin, rlmax+1, scale):  # this is each readlength
-        nodes.append(GccorrectNode(dat_bam, dat_make, rl))
-    topnode = CreateGCModelNode(dat_bam, subnodes=nodes)
+        for rl in xrange(rlmin, rlmax+1, scale):  # this is each readlength
+            nodes.append(GccorrectNode(d_bam, d_make, rl))
+        topnode = CreateGCModelNode(d_bam, subnodes=nodes)
 
-    dat_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
-    gcoutfile = (out for out in topnode.output_files if out.endswith('.txt'))
-    dat_bam.opts['BamInfo']['--GCmodel'] = gcoutfile.next()
-    return [topnode]
-
-
-def get_io_paths(config, bam_name):
-    io_paths = {'o_out': os.path.join(config.destination, bam_name),
-                'temp': os.path.join(config.temp_root, bam_name),
-                'bamname': bam_name}
-    check_path(io_paths['o_out'])
-    check_path(io_paths['temp'])
-    return io_paths
-
-
-def make_gcnode(dat_bam, dat_make):
-    if dat_bam.opts['GCcorrect'].get('Enabled', False):
-        return calc_gcmodel(dat_bam, dat_make)
+        d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
+        gcoutfile = (out for out in topnode.output_files if
+                     out.endswith('.txt')).next()
+        d_bam.opts['BamInfo']['--GCmodel'] = gcoutfile
+        return [topnode]
     return []
 
 
-def run_filterbed(config, dat_make):
-    if dat_make.bedfiles.get('EnabledFilter', False):
-        # return filter_bedfiles(bedfiles, config.temp_root,
-        #                        prefix["--MappabilityPath"])
-        return filter_bedfiles(config.temp_root, dat_make)
-    return []
-
-
-def run_analyses(anal, a_path, dat_bam, bedinfo, m_node):
+def run_analyses(anal, a_path, d_bam, d_make, bedinfo, m_node):
     aux_python, aux_R = a_path
-    node = GeneralExecuteNode(anal, aux_python, dat_bam, bedinfo,
+    bed_name, bed_path = bedinfo
+    node = GeneralExecuteNode(anal, aux_python, d_bam, bed_name, bed_path,
                               dependencies=m_node)
-    if aux_R == '_':  # we have no plotting for writedepth
+    if aux_R == '_' or not d_make.bed_plot[bed_name]:
         return node
     infile = (out for out in node.output_files if
               out.endswith('txt.gz')).next()
@@ -152,34 +121,57 @@ ANALYSES = {'Phasogram': ['./tools/phasogram.py', './tools/phaso.R'],
             'NucleoMap': ['./tools/nucleomap.py', './tools/nucleo_merge.R'],
             'MethylMap': ['./tools/methylmap.py', './tools/methyl_merge.R']
             }
-GEN_OUTPUT_FMT = '{}_{}_{}'.format
 
 
 class makef_collect(object):
     def __init__(self, make):
         self.makefile = make.pop('Makefile', {})
         self.prefix = self.makefile.pop('Prefixes', {})
-        self.bedfiles = self.makefile.pop('BedFiles', {})
+        self.bedfiles, self.bed_plot = self._splitbedopts()
+
+    def _splitbedopts(self):
+        bedf = {}
+        bedp = {}
+        beddata = self.makefile.pop('BedFiles', {})
+        for bedname, bedopts in beddata.iteritems():
+            if isinstance(bedopts, dict):
+                bedf[bedname] = bedopts["Path"]
+                bedp[bedname] = bedopts["MakeMergePlot"]
+            else:
+                bedf[bedname] = bedopts
+        return bedf, bedp
 
 
 class bam_collect(object):
-    def __init__(self, config, bam_name, opts, dat_make):
+    def __init__(self, config, bam_name, opts, d_make):
         self.bam_name = bam_name
         self.i_path = os.path.join(config.temp_root, self.bam_name)
         self.o_path = os.path.join(config.destination, self.bam_name)
-        self.baminfo = opts['BamInfo']
+        self._createpaths()
         self.opts = opts
-        self.dat_make = dat_make  # comes from makef_collect class
-        self.fmt = GEN_OUTPUT_FMT
+        self.baminfo = self.opts['BamInfo']
+        self.fmt = '{}_{}_{}.txt.gz'.format
+        self.make_prefix = d_make.prefix  # comes from makef_collect class
+        self.dic = dict(self.baminfo, **self.make_prefix)
+
+    def _createpaths(self):
+        check_path(self.i_path)
+        check_path(self.o_path)
 
     def retrievedat(self, analtype):
-        # potentially retrieve data from makef_collect prefix.
-        return self.opts[analtype]+self.baminfo+self.dat_make.prefix
+        return self._coerce_to_dic(self.opts[analtype], self.baminfo,
+                                   self.make_prefix)
+
+    def _coerce_to_dic(*args):
+        dic = {}
+        for arg in args:
+            if not isinstance(arg, dict):
+                arg = dict([arg])
+            dic.update(arg)
+        return dic
 
 
 def run(config, makefiles):
-    # config, makefiles = parse_args(argv)
-    # this is not what we normally want:
     check_path(config.temp_root)
     logfile_template = time.strftime("Epiomix_pipe.%Y%m%d_%H%M%S_%%02i.log")
     pypeline.logger.initialize(config, logfile_template)
@@ -187,25 +179,16 @@ def run(config, makefiles):
     pipeline = Pypeline(config)
     topnodes = []
     for make in read_epiomix_makefile(makefiles):
-        dat_make = makef_collect(make)
-        # makefile = make.get('Makefile')
-        # prefix = makefile.get('Prefixes')
-        # bedfiles = makefile.get('BedFiles')
-        # filternode.extend(run_filterbed(bedfiles, config, prefix))
-        filternode = run_filterbed(config, dat_make)
-        for bam_name, opts in dat_make.makefile['BamInputs'].items():
-            dat_bam = bam_collect(config, bam_name, opts, dat_make)
-            # io_paths = get_io_paths(config, bam_name)
-            m_node = make_metanode(make_gcnode(dat_bam, dat_make) +
-                                   filternode)
-            # general_opts = coerce_to_dic(prefix, opts["BamInfo"])
-            for bedinfo in checkbedfiles_ext(dat_make.bedfiles):
+        d_make = makef_collect(make)
+        filternode = filter_bedfiles(config, d_make)
+        for bam_name, opts in d_make.makefile['BamInputs'].items():
+            d_bam = bam_collect(config, bam_name, opts, d_make)
+            gcnode = calc_gcmodel(d_bam, d_make)
+            m_node = make_metanode(gcnode+filternode, d_bam.bam_name)
+            for bedinfo in checkbedfiles_ext(d_make.bedfiles):
                 for anal, a_path in main_anal_to_run(opts):
-                    # anal_opt = [io_paths['o_out'], anal, GEN_OUTPUT_FMT,
-                    #             coerce_to_dic(general_opts, opts[anal])]
-                    t_node = run_analyses(anal, a_path, dat_bam, bedinfo, m_node)
-                    topnodes.append(run_analyses(a_path, anal_opt,
-                                                 bedinfo, m_node))
+                    topnodes.append(run_analyses(anal, a_path, d_bam,
+                                                 d_make, bedinfo, m_node))
     pipeline.add_nodes(topnodes)
     logger.info("Running BAM pipeline ...")
     pipeline.run(dry_run=config.dry_run, max_running=config.max_threads)
@@ -216,13 +199,11 @@ def _print_usage():
     if basename == "./epipaleomix.py":
         basename = "epipaleomix"
 
-    # print_info("Epipaleomix %s\n" % (pypeline.__version__,))
     print_info("Epipaleomix\n")
     print_info("Usage:")
     print_info("  -- %s help           -- Display this message" % basename)
-    # print_info("  -- %s makefile [...] -- Generate makefile from 'SampleSheet.csv' files." % basename)
     print_info("  -- %s dryrun [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
-    print_info("     %s                   Equivalent to 'epipaleomix run --dry-run [...]'." % (" " * len(basename),))
+    # print_info("     %s                   Equivalent to 'epipaleomix run --dry-run [...]'." % (" " * len(basename),))
     print_info("  -- %s run [...]      -- Run pipeline on provided makefiles." % basename)
 
 
@@ -244,7 +225,8 @@ def main(argv):
         _print_usage()
         print_err("\nPlease specify at least one makefile!")
         return 1
-    # Note that we remove antother input before passing on to run func
+    # NOTE THAT WE SPLICE OUT ANOTHER INPUT
+    # BEFORE PASSING ON TO RUN FUNC
     return run(config, args[1:])
 
 if __name__ == '__main__':
