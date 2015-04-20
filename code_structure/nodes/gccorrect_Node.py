@@ -13,7 +13,6 @@ class GccorrectNode(CommandNode):
         call = ['python', './tools/gccorrect.py', '%(IN_BAM)s',
                 '%(OUT_STDOUT)s']
         call.extend(("--ReadLength", rl))
-        # print(dat_bam.retrievedat('GCcorrect'))
         for option, argument in dat_bam.retrievedat('GCcorrect').iteritems():
             if isinstance(option, str) and option.startswith('-'):
                 call.extend((option, argument))

@@ -7,7 +7,6 @@ import logging
 import pypeline.yaml
 import pypeline.logger
 import optparse
-from copy import deepcopy
 from set_procname import set_procname
 from nodes.gccorrect_Node import \
     GccorrectNode, CreateGCModelNode
@@ -16,7 +15,6 @@ from nodes.execute_Node import \
     General_Plot_Node
 from nodes.cleanbedfiles_Node import CleanFilesNode
 from pypeline.node import MetaNode
-from pypeline.common.console import print_err
 from epiomix_makefile import read_epiomix_makefile
 from pypeline.pipeline import Pypeline
 from pypeline.common.console import \
@@ -152,15 +150,14 @@ class bam_collect(object):
         self.baminfo = self.opts['BamInfo']
         self.fmt = '{}_{}_{}.txt.gz'.format
         self.prefix = d_make.prefix  # comes from makef_collect class
-        # self.dic = dict(self.baminfo, **self.make_prefix)
+        self.generalopts = self._coerce_to_dic(self.baminfo, self.prefix)
 
     def _createpaths(self):
         check_path(self.i_path)
         check_path(self.o_path)
 
     def retrievedat(self, analtype):
-        return self._coerce_to_dic(self.opts[analtype], self.baminfo,
-                                   self.prefix)
+        return self._coerce_to_dic(self.opts[analtype], self.generalopts)
 
     def _coerce_to_dic(self, *args):
         dic = {}
