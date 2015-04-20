@@ -21,8 +21,7 @@ def _alphanum_check(whitelist):
                ValuesSubsetOf(whitelist, description=description))
 
 # Valid strings for targets / samples / libraries / lanes
-_VALID_BED_NAME = _VALID_MAPPA_NAME =\
-    _VALID_PREFIX_NAME = _VALID_TARGET_NAME = \
+_VALID_BED_NAME = _VALID_TARGET_NAME = \
     And(_alphanum_check(whitelist="._-"),
         ValueGE(2, key=len, description="at least two characters long"))
 
@@ -70,6 +69,11 @@ _VALIDATION_TOOLS = {
     "WriteDepth": _VALIDATION_WRITEDEPTH
 }
 
+_VALIDATION_BED = {
+    "Path": IsStr,
+    "MakeMergePlot": IsBoolean(default=True)
+}
+
 _VALIDATION = {
     "BamInputs": {  # BAMFILES:
         _VALID_TARGET_NAME: _VALIDATION_TOOLS
@@ -82,26 +86,12 @@ _VALIDATION = {
     "BedFiles": {
         'EnabledFilter': IsBoolean(default=True),
         'UniquenessFilter': IsFloat(default=0.9),
-        _VALID_BED_NAME: IsStr
+        _VALID_BED_NAME: _VALIDATION_BED
     }
 }
 
 
 def read_epiomix_makefile(argv):
     for f in argv:
-        if f.endswith('.yaml'):
+        if isinstance(f, str) and f.endswith('.yaml'):
             yield read_makefile(f, _VALIDATION)
-#             print(abc)
-#         for bam, val in abc['Makefile']['BamInputs'].iteritems():
-#             print(abc['Makefile']['BamInputs'][bam])
-#             for trala, val in abc['Makefile']['BamInputs'][bam].iteritems():
-#                 if trala == 'GCcorrect':
-#                     print(abc['Makefile']['BamInputs'][bam][trala]['--MapMinMaxReadLength'][1])
-#                     sys.exit()
-#                 print(val)
-#                 print(isinstance(val, dict))
-#                 if isinstance(val, dict) and val['Enabled']:
-#                     print trala
-# if __name__ == '__main__':
-#     import sys
-#     sys.exit(main(sys.argv[1:]))

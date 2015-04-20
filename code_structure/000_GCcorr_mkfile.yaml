@@ -12,7 +12,10 @@ BedFiles:
 #    CTCGbed1: ../bedfiles/testhg19ctcf1.bed
 #    CTCGbed2: ../bedfiles/testhg19ctcf2.bed
 #    CTCFbed: ../../bedfiles/testhg19ctcf.bed
-    CTCFbed: ../../bedfiles/CTCFsites_2KB_overlap_rm.bed
+#    CTCFbed: ../../bedfiles/CTCFsites_2KB_overlap_rm.bed
+    CTCFbed: 
+        Path: ../../bedfiles/CTCFsites_2KB_overlap_rm.bed
+        MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
 #    small: small_bed.bed
 BamInputs:
     BAM1:
