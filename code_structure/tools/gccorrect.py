@@ -109,7 +109,7 @@ def run(args):
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1
     for chrom, start, end, score in read_bed(args):
-        if score >= mappability:
+        if score >= mappability and chrom in 'chr1' or chrom in '1':
             # because chunks can overlap with 50%
             if start-last_end < 0 and last_chrom == chrom:
                 start = start + ((end-start)/2)
