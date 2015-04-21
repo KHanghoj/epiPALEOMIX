@@ -13,29 +13,30 @@ class GCcorrect(object):
     """docstring for GCcorrect"""
     def __init__(self, arg):
         self.arg = arg
-        self.dic_n_gc = defaultdict(int)
-        self.dic_f_gc = defaultdict(int)
+        self.reads_gc, self.reference_gc = defaultdict(int), defaultdict(int)
         self.samfile = pysam.Samfile(self.arg.BamPath, "rb")
         self.fasta = Cache(self.arg.FastaPath)
         self.rl = self.arg.ReadLength
 
     def getreads(self, chrom, start, end):
-        self.dic_forward, self.dic_reverse = {}, {}
+        self.reads_forw, self.reads_back = {}, {}
         records = self.samfile.fetch(chrom, start, end)
         # they need to be 0-based for fetching fasta seq:
         self.chrom = corr_fasta_chr(self.arg, chrom)
         self.start, self.end = start-1, end-1
-        [self._update(record.aend-1, self.dic_reverse)
-            if record.is_reverse else
-            self._update(record.pos, self.dic_forward) for record in records]
-        if self.dic_forward and self.dic_reverse:
-            # do not use chunks with 50 or less positions.
+        for record in records:
+            if record.is_reverse:
+                self._update(record.aend-1, self.reads_back)
+            else:
+                self._update(record.pos, self.reads_forw)
+
+        if self.reads_forw and self.reads_back:
             for rela_pos, gc in self._short_seq(self.rl):
                 curr_start = rela_pos+self.start
                 curr_end = curr_start+self.rl
-                self.dic_n_gc[gc] += 2
-                self.dic_f_gc[gc] += (self.dic_forward.pop(curr_start, 0) +
-                                      self.dic_reverse.pop(curr_end, 0))
+                self.reference_gc[gc] += 2
+                self.reads_gc[gc] += (self.reads_forw.pop(curr_start, 0) +
+                                      self.reads_back.pop(curr_end, 0))
 
     def _update(self, pos, dic):
         try:
@@ -45,28 +46,24 @@ class GCcorrect(object):
 
     def _retrieve_fastaseq(self):
         length = self.end-self.start
-        seq = self.fasta.fetch_string(self.chrom, self.start-1, length)
-        return(length, seq)
+        seq = self.fasta.fetch_string(self.chrom, self.start, length)
+        return length, seq
 
     def _short_seq(self, rl):
         ''' seq_fasta, length of read, return seq'''
         region_size, region_seq = self._retrieve_fastaseq()
-        indices = iter(xrange(region_size - (rl - 1)))
-        while True:
-            try:
-                idx = indices.next()
-                tempseq = region_seq[idx+_BUFFER: idx-_BUFFER+rl]
-                yield (idx+_BUFFER, (tempseq.count('C')+tempseq.count('G')))
-            except StopIteration:
-                break
+        for idx in xrange(region_size - (rl - 1)):
+            seq = region_seq[idx+_BUFFER: idx+rl-_BUFFER]
+            yield (idx+_BUFFER, (seq.count('C')+seq.count('G')))
 
     def writetofile(self):
         ''' dfs '''
         out = sys.stdout.write
         fmt = '{}\t{}\t{}\t{}\n'.format
         for gc in range(0, self.rl+1):
-            out(fmt(str(self.rl), str(gc), str(self.dic_f_gc[gc]),
-                str(self.dic_n_gc[gc])))
+            out(fmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
+                str(self.reference_gc[gc])))
+        self.fasta.closefile()
 
 
 def parse_args(argv):
@@ -77,15 +74,15 @@ def parse_args(argv):
     parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
-    parser.add_argument('--FastaChromType', dest='FastaChromType')
-    parser.add_argument('--BamChromType', dest='BamChromType')
+    parser.add_argument('--FastaChromType')
+    parser.add_argument('--BamChromType')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     return parser.parse_known_args(argv)
 
 
 def read_mappa_W(args):
-    with open(args.MappabilityPath, 'r') as myfile:
-        for line in myfile:
+    with open(args.MappabilityPath, 'r') as mappafile:
+        for line in mappafile:
             input_line = (line.rstrip('\n')).split('\t')
             chrom, start, end = input_line[:3]
             if 'chr' not in chrom:
@@ -95,16 +92,14 @@ def read_mappa_W(args):
 
 
 def read_mappa_WO(args):
-    with open(args.MappabilityPath, 'r') as myfile:
-        for line in myfile:
+    with open(args.MappabilityPath, 'r') as mappafile:
+        for line in mappafile:
             input_line = (line.rstrip('\n')).split('\t')
-            chrom = input_line.pop(0).replace('chr', '')
+            chrom, start, end = input_line[:3]
             if 'chr' in chrom:
                 chrom = chrom.replace('chr', '')
-            start = int(input_line.pop(0))
-            end = int(input_line.pop(0))
             score = float(input_line[-1])
-            yield (chrom, start, end, score)
+            yield (str(chrom), int(start), int(end), score)
 
 
 def run(args):
@@ -115,11 +110,10 @@ def run(args):
     last_chrom, last_end = '', -1
     for chrom, start, end, score in read_bed(args):
         if score >= mappability:
-            # because chunks can overlap
+            # because chunks can overlap with 50%
             if start-last_end < 0 and last_chrom == chrom:
                 start = start + ((end-start)/2)
-            last_chrom = chrom
-            last_end = end
+            last_chrom, last_end = chrom, end
             GC.getreads(chrom, start, end)
     GC.writetofile()
 

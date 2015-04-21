@@ -103,9 +103,8 @@ def run_analyses(anal, a_path, d_bam, d_make, bedinfo, m_node):
                               dependencies=m_node)
     if aux_R == '_' or not d_make.bed_plot[bed_name]:
         return node
-    infile = (out for out in node.output_files if
-              out.endswith('txt.gz')).next()
-    return General_Plot_Node(aux_R, infile, anal, dependencies=node)
+    infile = (out for out in node.output_files if out.endswith('txt.gz'))
+    return General_Plot_Node(aux_R, infile.next(), anal, dependencies=node)
 
 
 def make_metanode(depen_nodes, bamname):
@@ -125,13 +124,12 @@ class makef_collect(object):
     def __init__(self, make):
         self.makefile = make.pop('Makefile', {})
         self.prefix = self.makefile.pop('Prefixes', {})
+        self.beddata = self.makefile.pop('BedFiles', {})
         self.bedfiles, self.bed_plot = self._splitbedopts()
 
     def _splitbedopts(self):
-        bedf = {}
-        bedp = {}
-        beddata = self.makefile.pop('BedFiles', {})
-        for bedname, bedopts in beddata.iteritems():
+        bedf, bedp = {}, {}
+        for bedname, bedopts in self.beddata.iteritems():
             if isinstance(bedopts, dict):
                 bedf[bedname] = bedopts["Path"]
                 bedp[bedname] = bedopts["MakeMergePlot"]
@@ -187,6 +185,8 @@ def run(config, makefiles):
                 for anal, a_path in main_anal_to_run(opts):
                     topnodes.append(run_analyses(anal, a_path, d_bam,
                                                  d_make, bedinfo, m_node))
+            if not topnodes:
+                topnodes.extend(gcnode+filternode)
     pipeline.add_nodes(topnodes)
     logger.info("Running BAM pipeline ...")
     pipeline.run(dry_run=config.dry_run, max_running=config.max_threads)
