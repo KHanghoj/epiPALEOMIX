@@ -9,7 +9,8 @@ import pypeline.logger
 import optparse
 from set_procname import set_procname
 from nodes.gccorrect_Node import \
-    GccorrectNode, CreateGCModelNode
+    GccorrectNode, CreateGCModelNode, \
+    GccorrectNode_Mid  # , GccorrectNode_Final
 from nodes.execute_Node import \
     GeneralExecuteNode, \
     General_Plot_Node
@@ -77,7 +78,7 @@ def main_anal_to_run(opts):
             yield analysis, ANALYSES[analysis]
 
 
-def calc_gcmodel(d_bam, d_make):
+def calc_gcmodel_old(d_bam, d_make):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
         nodes = []
         scale = d_bam.opts['GCcorrect']['Resolution']
@@ -89,6 +90,30 @@ def calc_gcmodel(d_bam, d_make):
         topnode = CreateGCModelNode(d_bam, subnodes=nodes)
 
         d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
+        gcoutfile = (out for out in topnode.output_files if
+                     out.endswith('.txt')).next()
+        d_bam.opts['BamInfo']['--GCmodel'] = gcoutfile
+        return [topnode]
+    return []
+
+# GccorrectNode_Mid, GccorrectNode_Final = object(), object()
+FINETUNERANGE = [-10, -5, 5, 10]
+
+
+def calc_gcmodel(d_bam):
+    if d_bam.opts['GCcorrect'].get('Enabled', False):
+        nodes, lastnode = [], []
+        scale = d_bam.opts['GCcorrect']['Resolution']
+        rlmin, rlmax = \
+            d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
+        d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
+        for rl in xrange(rlmin, rlmax+1, scale):  # this is each readlength
+            nodes.append(GccorrectNode(d_bam, rl))
+        midnode = GccorrectNode_Mid(d_bam, subnodes=nodes)
+        for rl in FINETUNERANGE:
+            lastnode.append(GccorrectNode(d_bam, rl,
+                            offset=midnode, subnodes=[midnode]))
+        topnode = CreateGCModelNode(d_bam, subnodes=lastnode)
         gcoutfile = (out for out in topnode.output_files if
                      out.endswith('.txt')).next()
         d_bam.opts['BamInfo']['--GCmodel'] = gcoutfile
@@ -179,7 +204,8 @@ def run(config, makefiles):
         filternode = filter_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
-            gcnode = calc_gcmodel(d_bam, d_make)
+            # gcnode = calc_gcmodel(d_bam, d_make)
+            gcnode = calc_gcmodel(d_bam)
             m_node = make_metanode(gcnode+filternode, d_bam.bam_name)
             for bedinfo in checkbedfiles_ext(d_make.bedfiles):
                 for anal, a_path in main_anal_to_run(opts):

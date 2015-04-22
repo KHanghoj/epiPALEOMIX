@@ -1,11 +1,18 @@
 from __future__ import print_function
 import re
-import os
 import sys
 import numpy as np
-# bamname = 'Saqqaq_GCcorrect'
-# path = "/Users/kehanghoej/Desktop/GC"
-# Desktop kehanghoej$ python gccorrect_pythononly.py GC Saqqaq
+import argparse
+# python tools/gccorrect_mid.py tralaa.txt
+#     temp/Saqqaq/Saqqaq_GCcorrect_*
+
+
+def parse_args(argv):
+    ''' docstring '''
+    parser = argparse.ArgumentParser(prog='GCcorrectionMid')
+    parser.add_argument('out', type=str)
+    parser.add_argument('inputs', help="..", nargs='+')
+    return parser.parse_known_args(argv)
 
 
 def get_data(f):
@@ -26,15 +33,17 @@ def calc(f):
 
 
 def main(argv):
-    path, bamname = argv
+    args, unknown = parse_args(argv)
     valmax, optlength = 0, 0
-    for dirpath, dirnames, fnames in os.walk(path):
-        for fname in fnames:
-            if fname.startswith(bamname):
-                val, length = calc(os.path.join(dirpath, fname))
-                if val > valmax:
-                    valmax, optlength = val, length
-    print(valmax, optlength, bamname, path, file=sys.stdout, sep='\t')
+    # fmt = '{}\t{}\n'.format
+    fmt = '{}\n'.format
+    for fname in args.inputs:
+        val, length = calc(fname)
+        if val > valmax:
+            valmax, optlength = val, length
+    with open(args.out, 'w') as f:
+        # f.write(fmt(valmax, optlength))
+        f.write(fmt(optlength))
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

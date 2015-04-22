@@ -76,6 +76,8 @@ def parse_args(argv):
     parser.add_argument('--MappaUniqueness', help="...", type=float)
     parser.add_argument('--FastaChromType')
     parser.add_argument('--BamChromType')
+    parser.add_argument('--OffSet', default=None, type=str,
+                        help='the offsetfile found by the midnode')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     return parser.parse_known_args(argv)
 
@@ -105,11 +107,13 @@ def read_mappa_WO(args):
 def run(args):
     read_bed = read_mappa_W if strtobool(args.BamChromType) else read_mappa_WO
     args.FastaChromType = strtobool(args.FastaChromType)
+    if args.OffSet:
+        args.ReadLength += int(open(args.OffSet, 'r').read().strip())
     GC = GCcorrect(args)
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1
     for chrom, start, end, score in read_bed(args):
-        if score >= mappability and chrom in 'chr1' or chrom in '1':
+        if score >= mappability:  # and chrom in 'chr1' or chrom in '1':
             # because chunks can overlap with 50%
             if start-last_end < 0 and last_chrom == chrom:
                 start = start + ((end-start)/2)

@@ -1,4 +1,4 @@
-srequire(ggplot2,quietly = TRUE)
+require(ggplot2,quietly = TRUE)
 require(reshape2, quietly = TRUE)
 require(gridExtra, quietly = TRUE)
 args <- commandArgs(trailingOnly = TRUE)
