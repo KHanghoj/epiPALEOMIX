@@ -8,7 +8,7 @@ import numpy as np
 # Desktop kehanghoej$ python gccorrect_pythononly.py GC Saqqaq
 
 
-def getline(f):
+def get_data(f):
     lst_read, lst_fasta = [], []
     with open(f, 'r') as fout:
         for line in fout:
@@ -19,7 +19,7 @@ def getline(f):
 
 
 def calc(f):
-    readlength, read, fasta = getline(f)
+    readlength, read, fasta = get_data(f)
     grandmean = sum(read)/sum(fasta)
     dat = sum(abs(read / fasta - grandmean) * (fasta / sum(fasta)))
     return 0.5*dat/grandmean, readlength
@@ -34,7 +34,7 @@ def main(argv):
                 val, length = calc(os.path.join(dirpath, fname))
                 if val > valmax:
                     valmax, optlength = val, length
-    print(valmax, optlength, bamname, file=sys.stdout)
+    print(valmax, optlength, bamname, path, file=sys.stdout, sep='\t')
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
