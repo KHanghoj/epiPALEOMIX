@@ -62,8 +62,9 @@ class GeneralExecuteNode(CommandNode):
                  dependencies=()):
         call = ['python', '%(AUX_PYTHON)s', '%(IN_BAM)s',
                 '%(IN_BED)s', '%(OUT_FILEPATH)s']
-        destination = os.path.join(d_bam.o_path,
-                                   d_bam.fmt(d_bam.bam_name, anal, bed_name))
+        destination = \
+            os.path.join(d_bam.o_path, d_bam.fmt.format(d_bam.bam_name,
+                                                        anal, bed_name))
 
         opt_arg = d_bam.retrievedat(anal)
         gc_bool = opt_arg.get('Apply_GC_Correction', False)

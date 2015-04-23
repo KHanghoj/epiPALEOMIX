@@ -58,11 +58,14 @@ class GCcorrect(object):
 
     def writetofile(self):
         ''' dfs '''
-        out = sys.stdout.write
+        # out = sys.stdout.write
         fmt = '{}\t{}\t{}\t{}\n'.format
-        for gc in range(0, self.rl+1):
-            out(fmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
-                str(self.reference_gc[gc])))
+        with open(self.arg.OutputFile, 'w') as f:
+            for gc in range(0, self.rl+1):
+                # out(fmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
+                #     str(self.reference_gc[gc])))
+                f.write(fmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
+                        str(self.reference_gc[gc])))
         self.fasta.closefile()
 
 
@@ -70,13 +73,14 @@ def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser(prog='GCcorrection')
     parser.add_argument('BamPath', type=str)
+    parser.add_argument('OutputFile', type=str)
     parser.add_argument('--FastaPath', type=str)
     parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
     parser.add_argument('--FastaChromType')
     parser.add_argument('--BamChromType')
-    parser.add_argument('--OffSet', default=None, type=str,
+    parser.add_argument('--OffSet', type=str,
                         help='the offsetfile found by the midnode')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     return parser.parse_known_args(argv)

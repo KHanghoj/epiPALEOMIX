@@ -22,6 +22,8 @@ from pypeline.common.console import \
     print_err, \
     print_info
 
+FINETUNERANGE = [-10, -5, 5, 10]
+
 
 class MakefileError(RuntimeError):
     """Raised if a makefile is unreadable, or does not meet specifications."""
@@ -78,26 +80,8 @@ def main_anal_to_run(opts):
             yield analysis, ANALYSES[analysis]
 
 
-def calc_gcmodel_old(d_bam, d_make):
-    if d_bam.opts['GCcorrect'].get('Enabled', False):
-        nodes = []
-        scale = d_bam.opts['GCcorrect']['Resolution']
-        rlmin, rlmax = \
-            d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
-
-        for rl in xrange(rlmin, rlmax+1, scale):  # this is each readlength
-            nodes.append(GccorrectNode(d_bam, d_make, rl))
-        topnode = CreateGCModelNode(d_bam, subnodes=nodes)
-
-        d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
-        gcoutfile = (out for out in topnode.output_files if
-                     out.endswith('.txt')).next()
-        d_bam.opts['BamInfo']['--GCmodel'] = gcoutfile
-        return [topnode]
-    return []
-
-# GccorrectNode_Mid, GccorrectNode_Final = object(), object()
-FINETUNERANGE = [-10, -5, 5, 10]
+def makegcnodes(d_bam, rang, subnodes=()):
+    return [GccorrectNode(d_bam, rl, subnodes=subnodes) for rl in rang]
 
 
 def calc_gcmodel(d_bam):
@@ -107,12 +91,9 @@ def calc_gcmodel(d_bam):
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
         d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
-        for rl in xrange(rlmin, rlmax+1, scale):  # this is each readlength
-            nodes.append(GccorrectNode(d_bam, rl))
-        midnode = GccorrectNode_Mid(d_bam, subnodes=nodes)
-        for rl in FINETUNERANGE:
-            lastnode.append(GccorrectNode(d_bam, rl,
-                            offset=midnode, subnodes=[midnode]))
+        nodes = makegcnodes(d_bam, xrange(rlmin, rlmax+1, scale))
+        midnode = [GccorrectNode_Mid(d_bam, subnodes=nodes)]
+        lastnode = makegcnodes(d_bam, FINETUNERANGE, subnodes=midnode)
         topnode = CreateGCModelNode(d_bam, subnodes=lastnode)
         gcoutfile = (out for out in topnode.output_files if
                      out.endswith('.txt')).next()
@@ -126,6 +107,7 @@ def run_analyses(anal, a_path, d_bam, d_make, bedinfo, m_node):
     bed_name, bed_path = bedinfo
     node = GeneralExecuteNode(anal, aux_python, d_bam, bed_name, bed_path,
                               dependencies=m_node)
+    # if bedplot is false -> no plot
     if aux_R == '_' or not d_make.bed_plot[bed_name]:
         return node
     infile = (out for out in node.output_files if out.endswith('txt.gz'))
@@ -171,7 +153,7 @@ class bam_collect(object):
         self._createpaths()
         self.opts = opts
         self.baminfo = self.opts['BamInfo']
-        self.fmt = '{}_{}_{}.txt.gz'.format
+        self.fmt = '{}_{}_{}.txt.gz'
         self.prefix = d_make.prefix  # comes from makef_collect class
         self.generalopts = self._coerce_to_dic(self.baminfo, self.prefix)
 
@@ -186,7 +168,6 @@ class bam_collect(object):
         dic = {}
         for arg in args:
             if not isinstance(arg, dict):
-                print(arg)
                 arg = dict([arg])
             dic.update(arg)
         return dic
@@ -204,7 +185,6 @@ def run(config, makefiles):
         filternode = filter_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
-            # gcnode = calc_gcmodel(d_bam, d_make)
             gcnode = calc_gcmodel(d_bam)
             m_node = make_metanode(gcnode+filternode, d_bam.bam_name)
             for bedinfo in checkbedfiles_ext(d_make.bedfiles):
