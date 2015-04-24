@@ -1,4 +1,4 @@
-from pypeline.node import CommandNode
+from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
 
@@ -42,3 +42,31 @@ class CleanFilesNode(CommandNode):
                              description=description,
                              command=paral_cmd,
                              dependencies=dependencies)
+
+
+import tools.splitbedfiles
+
+class SplitBedFile(Node):
+    def __init__(self, temp_root, inbedfile, no_subbed=3, subnodes=(), dependencies=()):
+        self.temp_root, self.infile = temp_root, inbedfile
+        self.outputnames = self._createbednames(no_subbed)
+        description = "<SplitBedile: '%s' to temproot '%s'" % \
+                      (inbedfile,
+                       temp_root)
+        Node.__init__(self,
+                      description=description,
+                      input_files=self.infile,
+                      output_files=self.outputnames,
+                      subnodes=subnodes
+                      dependencies=dependencies)
+
+    def _run(self, _config, _temp):
+        tools.splitbedfiles.main(self.infile, self.outputnames)
+
+    def _createbednames(self, no_subbed):
+        ''' make each bedfile filename '''
+        fmt, lst = '_0{}', []
+        filena, fileext = os.path.splitext(os.path.basename(self.infile))
+        for number in xrange(1,no_subbed+1):
+            lst.append(os.path.join(self.temp_root, filena + fmt.format(number) + fileext))
+        return lst
