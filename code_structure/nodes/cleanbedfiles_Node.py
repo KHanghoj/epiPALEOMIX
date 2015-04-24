@@ -1,6 +1,8 @@
 from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
+import os
+
 
 # class CleanFilesNodeold(CommandNode):
 #     def __init__(self, mappa, unique, inbedfile, outbedfile, dependencies=()):
@@ -21,7 +23,8 @@ from pypeline.atomiccmd.sets import ParallelCmds
 
 
 class CleanFilesNode(CommandNode):
-    def __init__(self, mappa, unique, inbedfile, outbedfile, dependencies=()):
+    def __init__(self, config, inbedfile, mappa, unique, dependencies=()):
+        outbedfile = os.path.join(config.temp_root, os.path.basename(inbedfile))
         call1 = ["python", "./tools/filtermappa.py",
                  "%(IN_MAPPA)s", str(unique)]
         call2 = ["bedtools", "intersect", "-wa", "-u", "-a",
@@ -45,23 +48,25 @@ class CleanFilesNode(CommandNode):
 
 
 import tools.splitbedfiles
-
+                                  
 class SplitBedFile(Node):
-    def __init__(self, temp_root, inbedfile, no_subbed=3, subnodes=(), dependencies=()):
-        self.temp_root, self.infile = temp_root, inbedfile
+    def __init__(self, config, inbedfile, no_subbed=3, subnodes=(), dependencies=()):
+        self.temp_root, self.infile = config.temp_root, inbedfile
         self.outputnames = self._createbednames(no_subbed)
-        description = "<SplitBedile: '%s' to temproot '%s'" % \
-                      (inbedfile,
-                       temp_root)
+        description = "<SplitBedFile: '%s' to '%s',"\
+                      " Splitted in %s sub bed files" \
+                      % (inbedfile, self.temp_root, str(no_subbed))
         Node.__init__(self,
                       description=description,
                       input_files=self.infile,
                       output_files=self.outputnames,
-                      subnodes=subnodes
+                      subnodes=subnodes,
                       dependencies=dependencies)
+        assert isinstance(self.outputnames, list), "output has to be a list of str"
 
     def _run(self, _config, _temp):
-        tools.splitbedfiles.main(self.infile, self.outputnames)
+        inputs = [self.infile]+self.outputnames
+        tools.splitbedfiles.main(inputs)
 
     def _createbednames(self, no_subbed):
         ''' make each bedfile filename '''
@@ -70,3 +75,28 @@ class SplitBedFile(Node):
         for number in xrange(1,no_subbed+1):
             lst.append(os.path.join(self.temp_root, filena + fmt.format(number) + fileext))
         return lst
+
+
+import tools.merge_datafiles
+                                  
+class MergeDataFiles(Node):
+    def __init__(self, d_bam, anal, bedn, subnodes=(), dependencies=()):
+        self.infiles = [''.join(n.output_files) for n in subnodes]
+        self.anal = anal
+        self.out = os.path.join(d_bam.o_path,
+                                d_bam.fmt.format(d_bam.bam_name, anal, bedn))
+        description = "<MergeDataFiles: '%s' to temproot '%s'" % \
+                      (self.infiles, self.out)
+        Node.__init__(self,
+                      description=description,
+                      input_files=self.infiles,
+                      output_files=self.out,
+                      subnodes=subnodes,
+                      dependencies=dependencies)
+
+    def _run(self, _config, _temp):
+        inputs = [self.out, self.infiles]
+        assert len(inputs) > 1, 'Need at least one output and one input'
+        if self.anal is 'Phasogram':
+            inputs.append('--merge')
+        tools.merge_datafiles.main(inputs)

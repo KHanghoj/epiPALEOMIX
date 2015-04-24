@@ -81,13 +81,6 @@ class GccorrectNode(Node):
             self.inputs.extend(("--OffSet", str(offsetfile.next())))
         self._add_options('GCcorrect')
         self.inputs.extend(("--ReadLength", str(self.rl)))
-        # optargs = self.d_bam.retrievedat(name)
-        # optargs = self.d_bam.retrievedat('GCcorrect')
-        # for option, argument in optargs.iteritems():
-        #     if isinstance(option, str) and option.startswith('-'):
-        #         if not isinstance(argument, str):
-        #             argument = str(argument)
-        #         self.inputs.extend((option, argument))
         tools.gccorrect.main(self.inputs)
 
     def _add_options(self, name):

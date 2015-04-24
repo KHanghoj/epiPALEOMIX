@@ -14,10 +14,7 @@ from nodes.gccorrect_Node import \
 from nodes.execute_Node import \
     GeneralExecuteNode, \
     General_Plot_Node
-from nodes.cleanbedfiles_Node import \
-    CleanFilesNode, \
-    SplitBedFile, \
-    MergeDataFiles
+from nodes.cleanbedfiles_Node import CleanFilesNode
 from pypeline.node import MetaNode
 from epiomix_makefile import read_epiomix_makefile
 from pypeline.pipeline import Pypeline
@@ -57,56 +54,28 @@ def check_path(temp_dir):
             return 1
 
 
-# def filter_bedfiles(config, d_make):
-#     bednodes = []
-#     if d_make.bedfiles.get('EnabledFilter', False):
-#         uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
-#         mappapath = d_make.prefix.get('--MappabilityPath', '')
-#         for bedname, in_bedpath in checkbedfiles_ext(d_make.bedfiles):
-#             out_bedpath = os.path.join(config.temp_root,
-#                                        os.path.basename(in_bedpath))
-#             d_make.bedfiles[bedname] = out_bedpath  # RENEW BEDFILE PATH
-#             bednodes.append(CleanFilesNode(mappapath, uniqueness,
-#                                            in_bedpath, out_bedpath))
-#     return bednodes
-
-def split_bedfiles(config, d_make):
-    uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
-    mappapath = d_make.prefix.get('--MappabilityPath', False)
-    nodes = []
-    enabl_filter = d_make.bedfiles.get('EnabledFilter', False)
-    for bedn, in_bedp in checkbedfiles_ext(d_make.bedfiles):
-        if enabl_filter and mappapath:
-            filtnode = [CleanFilesNode(config,in_bedp, mappapath, uniqueness)]
-            # here it is only one outputfile
-            d_make.bedfiles[bedn] = ''.join(filtnode[0].output_files)
-        else:
-            filtnode = []
-                
-        splnode = SplitBedFile(config, d_make.bedfiles[bedn], subnodes=filtnode)
-        d_make.bedfiles[bedn] = [''.join(f) for f in splnode.output_files]
-        nodes.append(splnode)
-        # now each bedfile name has several bedfile paths. cool
-    return nodes
+def filter_bedfiles(temp_root, d_make):
+    bednodes = []
+    if d_make.bedfiles.get('EnabledFilter', False):
+        uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
+        mappapath = d_make.prefix.get('--MappabilityPath', '')
+        for bedname, in_bedpath in checkbedfiles_ext(d_make.bedfiles):
+            out_bedpath = os.path.join(temp_root,
+                                       os.path.basename(in_bedpath))
+            d_make.bedfiles[bedname] = out_bedpath  # RENEW BEDFILE PATH
+            bednodes.append(CleanFilesNode(mappapath, uniqueness,
+                                           in_bedpath, out_bedpath))
+    return bednodes
 
 
-# def checkbedfiles_ext(bedfiles):
-#     for bedname, bedpath in bedfiles.items():
-#         if isinstance(bedpath, str) and bedpath.endswith('.bed'):
-#             yield bedname, bedpath
+def split_bedfiles(temp_root, d_make, filternode=()):
+    pass
 
 
 def checkbedfiles_ext(bedfiles):
-    for bedname, bedpath in bedfiles.items():
+    for bedname, bedpath in bedfiles.iteritems():
         if isinstance(bedpath, str) and bedpath.endswith('.bed'):
             yield bedname, bedpath
-
-
-def checkbedlist(bedfiles):
-    for bedname, bedpaths in bedfiles.items():
-        if (isinstance(bedpaths, list) and
-            all([bedp.endswith('.bed') for bedp in bedpaths])):
-            yield bedname, bedpaths
 
 
 def main_anal_to_run(opts):
@@ -139,25 +108,18 @@ def calc_gcmodel(d_bam):
 
 def run_analyses(anal, a_path, d_bam, d_make, bedinfo, m_node):
     aux_python, aux_R = a_path
-    bedn, bed_paths = bedinfo
-    nodes = []
-    for idx, bed_p in enumerate(bed_paths):
-        # if os.path.getsize(bed_p) > 0:
-        nodes.append(GeneralExecuteNode(anal, aux_python, d_bam,
-                                        bedn+str(idx), bed_p, dependencies=m_node))
-    assert nodes, "no bedfile contained any data input lines"
-    mergenode = MergeDataFiles(d_bam, anal, bedn, subnodes=nodes)
+    bed_name, bed_path = bedinfo
+    node = GeneralExecuteNode(anal, aux_python, d_bam, bed_name, bed_path,
+                              dependencies=m_node)
     # if bedplot is false -> no plot
-    if aux_R == '_' or not d_make.bed_plot[bedn]:
-        return mergenode
-    # infile = (out for out in node.output_files if out.endswith('txt.gz'))
-    infile = (out for out in mergenode.output_files)
-    return General_Plot_Node(aux_R, infile.next(),
-                             anal, dependencies=[mergenode])
+    if aux_R == '_' or not d_make.bed_plot[bed_name]:
+        return node
+    infile = (out for out in node.output_files if out.endswith('txt.gz'))
+    return General_Plot_Node(aux_R, infile.next(), anal, dependencies=node)
 
 
 def make_metanode(depen_nodes, bamname):
-    descrip_fmt = "Metanode: '{}': GC correction and bedfile split".format
+    descrip_fmt = 'Metanode: {}: correction of GC and bedfile'.format
     return MetaNode(description=descrip_fmt(bamname),
                     dependencies=depen_nodes)
 
@@ -224,12 +186,12 @@ def run(config, makefiles):
     topnodes = []
     for make in read_epiomix_makefile(makefiles):
         d_make = makef_collect(make)
-        filternode = split_bedfiles(config, d_make)
+        filternode = filter_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
             gcnode = calc_gcmodel(d_bam)
             m_node = make_metanode(gcnode+filternode, d_bam.bam_name)
-            for bedinfo in checkbedlist(d_make.bedfiles):
+            for bedinfo in checkbedfiles_ext(d_make.bedfiles):
                 for anal, a_path in main_anal_to_run(opts):
                     topnodes.append(run_analyses(anal, a_path, d_bam,
                                                  d_make, bedinfo, m_node))

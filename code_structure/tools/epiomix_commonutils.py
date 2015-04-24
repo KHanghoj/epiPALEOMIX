@@ -14,14 +14,22 @@ def corr_fasta_chr(args, chrom):
     return chrom
 
 
-def unpack1(n, seq):
-    it = iter(seq)
-    for _ in range(n - 1):
-        yield next(it, None)
-    yield tuple(it)
+# def unpack1(n, seq):
+#     it = iter(seq)
+#     for _ in range(n - 1):
+#         yield next(it, None)
+#     yield tuple(it)
 
 
-def read_bed(args):
+# def read_bed(args):
+#     if args.bed:
+#         with open(args.bed, 'r') as bedfile:
+#             for line in bedfile:
+#                 chrom, start, end, rest = unpack(*(re.split(r'\s+',
+#                                                  line.rstrip())))
+#                 yield (str(chrom), int(start), int(end))
+
+def read_bed_W(args):
     if args.bed:
         with open(args.bed, 'r') as bedfile:
             for line in bedfile:
@@ -30,6 +38,16 @@ def read_bed(args):
                 yield (str(chrom), int(start), int(end))
 
 
+def read_bed_WO(args):
+    if args.bed:
+        with open(args.bed, 'r') as bedfile:
+            for line in bedfile:
+                chrom, start, end, rest = unpack(*(re.split(r'\s+',
+                                                 line.rstrip())))
+                yield (str(chrom), int(start), int(end))
+
+
+                
 def read_mappa(args):
     if args.bed:
         with open(args.bed, 'r') as bedfile:
@@ -39,27 +57,27 @@ def read_mappa(args):
                 yield (str(chrom), int(start), int(end), rest[-1])
 
 
-def read_bed_W(args):
-    if args.bed:
-        with open(args.bed, 'r') as bedfile:
-            for line in bedfile:
-                # input_line = (line.rstrip('\n')).split('\t')[:3]
-                chrom, start, end = re.split(r'\s+', line.rstrip())[:3]
-                if 'chr' not in chrom:
-                    chrom = 'chr{}'.format(chrom)
-                yield (str(chrom), int(start), int(end))
+# def read_bed_W(args):
+#     if args.bed:
+#         with open(args.bed, 'r') as bedfile:
+#             for line in bedfile:
+#                 # input_line = (line.rstrip('\n')).split('\t')[:3]
+#                 chrom, start, end = re.split(r'\s+', line.rstrip())[:3]
+#                 if 'chr' not in chrom:
+#                     chrom = 'chr{}'.format(chrom)
+#                 yield (str(chrom), int(start), int(end))
 
 
-def read_bed_WO(args):
-    if args.bed:
-        with open(args.bed, 'r') as bedfile:
-            for line in bedfile:
-                input_line = (line.rstrip('\n')).split('\t')[:3]
-                # input_line = # re.split(r'\s+',str1)  # this splits by space
-                chrom, start, end = input_line
-                if 'chr' in chrom:
-                    chrom = chrom.replace('chr', '')
-                yield (str(chrom), int(start), int(end))
+# def read_bed_WO(args):
+#     if args.bed:
+#         with open(args.bed, 'r') as bedfile:
+#             for line in bedfile:
+#                 input_line = (line.rstrip('\n')).split('\t')[:3]
+#                 # input_line = # re.split(r'\s+',str1)  # this splits by space
+#                 chrom, start, end = input_line
+#                 if 'chr' in chrom:
+#                     chrom = chrom.replace('chr', '')
+#                 yield (str(chrom), int(start), int(end))
 
 
 def strtobool(val):
