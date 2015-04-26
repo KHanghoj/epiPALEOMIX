@@ -85,7 +85,7 @@ class MergeDataFiles(Node):
         self.anal = anal
         self.out = os.path.join(d_bam.o_path,
                                 d_bam.fmt.format(d_bam.bam_name, anal, bedn))
-        description = "<MergeDataFiles: '%s' to temproot '%s'" % \
+        description = "<MergeDataFiles: '%s' to OUTPUT '%s'" % \
                       (self.infiles, self.out)
         Node.__init__(self,
                       description=description,
@@ -95,8 +95,8 @@ class MergeDataFiles(Node):
                       dependencies=dependencies)
 
     def _run(self, _config, _temp):
-        inputs = [self.out, self.infiles]
-        assert len(inputs) > 1, 'Need at least one output and one input'
-        if self.anal is 'Phasogram':
+        inputs = [self.anal, self.out] + self.infiles  # INFILES IS A LIST ALREADY
+        assert len(inputs) > 2, 'Need at least one output and one input'
+        if self.anal == 'Phasogram':
             inputs.append('--merge')
         tools.merge_datafiles.main(inputs)

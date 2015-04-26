@@ -10,7 +10,7 @@ import optparse
 from set_procname import set_procname
 from nodes.gccorrect_Node import \
     GccorrectNode, CreateGCModelNode, \
-    GccorrectNode_Mid  # , GccorrectNode_Final
+    GccorrectNode_Mid
 from nodes.execute_Node import \
     GeneralExecuteNode, \
     General_Plot_Node
@@ -26,10 +26,58 @@ from pypeline.common.console import \
     print_info
 
 FINETUNERANGE = [-10, -5, 5, 10]
+ANALYSES = ['Phasogram', 'WriteDepth', 'NucleoMap', 'MethylMap']
 
 
 class MakefileError(RuntimeError):
     """Raised if a makefile is unreadable, or does not meet specifications."""
+
+
+class make_collect(object):
+    def __init__(self, make):
+        self.makefile = make.pop('Makefile', {})
+        self.prefix = self.makefile.pop('Prefixes', {})
+        self.beddata = self.makefile.pop('BedFiles', {})
+        self.bedfiles, self.bed_plot = self._splitbedopts()
+
+    def _splitbedopts(self):
+        ''' Split bedfiles options between bedname path and plot boolean '''
+        bedf, bedp = {}, {}
+        for bedn, bedopts in self.beddata.iteritems():
+            if isinstance(bedopts, dict):
+                bedf[bedn] = bedopts["Path"]
+                bedp[bedn] = bedopts["MakeMergePlot"]
+            else:
+                bedf[bedn] = bedopts
+        return bedf, bedp
+
+
+class bam_collect(object):
+    def __init__(self, config, bam_name, opts, d_make):
+        self.bam_name = bam_name
+        self.i_path = os.path.join(config.temp_root, self.bam_name)
+        self.o_path = os.path.join(config.destination, self.bam_name)
+        self._createpaths()
+        self.opts = opts
+        self.baminfo = self.opts['BamInfo']
+        self.fmt = '{}_{}_{}.txt.gz'
+        self.prefix = d_make.prefix  # comes from make_collect class
+
+    def _createpaths(self):
+        check_path(self.i_path)
+        check_path(self.o_path)
+
+    def retrievedat(self, anal):
+        return self._coerce_to_dic(self.opts[anal], self.baminfo,
+                                   self.prefix)
+
+    def _coerce_to_dic(self, *args):
+        dic = {}
+        for arg in args:
+            if not isinstance(arg, dict):
+                arg = dict([arg])
+            dic.update(arg)
+        return dic
 
 
 def parse_args(argv):
@@ -37,7 +85,6 @@ def parse_args(argv):
     usage_str = "%prog <command> [options] [makefiles]"
     # version_str = "%%prog %s" % (pypeline.__version__,)
     parser = optparse.OptionParser(usage=usage_str)
-    # parser = optparse.OptionParser(usage=usage_str, version=version_str)
     parser.add_option('--temp-root', type=str, default='./temp')
     parser.add_option("--dry-run", action="store_true", default=False,
                       help="If passed, only a dry-run in performed"
@@ -57,28 +104,14 @@ def check_path(temp_dir):
             return 1
 
 
-# def filter_bedfiles(config, d_make):
-#     bednodes = []
-#     if d_make.bedfiles.get('EnabledFilter', False):
-#         uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
-#         mappapath = d_make.prefix.get('--MappabilityPath', '')
-#         for bedname, in_bedpath in checkbedfiles_ext(d_make.bedfiles):
-#             out_bedpath = os.path.join(config.temp_root,
-#                                        os.path.basename(in_bedpath))
-#             d_make.bedfiles[bedname] = out_bedpath  # RENEW BEDFILE PATH
-#             bednodes.append(CleanFilesNode(mappapath, uniqueness,
-#                                            in_bedpath, out_bedpath))
-#     return bednodes
-
 def split_bedfiles(config, d_make):
     uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
     mappapath = d_make.prefix.get('--MappabilityPath', False)
-    nodes = []
     enabl_filter = d_make.bedfiles.get('EnabledFilter', False)
+    nodes = []
     for bedn, in_bedp in checkbedfiles_ext(d_make.bedfiles):
         if enabl_filter and mappapath:
             filtnode = [CleanFilesNode(config,in_bedp, mappapath, uniqueness)]
-            # here it is only one outputfile
             d_make.bedfiles[bedn] = ''.join(filtnode[0].output_files)
         else:
             filtnode = []
@@ -86,14 +119,7 @@ def split_bedfiles(config, d_make):
         splnode = SplitBedFile(config, d_make.bedfiles[bedn], subnodes=filtnode)
         d_make.bedfiles[bedn] = [''.join(f) for f in splnode.output_files]
         nodes.append(splnode)
-        # now each bedfile name has several bedfile paths. cool
     return nodes
-
-
-# def checkbedfiles_ext(bedfiles):
-#     for bedname, bedpath in bedfiles.items():
-#         if isinstance(bedpath, str) and bedpath.endswith('.bed'):
-#             yield bedname, bedpath
 
 
 def checkbedfiles_ext(bedfiles):
@@ -108,111 +134,51 @@ def checkbedlist(bedfiles):
             all([bedp.endswith('.bed') for bedp in bedpaths])):
             yield bedname, bedpaths
 
-
+            
 def main_anal_to_run(opts):
     for analysis, options in opts.iteritems():
-        if analysis in ANALYSES.keys() and options['Enabled']:
-            yield analysis, ANALYSES[analysis]
+        if analysis in ANALYSES and options['Enabled']:
+            yield analysis
 
 
 def makegcnodes(d_bam, rang, subnodes=()):
     return [GccorrectNode(d_bam, rl, subnodes=subnodes) for rl in rang]
 
 
+def concat_nodes(nodecls, bam, ran, subnodes=()):
+    return [nodecls(bam, subnodes=makegcnodes(bam, ran, subnodes))]
+    
+
 def calc_gcmodel(d_bam):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
-        nodes, lastnode = [], []
         scale = d_bam.opts['GCcorrect']['Resolution']
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
         d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
-        nodes = makegcnodes(d_bam, xrange(rlmin, rlmax+1, scale))
-        midnode = [GccorrectNode_Mid(d_bam, subnodes=nodes)]
-        lastnode = makegcnodes(d_bam, FINETUNERANGE, subnodes=midnode)
-        topnode = CreateGCModelNode(d_bam, subnodes=lastnode)
-        gcoutfile = (out for out in topnode.output_files if
-                     out.endswith('.txt')).next()
-        d_bam.opts['BamInfo']['--GCmodel'] = gcoutfile
-        return [topnode]
+        node_one = concat_nodes(GccorrectNode_Mid, d_bam, xrange(rlmin, rlmax+1, scale))
+        node_two = concat_nodes(CreateGCModelNode, d_bam, FINETUNERANGE, subnodes=node_one)
+        d_bam.opts['BamInfo']['--GCmodel'] = \
+            (out for out in node_two[0].output_files if out.endswith('.txt')).next()
+        return node_two
     return []
 
 
-def run_analyses(anal, a_path, d_bam, d_make, bedinfo, m_node):
-    aux_python, aux_R = a_path
+def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
     bedn, bed_paths = bedinfo
     nodes = []
     for idx, bed_p in enumerate(bed_paths):
-        # if os.path.getsize(bed_p) > 0:
-        nodes.append(GeneralExecuteNode(anal, aux_python, d_bam,
-                                        bedn+str(idx), bed_p, dependencies=m_node))
-    assert nodes, "no bedfile contained any data input lines"
+        nodes.append(GeneralExecuteNode(anal, d_bam, bedn+str(idx), bed_p, dependencies=m_node))
     mergenode = MergeDataFiles(d_bam, anal, bedn, subnodes=nodes)
-    # if bedplot is false -> no plot
-    if aux_R == '_' or not d_make.bed_plot[bedn]:
+    if not d_make.bed_plot[bedn]: # if bedplot is false -> no plot
         return mergenode
-    # infile = (out for out in node.output_files if out.endswith('txt.gz'))
-    infile = (out for out in mergenode.output_files)
-    return General_Plot_Node(aux_R, infile.next(),
-                             anal, dependencies=[mergenode])
+    infile = (out for out in mergenode.output_files).next()
+    return General_Plot_Node(aux_R, infile, anal, dependencies=[mergenode])
 
 
 def make_metanode(depen_nodes, bamname):
     descrip_fmt = "Metanode: '{}': GC correction and bedfile split".format
     return MetaNode(description=descrip_fmt(bamname),
                     dependencies=depen_nodes)
-
-
-ANALYSES = {'Phasogram': ['./tools/phasogram.py', './tools/phaso.R'],
-            'WriteDepth': ['./tools/pileupdepth.py', '_'],
-            'NucleoMap': ['./tools/nucleomap.py', './tools/nucleo_merge.R'],
-            'MethylMap': ['./tools/methylmap.py', './tools/methyl_merge.R']
-            }
-
-
-class makef_collect(object):
-    def __init__(self, make):
-        self.makefile = make.pop('Makefile', {})
-        self.prefix = self.makefile.pop('Prefixes', {})
-        self.beddata = self.makefile.pop('BedFiles', {})
-        self.bedfiles, self.bed_plot = self._splitbedopts()
-
-    def _splitbedopts(self):
-        bedf, bedp = {}, {}
-        for bedname, bedopts in self.beddata.iteritems():
-            if isinstance(bedopts, dict):
-                bedf[bedname] = bedopts["Path"]
-                bedp[bedname] = bedopts["MakeMergePlot"]
-            else:
-                bedf[bedname] = bedopts
-        return bedf, bedp
-
-
-class bam_collect(object):
-    def __init__(self, config, bam_name, opts, d_make):
-        self.bam_name = bam_name
-        self.i_path = os.path.join(config.temp_root, self.bam_name)
-        self.o_path = os.path.join(config.destination, self.bam_name)
-        self._createpaths()
-        self.opts = opts
-        self.baminfo = self.opts['BamInfo']
-        self.fmt = '{}_{}_{}.txt.gz'
-        self.prefix = d_make.prefix  # comes from makef_collect class
-        self.generalopts = self._coerce_to_dic(self.baminfo, self.prefix)
-
-    def _createpaths(self):
-        check_path(self.i_path)
-        check_path(self.o_path)
-
-    def retrievedat(self, analtype):
-        return self._coerce_to_dic(self.opts[analtype], self.generalopts)
-
-    def _coerce_to_dic(self, *args):
-        dic = {}
-        for arg in args:
-            if not isinstance(arg, dict):
-                arg = dict([arg])
-            dic.update(arg)
-        return dic
 
 
 def run(config, makefiles):
@@ -223,18 +189,18 @@ def run(config, makefiles):
     pipeline = Pypeline(config)
     topnodes = []
     for make in read_epiomix_makefile(makefiles):
-        d_make = makef_collect(make)
-        filternode = split_bedfiles(config, d_make)
+        d_make = make_collect(make)
+        splitbednode = split_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
             gcnode = calc_gcmodel(d_bam)
-            m_node = make_metanode(gcnode+filternode, d_bam.bam_name)
+            m_node = make_metanode(gcnode+splitbednode, d_bam.bam_name)
             for bedinfo in checkbedlist(d_make.bedfiles):
-                for anal, a_path in main_anal_to_run(opts):
-                    topnodes.append(run_analyses(anal, a_path, d_bam,
+                for anal in main_anal_to_run(opts):
+                    topnodes.append(run_analyses(anal, d_bam,
                                                  d_make, bedinfo, m_node))
             if not topnodes:
-                topnodes.extend(gcnode+filternode)
+                topnodes.extend(gcnode+splitbednode)
     pipeline.add_nodes(topnodes)
     logger.info("Running BAM pipeline ...")
     pipeline.run(dry_run=config.dry_run, max_running=config.max_threads)
@@ -271,8 +237,7 @@ def main(argv):
         _print_usage()
         print_err("\nPlease specify at least one makefile!")
         return 1
-    # NOTE THAT WE SPLICE OUT ANOTHER INPUT
-    # BEFORE PASSING ON TO RUN FUNC
+    # NOTE THAT WE SPLICE OUT ANOTHER INPUT BEFORE PASSING ON TO RUN FUNC
     return run(config, args[1:])
 
 if __name__ == '__main__':

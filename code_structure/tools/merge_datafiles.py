@@ -3,11 +3,19 @@ from collections import defaultdict
 import re
 import argparse
 import sys
+import gzip
 # python mergephasogram.py outputnucleo test.txt test1.txt test2.txt
 
+HEADERS = {
+    'MethylMap': '#chrom\tgenomicpos\tdeaminated\ttotal\tbedcoord\n',
+    'NucleoMap': '#chrom\tstart\tend\tdepth\tscore\tbedcoord\n',
+    'WriteDepth': '#chrom\tgenomicpos\tdepth\tbedcoord\n',
+    'Phasogram': '#Length\tCount\n'
+}
 
 def p_args(argv):
     parser = argparse.ArgumentParser(prog='Merge_Phasogram')
+    parser.add_argument('analysis', type=str, help='analysisname')
     parser.add_argument('output', type=str, help='outputfile')
     parser.add_argument('infiles', nargs='+', type=str)
     parser.add_argument('--merge', action='store_true',
@@ -28,10 +36,11 @@ def run_iter(input_gen):
     
     
 def run(args):
-    with open(args.output, 'w') as f_out:
-        dic = defaultdict(int)
+    dic = defaultdict(int)
+    with gzip.open(args.output, 'wb') as f_out:
+        f_out.write(HEADERS[args.analysis])
         for f in args.infiles:
-            with open(f, 'r') as f_in:
+            with gzip.open(f, 'rb') as f_in:
                 if args.merge:
                     # for line in f_in:
                     #     merge_func(dic, *re.split(r'\s', line.rstrip()))

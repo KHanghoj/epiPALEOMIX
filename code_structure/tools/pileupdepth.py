@@ -96,8 +96,8 @@ class Write_Depth(GC_correction):
             pathname, extens = splitext(self.arg.outputfile)
             move(self.arg.outputfile, pathname+'_old'+extens)
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
-        header = '#chrom\tgenomicpos\tdepth\tbedcoord\n'
-        self.f_output.write(header)
+        # header = '#chrom\tgenomicpos\tdepth\tbedcoord\n'
+        # self.f_output.write(header)
 
     def reset_deques(self, chrom, start, end):
         self.start, self.end = start, end

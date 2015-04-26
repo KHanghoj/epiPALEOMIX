@@ -3,10 +3,21 @@ IN_path = args[1]
 OUT_path = args[2]
 
 require(ggplot2); require(TSA); require(zoo); require(gridExtra)
-plotting = function(df){
+plotting1 = function(df){
  p <- ggplot(df,aes(x,smooth,col=names,
  group=names, fill=names))+
  geom_line()+ facet_wrap(~names,ncol=3)+
+ theme(legend.position="none")+
+ labs(title='',
+ y='Predicted Nucleosome Count',
+ x='Relative position')
+ p
+}
+
+plotting = function(df){
+ p <- ggplot(df,aes(x,smooth,col=names,
+ group=names, fill=names))+
+ geom_area()+ facet_wrap(~names,ncol=3)+
  theme(legend.position="none")+
  labs(title='',
  y='Predicted Nucleosome Count',
@@ -42,6 +53,7 @@ nam = unlist(strsplit(nam,'\\.'))[1]
 
 if (file.info(IN_path)$size>55){
 a=read.table(IN_path)
+
 a$bedstart = sapply(strsplit(as.character(a[,6]), "_"), "[[", 2)
 a$rela_pos = as.integer(a[,2])-as.integer(a$bedstart)
 # if cutoff

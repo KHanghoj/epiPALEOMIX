@@ -44,7 +44,7 @@ def read_bed_WO(args):
             for line in bedfile:
                 chrom, start, end, rest = unpack(*(re.split(r'\s+',
                                                  line.rstrip())))
-                yield (str(chrom), int(start), int(end))
+                yield (str(chrom).replace('chr',''), int(start), int(end))
 
 
                 

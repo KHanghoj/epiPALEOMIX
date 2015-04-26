@@ -15,7 +15,7 @@ BedFiles:
 #    CTCFbed: ../../bedfiles/CTCFsites_2KB_overlap_rm.bed
     CTCFbed: 
         Path: ../../bedfiles/CTCFsites_2KB_overlap_rm.bed
-        MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
+        MakeMergePlot: True  # i.e. if bedfile covers chr1  cannot merge data
 #    small: small_bed.bed
 BamInputs:
     BAM1:
@@ -26,8 +26,8 @@ BamInputs:
             "--LibraryConstruction": DS  # DS if double strand, SS if single strand
         GCcorrect:
             "Enabled": True
-            "MapMinMaxReadLength": [45, 60]
-            "Resolution": 5  # if 1, checks all sizes from 45 to 60, now checks every 5th
+            "MapMinMaxReadLength": [30, 75]
+            "Resolution": 15  # if 1, checks all sizes from 45 to 60, now checks every 5th
             "--MappaUniqueness": 0.9
         NucleoMap:
             "Enabled": True

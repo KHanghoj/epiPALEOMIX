@@ -143,8 +143,8 @@ class Nucleosome_Prediction(GC_correction):
             pathname, extens = splitext(self.arg.outputfile)
             move(self.arg.outputfile, pathname+'_old'+extens)
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
-        header = '#chrom\tstart\tend\tdepth\tscore\tbedcoord\n'
-        self.f_output.write(header)
+        # header = '#chrom\tstart\tend\tdepth\tscore\tbedcoord\n'
+        # self.f_output.write(header)
 
     def closefile(self):
         self.f_output.close()
