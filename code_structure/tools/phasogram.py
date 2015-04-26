@@ -21,42 +21,40 @@ class Phasogram(GC_correction):
         self._fasta = Cache(self.arg.FastaPath)
         GC_correction.__init__(self)
         self.outputdic = defaultdict(int)
-        self.forward_dic = {}
-        self.reverse_dic = {}
+        self.forward_dic, self.reverse_dic = {}, {}
         self._GC_model_len = 0
         self._GCmodel_ini()
 
-    def _call_output(self, dic, max_lst_range=None, max_size=None):
+    def _call_output(self, dic, max_range=None, max_size=None):
         if dic:
-            if max_lst_range is None:
-                max_lst_range = self.arg.MaxRange
-            if max_size is None:
-                max_size = self.arg.MaxRange
+            max_range = self.arg.MaxRange if max_range is None else max_range
+            max_size = self.arg.MaxRange if max_size is None else max_range
             sort_keys = deque(sorted(dic.iterkeys()))
             max_key = sort_keys[-1]
-            while max_key - sort_keys[0] > max_lst_range:
+            while max_key - sort_keys[0] > max_range:
                 old_pos = sort_keys.popleft()
-                old_count = dic.pop(old_pos, None)
+                old_count = dic.pop(old_pos, 0)
                 for current in sort_keys:
                     length = current - old_pos
                     if length >= max_size:
-                        break
-                        # do no know if break or contiune
+                        break  # break the for loop as current pos is too long.
                     if old_count >= self.arg.SubsetPileup:
                         self.outputdic[length] += 1
+                        
+    def _finddepth(self, pos, dic, gc_pos):
+        corr = self._get_gc_corr_dep(gc_pos)
+        try:
+            dic[pos] += corr
+        except KeyError:
+            dic[pos] = corr
+            self._call_output(dic)
 
+    
     def update(self, record):
         if record.is_reverse:
-            curr_pos, temp_dic = record.aend, self.reverse_dic
-            corr_depth = self._get_gc_corr_dep(record.aend-self._GC_model_len)
+            self._finddepth(record.aend, self.reverse_dic, record.aend-self._GC_model_len)
         else:
-            curr_pos, temp_dic = record.pos, self.forward_dic
-            corr_depth = self._get_gc_corr_dep(record.pos)
-        try:
-            temp_dic[curr_pos] += corr_depth
-        except KeyError:
-            temp_dic[curr_pos] = corr_depth
-            self._call_output(temp_dic)
+            self._finddepth(record.pos, self.forward_dic, record.pos)
 
     def writetofile(self):
         with gzip.open(self.arg.outputfile, 'w') as f_output:
@@ -64,13 +62,12 @@ class Phasogram(GC_correction):
                 f_output.write('{}\t{}\n'.format(key, value))
 
     def call(self):
-        self._call_output(self.forward_dic, max_lst_range=0, max_size=0)
-        self._call_output(self.reverse_dic, max_lst_range=0, max_size=0)
+        self._call_output(self.forward_dic, max_range=0, max_size=0)
+        self._call_output(self.reverse_dic, max_range=0, max_size=0)
 
     def reset(self, chrom):
         self.chrom = chrom
-        self.forward_dic = {}
-        self.reverse_dic = {}
+        self.forward_dic, self.reverse_dic = {}, {}
 
 
 def parse_args(argv):

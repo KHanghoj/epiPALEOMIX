@@ -60,11 +60,17 @@ if (file.info(IN_path)$size>55){
 
 
 	pdf(OUT_path)
-	grid.arrange(plotting(df[df$x>=0&df$x<=CUTOFF,]), 
+        df = df[df$x>=0&df$x<=CUTOFF,]
+	grid.arrange(plotting(df), 
 				 plot.periodo(periodo.short(df), 100, xshort),
 			     plot.periodo(periodo.long(df), 400, xlong),
 			     nrow=3)
-	dev.off()
+#	grid.arrange(plotting(df[df$x>=0&df$x<=CUTOFF,]), 
+#				 plot.periodo(periodo.short(df), 100, xshort),
+#			     plot.periodo(periodo.long(df), 400, xlong),
+#			     nrow=3)
+
+        dev.off()
 } else{
 	pdf(OUT_path)
 	plot(1, type="n", axes=F, xlab=sprintf("NODATA in %s",nam), ylab="")
