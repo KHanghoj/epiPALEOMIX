@@ -60,7 +60,10 @@ class Phasogram(GC_correction):
         with gzip.open(self.arg.outputfile, 'w') as f_output:
             for key in sorted(self.outputdic.iterkeys()):
                 f_output.write('{}\t{}\n'.format(key, self.outputdic[key]))
-        self._fasta_dat.closefile()
+        try:
+            self._fasta_dat.closefile()
+        except AttributeError:
+            pass
 
     def call(self):
         self._call_output(self.forward_dic, max_range=0, max_size=0)

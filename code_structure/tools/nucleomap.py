@@ -147,7 +147,10 @@ class Nucleosome_Prediction(GC_correction):
 
     def closefile(self):
         self.f_output.close()
-        self._fasta_dat.closefile()
+        try:
+            self._fasta_dat.closefile()
+        except AttributeError:
+            pass
 
     def reset_deques(self, chrom, start, end):
         self._deq_depth.clear()

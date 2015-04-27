@@ -132,7 +132,10 @@ class Methyl_Level(object):
         del self.rows[:]  # EMPTY LIST AFTER WRITING TO FILE
 
     def closefiles(self):
-        self._fasta.closefile()
+        try:
+            self._fasta.closefile()
+        except AttributeError:
+            pass
         self.f_output.close()
 
 

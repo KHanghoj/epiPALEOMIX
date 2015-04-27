@@ -8,7 +8,7 @@ from collections import deque
 from os.path import exists, splitext
 from shutil import move
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, GC_correction
+    read_bed_WO, strtobool, GC_correction, corr_fasta_chr
 
 
 class Write_Depth(GC_correction):
@@ -98,7 +98,7 @@ class Write_Depth(GC_correction):
  
     def reset_deques(self, chrom, start, end):
         self.start, self.end = start, end
-        self.chrom = self._check_fasta_chr(chrom)
+        self.chrom = self.corr_fasta_chr(chrom)
         self._corrected_depth.clear()
         self._genomic_positions.clear()
         self._last_pos = -self._seq_len
@@ -106,7 +106,10 @@ class Write_Depth(GC_correction):
 
     def closefile(self):
         self.f_output.close()
-        self._fasta_dat.closefile()
+        try:
+            self._fasta_dat.closefile()
+        except AttributeError:
+            pass
 
 
 def parse_args(argv):
