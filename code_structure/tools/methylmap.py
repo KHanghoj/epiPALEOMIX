@@ -122,8 +122,6 @@ class Methyl_Level(object):
             pathname, extens = splitext(self.arg.outputfile)
             move(self.arg.outputfile, pathname+'_old'+extens)
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
-        # header = '#chrom\tgenomicpos\tdeaminated\ttotal\tbedcoord\n'
-        # self.f_output.write(header)
         self.fmt = "{chr}\t{r.pos}\t{r.top}\t{r.lower}\t{bed}\n".format
 
     def _writetofile(self):
