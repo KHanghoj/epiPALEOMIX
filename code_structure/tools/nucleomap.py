@@ -8,7 +8,7 @@ from itertools import islice, izip, tee
 from os.path import exists, splitext
 from shutil import move
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache, GC_correction, corr_fasta_chr
+    read_bed_WO, strtobool, GC_correction, corr_fasta_chr  # , Cache
 import gzip
 # CONSTANTS:
 _SIZE = 147  # the window
@@ -23,12 +23,12 @@ class Nucleosome_Prediction(GC_correction):
     """docstring for Nucleosome_Prediction"""
     def __init__(self, arg):
         self.arg = arg
-        self._fasta = Cache(self.arg.FastaPath)
+#         self._fasta = Cache(self.arg.FastaPath)
         GC_correction.__init__(self)
         self._mindepth = int(self.arg.MinDepth)
         self._seq_len = int(self.arg.DequeLen)
         self._zeros = [0]*self._seq_len
-        self._read_max_len = self._seq_len-(self.arg.MaxReadLen+50)
+        self._read_max_len = self._seq_len-(self.arg.MaxReadLen+100)
         self._deq_depth = deque(maxlen=self._seq_len)
         self._deq_pos = deque(maxlen=self._seq_len)
         self._last_ini = -(self._seq_len+1)
@@ -143,8 +143,6 @@ class Nucleosome_Prediction(GC_correction):
             pathname, extens = splitext(self.arg.outputfile)
             move(self.arg.outputfile, pathname+'_old'+extens)
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
-        # header = '#chrom\tstart\tend\tdepth\tscore\tbedcoord\n'
-        # self.f_output.write(header)
 
     def closefile(self):
         self.f_output.close()
@@ -178,7 +176,7 @@ def parse_args(argv):
 
 def run(args):
     read_bed = read_bed_W if strtobool(args.BamChromType) else read_bed_WO
-    args.FastaChromType = strtobool(args.FastaChromType)
+    args.FastaChromType = strtobool(args.FastaChromType) if args.GCmodel else True
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = Nucleosome_Prediction(args)
     for chrom, start, end in read_bed(args):

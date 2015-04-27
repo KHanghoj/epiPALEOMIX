@@ -127,6 +127,7 @@ class GC_correction(object):
     ''' class doc '''
     def _GCmodel_ini(self):
         if self.arg.GCmodel:
+            self._fasta = Cache(self.arg.FastaPath)
             with open(self.arg.GCmodel, 'r') as f:
                 next(f)  # do not need the header
                 self._model = [float(line.rstrip('\n').split('\t')[-1])

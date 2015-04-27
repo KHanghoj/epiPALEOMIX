@@ -11,14 +11,14 @@ import argparse
 import gzip
 from collections import defaultdict, deque
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache, GC_correction, corr_fasta_chr
+    read_bed_WO, strtobool, GC_correction, corr_fasta_chr # , Cache
 
 
 class Phasogram(GC_correction):
     """docstring for Phasogram"""
     def __init__(self, arg):
         self.arg = arg
-        self._fasta = Cache(self.arg.FastaPath)
+#         self._fasta = Cache(self.arg.FastaPath)
         GC_correction.__init__(self)
         self.outputdic = defaultdict(int)
         self.forward_dic, self.reverse_dic = {}, {}
@@ -58,8 +58,8 @@ class Phasogram(GC_correction):
 
     def writetofile(self):
         with gzip.open(self.arg.outputfile, 'w') as f_output:
-            for key, value in self.outputdic.iteritems():
-                f_output.write('{}\t{}\n'.format(key, value))
+            for key in sorted(self.outputdic.iterkeys()):
+                f_output.write('{}\t{}\n'.format(key, self.outputdic[key]))
 
     def call(self):
         self._call_output(self.forward_dic, max_range=0, max_size=0)
@@ -79,7 +79,7 @@ def parse_args(argv):
     parser.add_argument('--FastaPath', help="fastafile", type=str)
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
-    parser.add_argument('--MaxRange', help="...", type=int, default=3000)
+    parser.add_argument('--MaxRange', help="...", type=int, default=1000)
     parser.add_argument('--FastaChromType', help="...")
     parser.add_argument('--BamChromType', help="...")
     parser.add_argument('--MinMappingQuality', help="...", type=int,
@@ -89,7 +89,8 @@ def parse_args(argv):
 
 def run(args):
     read_bed = read_bed_W if strtobool(args.BamChromType) else read_bed_WO
-    args.FastaChromType = strtobool(args.FastaChromType)
+    args.FastaChromType = strtobool(args.FastaChromType) if args.GCmodel else True
+#    args.FastaChromType = strtobool(args.FastaChromType)
     samfile = pysam.Samfile(args.bam, "rb")
     Phaso = Phasogram(args)
     for chrom, start, end in read_bed(args):
