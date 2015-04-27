@@ -127,7 +127,7 @@ class GC_correction(object):
     ''' class doc '''
     def _GCmodel_ini(self):
         if self.arg.GCmodel:
-            self._fasta = Cache(self.arg.FastaPath)
+            self._fasta_dat = Cache(self.arg.FastaPath)
             with open(self.arg.GCmodel, 'r') as f:
                 next(f)  # do not need the header
                 self._model = [float(line.rstrip('\n').split('\t')[-1])
@@ -136,7 +136,7 @@ class GC_correction(object):
 
     def _get_gc_corr_dep(self, pos):
         if self.arg.GCmodel:
-            fasta_str = self._fasta.fetch_string(self.chrom,
+            fasta_str = self._fasta_dat.fetch_string(self.chrom,
                                                  pos, self._GC_model_len-1)
             gc_idx = fasta_str.count('G')+fasta_str.count('C')
             return self._model[gc_idx]

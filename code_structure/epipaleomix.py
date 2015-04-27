@@ -38,18 +38,19 @@ class make_collect(object):
         self.makefile = make.pop('Makefile', {})
         self.prefix = self.makefile.pop('Prefixes', {})
         self.beddata = self.makefile.pop('BedFiles', {})
-        self.bedfiles, self.bed_plot = self._splitbedopts()
+        self.bedfiles, self.bed_plot, self.no_sub = self._splitbedopts()
 
     def _splitbedopts(self):
         ''' Split bedfiles options between bedname path and plot boolean '''
-        bedf, bedp = {}, {}
+        bedf, bedp, bedsub = {}, {}, {}
         for bedn, bedopts in self.beddata.iteritems():
             if isinstance(bedopts, dict):
                 bedf[bedn] = bedopts["Path"]
                 bedp[bedn] = bedopts["MakeMergePlot"]
+                bedsub[bedn] = bedopts["NOSubFiles"]
             else:
                 bedf[bedn] = bedopts
-        return bedf, bedp
+        return bedf, bedp, bedsub
 
 
 class bam_collect(object):
@@ -108,15 +109,13 @@ def split_bedfiles(config, d_make):
     uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
     mappapath = d_make.prefix.get('--MappabilityPath', False)
     enabl_filter = d_make.bedfiles.get('EnabledFilter', False)
-    nodes = []
+    filtnode, nodes = [], []
     for bedn, in_bedp in checkbedfiles_ext(d_make.bedfiles):
         if enabl_filter and mappapath:
-            filtnode = [CleanFilesNode(config,in_bedp, mappapath, uniqueness)]
+            filtnode.append(CleanFilesNode(config,in_bedp, mappapath, uniqueness))
             d_make.bedfiles[bedn] = ''.join(filtnode[0].output_files)
-        else:
-            filtnode = []
-                
-        splnode = SplitBedFile(config, d_make.bedfiles[bedn], subnodes=filtnode)
+        splnode = SplitBedFile(config, d_make.bedfiles[bedn],
+                               d_make.no_sub[bedn], subnodes=filtnode)
         d_make.bedfiles[bedn] = [''.join(f) for f in splnode.output_files]
         nodes.append(splnode)
     return nodes
@@ -172,7 +171,7 @@ def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
     if not d_make.bed_plot[bedn]: # if bedplot is false -> no plot
         return mergenode
     infile = (out for out in mergenode.output_files).next()
-    return General_Plot_Node(aux_R, infile, anal, dependencies=[mergenode])
+    return General_Plot_Node(infile, anal, dependencies=[mergenode])
 
 
 def make_metanode(depen_nodes, bamname):

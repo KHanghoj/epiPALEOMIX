@@ -20,7 +20,6 @@ def _alphanum_check(whitelist):
     return And(IsStr(),
                ValuesSubsetOf(whitelist, description=description))
 
-# Valid strings for targets / samples / libraries / lanes
 _VALID_BED_NAME = _VALID_TARGET_NAME = \
     And(_alphanum_check(whitelist="._-"),
         ValueGE(2, key=len, description="at least two characters long"))
@@ -41,7 +40,10 @@ _VALIDATION_NUCLEO = {
     "Enabled": IsBoolean(default=True),
     "Apply_GC_Correction": IsBoolean(default=True),
     "--MinDepth": IsUnsignedInt(default=20),
-    "--DequeLen": IsUnsignedInt(default=2000)
+    "--DequeLen": IsUnsignedInt(default=2000),
+    "--NucleosomeFlanks": IsUnsignedInt(default=25),
+    "--NucleosomeSize": IsUnsignedInt(default=147),
+    "--NucleosomeOffset": IsUnsignedInt(default=12)
 }
 _VALIDATION_METHYL = {
     "Enabled": IsBoolean(default=True),
@@ -71,7 +73,8 @@ _VALIDATION_TOOLS = {
 
 _VALIDATION_BED = {
     "Path": IsStr,
-    "MakeMergePlot": IsBoolean(default=True)
+    "MakeMergePlot": IsBoolean(default=True),
+    "NOSubFiles": IsUnsignedInt(default=3)
 }
 
 _VALIDATION = {

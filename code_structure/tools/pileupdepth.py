@@ -8,14 +8,13 @@ from collections import deque
 from os.path import exists, splitext
 from shutil import move
 from epiomix_commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache, GC_correction
+    read_bed_WO, strtobool, GC_correction
 
 
 class Write_Depth(GC_correction):
     """docstring for Write_Depth"""
     def __init__(self, arg):
         self.arg = arg
-#        self._fasta = Cache(self.arg.FastaPath)
         GC_correction.__init__(self)
         self._f_output, self._model = None, None
         self._GC_model_len = 0
@@ -107,6 +106,7 @@ class Write_Depth(GC_correction):
 
     def closefile(self):
         self.f_output.close()
+        self._fasta_dat.closefile()
 
 
 def parse_args(argv):

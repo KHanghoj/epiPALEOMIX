@@ -50,7 +50,7 @@ class CleanFilesNode(CommandNode):
 import tools.splitbedfiles
                                   
 class SplitBedFile(Node):
-    def __init__(self, config, inbedfile, no_subbed=3, subnodes=(), dependencies=()):
+    def __init__(self, config, inbedfile, no_subbed, subnodes=(), dependencies=()):
         self.temp_root, self.infile = config.temp_root, inbedfile
         self.outputnames = self._createbednames(no_subbed)
         description = "<SplitBedFile: '%s' to '%s',"\

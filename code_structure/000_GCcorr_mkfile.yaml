@@ -16,6 +16,7 @@ BedFiles:
     CTCFbed: 
         Path: ../../bedfiles/CTCFsites_2KB_overlap_rm.bed
         MakeMergePlot: True  # i.e. if bedfile covers chr1  cannot merge data
+        NOSubFiles: 5  # this speeds up the calculations dramatically
 #    small: small_bed.bed
 BamInputs:
     BAM1:
@@ -27,13 +28,16 @@ BamInputs:
         GCcorrect:
             "Enabled": True
             "MapMinMaxReadLength": [30, 75]
-            "Resolution": 15  # if 1, checks all sizes from 45 to 60, now checks every 5th
+            "Resolution": 15  # minimum of 15
             "--MappaUniqueness": 0.9
         NucleoMap:
             "Enabled": True
             "Apply_GC_Correction": True
             "--MinDepth": 20
             "--DequeLen": 2000
+            "--NucleosomeSize": 147
+            "--NucleosomeFlanks": 25
+            "--NucleosomeOffset": 12
         MethylMap:
             "Enabled": True
             "--ReadBases": 6
