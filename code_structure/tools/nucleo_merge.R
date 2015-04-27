@@ -3,7 +3,7 @@ IN_path = args[1]
 OUT_path = args[2]
 
 require(ggplot2); require(TSA); require(zoo); require(gridExtra)
-plotting1 = function(df){
+plotting = function(df){
  p <- ggplot(df,aes(x,smooth,col=names,
  group=names, fill=names))+
  geom_line()+ facet_wrap(~names,ncol=3)+
@@ -14,7 +14,7 @@ plotting1 = function(df){
  p
 }
 
-plotting = function(df){
+plotting1 = function(df){
  p <- ggplot(df,aes(x,smooth,col=names,
  group=names, fill=names))+
  geom_area()+ facet_wrap(~names,ncol=3)+
