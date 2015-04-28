@@ -15,7 +15,7 @@ RPATHS = {'Phasogram': 'phaso.R',
           'MethylMap': 'methyl_merge.R'
 }
 
-prefix = os.path.dirname(nucleomap.__file__)
+prefix = os.path.dirname(Nucleomap.__file__)
         
 MODULES = {
     'WriteDepth': pileupdepth.main,

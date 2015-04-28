@@ -1,0 +1,17 @@
+------------------------------------------------------------
+2015-04-28 16:13:38,519 -- ERROR:
+Errors detected during graph construction (max 20 shown):
+	Required file does not exist, and is not created by a node:
+		Filename: bedfiles/CTCFsites_2KB_overlap_rm.bed
+		Dependent node(s): <SplitBedFile: 'bedfiles/CTCFsites_2KB_overlap_rm.bed' to './temp', Splitted in 5 sub bed files
+	Required file does not exist, and is not created by a node:
+		Filename: bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed
+		Dependent node(s): <SplitBedFile: 'bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed' to './temp', Splitted in 5 sub bed files
+	Required file does not exist, and is not created by a node:
+		Filename: saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+		Dependent node(s): <ANALYSIS:'MethylMap', BAM: BAM1, Bed:'CTCFbed0'
+		                   <ANALYSIS:'MethylMap', BAM: BAM1, Bed:'CTCFbed1'
+		                   <ANALYSIS:'MethylMap', BAM: BAM1, Bed:'CTCFbed2'
+		                   <ANALYSIS:'MethylMap', BAM: BAM1, Bed:'CTCFbed3'
+		                   <ANALYSIS:'MethylMap', BAM: BAM1, Bed:'CTCFbed4'
+		                   and 38 more nodes ...

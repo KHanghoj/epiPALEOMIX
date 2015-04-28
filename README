@@ -1,0 +1,41 @@
+put unzip epipipe.zip into a folder:
+    .i.e ~/install
+update .profile/.bashrc with following:
+    echo "export PYTHONPATH=\$PYTHONPATH:~/install/" >> ~/.profile
+
+CREATE MAKEFILE
+    000_makefile
+
+EXECUTE:
+    # ~/install/epipipe/epipaleomix.py dryrun path/to/makefile
+    # ~/install/epipipe/epipaleomix.py run path/to/makefile
+    # ~/install/epipipe/epipaleomix.py -h  # for help
+         --max-threads "default 4 integer"
+         --destination "default ./OUTPUT"
+         --temp-root   "default ./temp"
+
+TOOLS/PACKAGES:
+Python 2.7:
+        -- Numpy
+        -- Pysam
+        -- ??
+
+R:
+        -- ggplot2
+        -- reshape2
+        -- TSA
+        -- GridExtra
+        -- zoo # ?? can be removed
+
+Bedtools
+
+
+
+MISSING:
+-- summaryNode
+-- make global PATH executables with .bin like paleomix (not super important)
+-- Doc/Module strings
+-- Make wiki
+-- make setup.py
+-- 
+
