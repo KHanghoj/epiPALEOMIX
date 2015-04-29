@@ -37,7 +37,9 @@ BamInputs:
         MethylMap:
             "Enabled": True
             "--ReadBases": 6
-            "--SkipBases": 0
+            "--Primes": five  # choose from {both, five, three}. Normally 5' for DS and both for SS
+            "--SkipThreePrime": 0
+            "--SkipFivePrime": 0
         Phasogram:
             "Enabled": True
             "Apply_GC_Correction": False

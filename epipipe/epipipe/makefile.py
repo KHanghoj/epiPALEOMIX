@@ -48,7 +48,9 @@ _VALIDATION_NUCLEO = {
 _VALIDATION_METHYL = {
     "Enabled": IsBoolean(default=True),
     "--ReadBases": IsUnsignedInt(default=6),
-    "--SkipBases": IsUnsignedInt(default=0)
+    "--SkipThreePrime": IsUnsignedInt(default=0),
+    "--SkipFivePrime": IsUnsignedInt(default=0),
+    "--Primes": IsStr
 }
 _VALIDATION_PHASO = {
     "Enabled": IsBoolean(default=True),

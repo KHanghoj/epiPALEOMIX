@@ -8,13 +8,14 @@ import epipipe.yaml
 import epipipe.logger
 import optparse
 from set_procname import set_procname
-from nodes.gccorrect_Node import \
-    GccorrectNode, CreateGCModelNode, \
+from epipie.nodes.gccorrect_Node import \
+    GccorrectNode, \
+    CreateGCModelNode, \
     GccorrectNode_Mid
-from nodes.execute_Node import \
+from epipipe.nodes.execute_Node import \
     GeneralExecuteNode, \
     General_Plot_Node
-from nodes.cleanbedfiles_Node import \
+from epipipe.nodes.cleanbedfiles_Node import \
     CleanFilesNode, \
     SplitBedFile, \
     MergeDataFiles

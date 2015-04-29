@@ -12,9 +12,16 @@ from os.path import exists, splitext
 from shutil import move
 from collections import defaultdict, namedtuple
 from epipipe.tools.commonutils import read_bed_W, \
-    read_bed_WO, strtobool, Cache, corr_fasta_chr
+    read_bed_WO, \
+    strtobool, \
+    Cache, \
+    corr_fasta_chr
 _PLUS_STRAND_BASES = ['CG', 'TG']
 _MINUS_STRAND_BASES = ['CG', 'CA']
+SSorDS = {
+    'SS': {'inbases': _PLUS_STRAND_BASES, 'basepos': 0},
+    'DS': {'inbases': _MINUS_STRAND_BASES, 'basepos': 1}
+}
 
 
 class Methyl_Level(object):
@@ -22,8 +29,8 @@ class Methyl_Level(object):
     def __init__(self, arg):
         self.arg = arg
         self._ReadBases = self.arg.ReadBases
-        self._SkipBases = self.arg.SkipBases
-        self._Size = self._ReadBases-self._SkipBases-1
+        self._skip_five = self.arg.SkipFivePrime
+        self._skip_three = self.arg.SkipThreePrime
         self._fasta = Cache(self.arg.FastaPath)
         self.dic_pos = defaultdict(lambda: defaultdict(int))
         self.pat = re.compile('CG')
@@ -31,6 +38,47 @@ class Methyl_Level(object):
         self.rowsapp = self.rows.append
         self.na_tup = namedtuple('row', ('pos top lower'))
         self._makeoutputfile()
+        self._row_size = int(1e6)
+        self._init_dics()
+        self._updatefunc = self._choosefunc()
+
+    def _init_dics(self):
+        lib_info = SSorDS[self.arg.LibraryConstruction]
+        forwdic = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0}
+        self.forw_five = merge_dics(forwdic, {'cig_idx': 0, 'skip': self._skip_five})
+        self.forw_three =  merge_dics(forwdic, {'cig_idx': -1, 'skip':self._skip_three})
+        self.rev_five = merge_dics(lib_info, {'cig_idx': -1, 'skip': self._skip_five})
+        self.rev_three = merge_dics(lib_info, {'cig_idx': 0, 'skip': self._skip_three})
+        # in a sam/bam file everything is plus strand oriented.even sequences, cigar, EVERYTHING
+        # cig_idx -1 returns last cigar of the sequence from a positive strand
+        # perspective. so [-1] can be the 5' end of a reverse read.
+
+    def _choosefunc(self):
+        dic={'both': self._both, 'five': self._only_5, 'three': self._only_3}
+        return dic[self.arg.Primes.lower()]
+     
+    def _only_5(self):
+        if self.record.is_reverse:
+            self._rightpart(**self.rev_five)
+        else:
+            self._leftpart(**self.forw_five)
+
+    def _only_3(self):
+        if self.record.is_reverse:
+            self._leftpart(**self.rev_three)
+        else:
+            self._rightpart(**self.forw_three)
+
+    def _both(self):
+        # both is only for single strand libs
+        # this is because the 3' overhangs are remove in double strand library
+        # preparation.
+        if self.record.is_reverse:
+            self._rightpart(**self.rev_five)
+            self._leftpart(**self.rev_three)
+        else:
+            self._leftpart(**self.forw_five)
+            self._rightpart(**self.forw_three)
 
     def reset_dict(self, chrom, start, end):
         self.dic_pos = defaultdict(lambda: defaultdict(int))
@@ -45,28 +93,15 @@ class Methyl_Level(object):
 
     def update(self, record):
         self.record = record
+
         if self.last_end < self.record.pos:
             self._call_ms()
             self.dic_pos.clear()
-            if len(self.rows) > int(1e6):
+            if len(self.rows) > self._row_size:
                 self._writetofile()
 
-        if self.record.is_reverse:
-            self._minus_or_threeprime()
-        else:
-            self._forward_strand()
-        self.last_end = record.aend
-
-    def update_ss(self, record):
-        self.record = record
-        if self.last_end < self.record.pos:
-            self._call_ms()
-            self.dic_pos.clear()
-            if len(self.rows) > int(1e6):
-                self._writetofile()
-        self._minus_or_threeprime(inbases=_PLUS_STRAND_BASES, libtype=0)
-        self._forward_strand()
-        self.last_end = record.aend
+        self._updatefunc()
+        self.last_end = self.record.aend
 
     def _call_ms(self):
         for pos, basescore in sorted(self.dic_pos.iteritems()):
@@ -78,43 +113,32 @@ class Methyl_Level(object):
         self._call_ms()
         self._writetofile()
 
-    # def _reverse_strand(self):
-    #     curr_pos = self.record.aend-self._ReadBases
-    #     fast_string = self._fasta.fetch_string(self.chrom,
-    #                                            curr_pos, self._ReadBases)
-    #     cigar_op, cigar_len = self.record.cigar[-1]
-    #     bases = self.record.seq[-self._ReadBases:]
-    #     for fast_idx in self._getindexes(fast_string):
-    #         inverse_idx = self._ReadBases - fast_idx
-    #         if (fast_idx <= self._Size and
-    #                 cigar_op == 0 and cigar_len >= inverse_idx and
-    #                 bases[fast_idx:fast_idx+2] in _MINUS_STRAND_BASES):
-    #             self.dic_pos[curr_pos+fast_idx][bases[fast_idx+1]] += 1
+    def _prep(self, curr_pos, skip=0):
+        ## skip is only used in right functions
+        # skip is 1-based always
+        fast_string = self._fasta.fetch_string(self.chrom, curr_pos,
+                                               self._ReadBases-skip)
+        for fast_idx in self._getindexes(fast_string):
+            yield fast_idx, self._ReadBases - fast_idx
 
-    def _minus_or_threeprime(self, inbases=_MINUS_STRAND_BASES, libtype=1):
+    def _rightpart(self, inbases, basepos, cig_idx, skip):
         curr_pos = self.record.aend-self._ReadBases
-        fast_string = \
-            self._fasta.fetch_string(self.chrom, curr_pos, self._ReadBases)
-        cigar_op, cigar_len = self.record.cigar[-1]
+        cigar_op, cigar_len = self.record.cigar[cig_idx]
         bases = self.record.seq[-self._ReadBases:]
-        for fast_idx in self._getindexes(fast_string):
-            inverse_idx = self._ReadBases - fast_idx
-            if (fast_idx <= self._Size and cigar_op == 0 and
-                    cigar_len >= inverse_idx and
+        for fast_idx, inverse_idx in self._prep(curr_pos, skip):
+            if (cigar_op == 0 and cigar_len >= inverse_idx and
                     bases[fast_idx:fast_idx+2] in inbases):
-                self.dic_pos[curr_pos+fast_idx][bases[fast_idx+libtype]] += 1
-
-    def _forward_strand(self):
+                self.dic_pos[curr_pos+fast_idx][bases[fast_idx+basepos]] += 1
+        
+    def _leftpart(self, inbases, basepos, cig_idx, skip):
         curr_pos = self.record.pos
-        fast_string = \
-            self._fasta.fetch_string(self.chrom, curr_pos, self._ReadBases)
+        cigar_op, cigar_len = self.record.cigar[cig_idx]
         bases = self.record.seq[:self._ReadBases]
-        cigar_op, cigar_len = self.record.cigar[0]
-        for fast_idx in self._getindexes(fast_string):
-            if (fast_idx >= self._SkipBases and
-                    cigar_op == 0 and cigar_len >= fast_idx and
-                    bases[fast_idx:fast_idx+2] in _PLUS_STRAND_BASES):
-                self.dic_pos[curr_pos+fast_idx][bases[fast_idx]] += 1
+        for fast_idx, _ in self._prep(curr_pos):
+            if (fast_idx >= skip and cigar_op == 0 and
+                    cigar_len >= fast_idx and
+                    bases[fast_idx:fast_idx+2] in inbases):
+                self.dic_pos[curr_pos+fast_idx][bases[fast_idx+basepos]] += 1            
 
     def _makeoutputfile(self):
         ''' want to write to file every chrom, to keep scalablility'''
@@ -139,6 +163,13 @@ class Methyl_Level(object):
         self.f_output.close()
 
 
+def merge_dics(x, y):
+    '''Given two dicts, merge them into a new dict as a shallow copy.'''
+    z = x.copy()
+    z.update(y)
+    return z
+
+
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -153,6 +184,10 @@ def parse_args(argv):
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--LibraryConstruction', help="..", type=str,
                         choices=['DS', 'SS'])
+    parser.add_argument('--Primes', help="..", type=str,
+                        choices=['both', 'five', 'three'])
+    parser.add_argument('--SkipThreePrime', help="..", type=int, default=0)
+    parser.add_argument('--SkipFivePrime', help="..", type=int, default=0)
     return parser.parse_known_args(argv)
 
 
@@ -161,12 +196,10 @@ def run(args):
     args.FastaChromType = strtobool(args.FastaChromType)
     samfile = pysam.Samfile(args.bam, "rb")
     Met_Score = Methyl_Level(args)
-    update = (Met_Score.update if args.LibraryConstruction == 'DS'
-              else Met_Score.update_ss)
     for chrom, start, end in read_bed(args):
         Met_Score.reset_dict(corr_fasta_chr(args, chrom), start, end)
         for record in samfile.fetch(chrom, start, end):
-            update(record)
+            Met_Score.update(record)
         Met_Score.call_final_ms()
     Met_Score.closefiles()
     samfile.close()

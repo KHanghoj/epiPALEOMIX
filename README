@@ -1,8 +1,9 @@
 put unzip epipipe.zip into a folder:
     .i.e ~/install
 update .profile/.bashrc with following:
-    echo "export PYTHONPATH=\$PYTHONPATH:~/install/" >> ~/.profile
-
+    echo "export PYTHONPATH=\$PYTHONPATH:~/install/epipipe/" >> ~/.profile
+    ##or (copy this into the dot file in ~/)
+    export PYTHONPATH=$PYTHONPATH:~/install/epipipe/
 CREATE MAKEFILE
     000_makefile
 
@@ -25,7 +26,7 @@ R:
         -- reshape2
         -- TSA
         -- GridExtra
-        -- zoo # ?? can be removed
+        -- zoo # should be removed
 
 Bedtools
 
