@@ -8,7 +8,7 @@ import epipipe.yaml
 import epipipe.logger
 import optparse
 from set_procname import set_procname
-from epipie.nodes.gccorrect_Node import \
+from epipipe.nodes.gccorrect_Node import \
     GccorrectNode, \
     CreateGCModelNode, \
     GccorrectNode_Mid
@@ -25,6 +25,7 @@ from epipipe.pipeline import Pypeline
 from epipipe.common.console import \
     print_err, \
     print_info
+from epipipe.mkfile import mkfile
 
 FINETUNERANGE = [-10, -5, 5, 10]
 ANALYSES = ['Phasogram', 'WriteDepth', 'NucleoMap', 'MethylMap']
@@ -229,11 +230,12 @@ def main(argv):
     except RuntimeError, error:
         print_err(error)
         return 1
-
-    commands = ("run", "dry_run", "dry-run", "dryrun")
+    commands = ("makefile", "mkfile", "run", "dry_run", "dry-run", "dryrun")
     if (len(args) == 0) or (args[0] not in commands):
         _print_usage()
         return 1
+    elif args[0] in ("mkfile", "makefile"):
+        return mkfile.main(args[1:])
     elif not args[1:]:
         _print_usage()
         print_err("\nPlease specify at least one makefile!")
