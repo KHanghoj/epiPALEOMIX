@@ -6,6 +6,9 @@ from epipipe.common.makefile import \
     IsStr, \
     IsBoolean, \
     And, \
+    Or, \
+    ValueIn, \
+    IsNone, \
     ValueGE, \
     ValuesSubsetOf, \
     IsListOf
@@ -27,13 +30,13 @@ _VALID_BED_NAME = _VALID_TARGET_NAME = \
 _VALIDATION_OPTIONS = {
     "BamPath": IsStr,
     "--MinMappingQuality": IsUnsignedInt(default=30),
-    "--BamChromType": IsBoolean,
+    "--BamPrefix": Or(IsStr, ValueIn(('',)), default=''),
     "--LibraryConstruction": IsStr
 }
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=True),
     "MapMinMaxReadLength": IsListOf(IsUnsignedInt),
-    "Resolution": IsUnsignedInt,
+    "Resolution": IsUnsignedInt(default=15),
     "--MappaUniqueness": IsFloat(default=0.9)
 }
 _VALIDATION_NUCLEO = {
@@ -85,7 +88,7 @@ _VALIDATION = {
     },
     "Prefixes": {
         "--FastaPath": IsStr,
-        "--FastaChromType": IsBoolean,
+        "--FastaPrefix": Or(IsStr, ValueIn(('',)), default=''),
         "--MappabilityPath": IsStr
     },
     "BedFiles": {

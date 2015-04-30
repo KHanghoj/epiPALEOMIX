@@ -28,7 +28,7 @@ MODULES = {
 class GeneralExecuteNode(Node):
     '''this new node puts the file in temporary
     final file need to be a merge of the other files'''
-    def __init__(self, anal, d_bam, bed_name, bed_path, dependencies=()):
+    def __init__(self, anal, d_bam, bed_name, bed_path, subnodes=(), dependencies=()):
         self.analysis = MODULES[anal]
         self.infile, self.d_bam = d_bam.baminfo['BamPath'], d_bam
         self.dest = os.path.join(d_bam.i_path,
@@ -41,6 +41,7 @@ class GeneralExecuteNode(Node):
                       description=description,
                       input_files=[self.infile, bed_path],
                       output_files=self.dest,
+                      subnodes=subnodes,
                       dependencies=dependencies)
 
     def _run(self, _config, _temp):

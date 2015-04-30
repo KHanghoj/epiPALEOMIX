@@ -7,8 +7,8 @@ import gzip
 from collections import deque
 from os.path import exists, splitext
 from shutil import move
-from epipipe.tools.commonutils import read_bed_W, \
-    read_bed_WO, strtobool, GC_correction, corr_fasta_chr
+from epipipe.tools.commonutils import read_bed, \
+    GC_correction, corr_chrom
 
 
 class Write_Depth(GC_correction):
@@ -29,11 +29,6 @@ class Write_Depth(GC_correction):
         self._output_fmt = '{0}\t{1}\t{2}\t{3}\n'
         self._makeoutputfile()
         self._GCmodel_ini()
-
-    def _check_fasta_chr(self, chrom):
-        if not self.arg.FastaChromType:
-            chrom = chrom.replace('chr', '')
-        return chrom
 
     def update_depth(self, record):
         self.jump = (record.pos - self._last_pos)
@@ -97,8 +92,7 @@ class Write_Depth(GC_correction):
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
  
     def reset_deques(self, chrom, start, end):
-        self.start, self.end = start, end
-        self.chrom = self.corr_fasta_chr(chrom)
+        self.chrom, self.start, self.end = chrom, start, end
         self._corrected_depth.clear()
         self._genomic_positions.clear()
         self._last_pos = -self._seq_len
@@ -120,8 +114,8 @@ def parse_args(argv):
     parser.add_argument('outputfile', help='...', type=str)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
-    parser.add_argument('--FastaChromType')
-    parser.add_argument('--BamChromType')
+    parser.add_argument('--FastaPrefix')
+    parser.add_argument('--BamPrefix')
     parser.add_argument('--MinMappingQuality', help="...", type=int,
                         default=25)
     parser.add_argument('--DequeLength', help="...", type=int, default=1000)
@@ -129,17 +123,14 @@ def parse_args(argv):
 
 
 def run(args):
-    read_bed = read_bed_W if strtobool(args.BamChromType) else read_bed_WO
-#    args.FastaChromType = strtobool(args.FastaChromType)
-    args.FastaChromType = strtobool(args.FastaChromType) if args.GCmodel else True
     samfile = pysam.Samfile(args.bam, "rb")
-    corrected_depth = Write_Depth(args)
+    Corr_Depth = Write_Depth(args)
     for chrom, start, end in read_bed(args):
-        corrected_depth.reset_deques(chrom, start, end)
+        Corr_Depth.reset_deques(corr_chrom(args.FastaPrefix, chrom), start, end)
         for record in samfile.fetch(chrom, start, end):
-            corrected_depth.update_depth(record)
-        corrected_depth.call_final_depths()
-    corrected_depth.closefile()
+            Corr_Depth.update_depth(record)
+        Corr_Depth.call_final_depths()
+    Corr_Depth.closefile()
     return 0
 
 

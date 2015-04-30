@@ -1,25 +1,25 @@
 # -*- mode: Yaml; -*-
 Prefixes:
-    "--FastaPath": reference/hs.build37.1.fa
-    "--FastaChromType": False  # True if annotated "chr1" elif annotated "1" then False
-    "--MappabilityPath": saqqaq/chr22_31_50.40000-20000.mappability
+    "--FastaPath": /Users/kehanghoej/Desktop/chrome.fa
+    "--FastaPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr'
+    "--MappabilityPath": /Users/kehanghoej/Desktop/GENOME_51_50.40000-20000.mappability
 BedFiles:
     EnabledFilter: False
     UniquenessFilter: 0.9  # filtering bed regions with low uniqueness
     CTCFbed: 
-        Path: bedfiles/CTCFsites_2KB_overlap_rm.bed
-        MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
+        Path: /Users/kehanghoej/Desktop/testhg19ctcf.bed
+        MakeMergePlot: True  # i.e. if bedfile covers chr1  cannot merge data
         NOSubFiles: 5 # splits the bedfile inputs into subfiles to take advantage of all cpu's
-    TSSHousekeeping: 
-        Path: bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed
-        MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
-        NOSubFiles: 5  # splits the bedfile inputs into subfiles to take advantage of all cpu's
+    # TSSHousekeeping: 
+    #     Path: bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed
+    #     MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
+    #     NOSubFiles: 5  # splits the bedfile inputs into subfiles to take advantage of all cpu's
 BamInputs:
     BAM1:
         BamInfo:
-            "BamPath": saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+            "BamPath": /Users/kehanghoej/Desktop/saqqaq_chrom22.bam
             "--MinMappingQuality": 30
-            "--BamChromType": False  # True if annotated "chr1" elif annotated "1" then False
+            "--BamPrefix": '' # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr'
             "--LibraryConstruction": DS  # DS if double strand, SS if single strand
         GCcorrect:
             "Enabled": True
@@ -53,7 +53,7 @@ BamInputs:
     #     BamInfo:
     #         "BamPath": saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
     #         "--MinMappingQuality": 30
-    #         "--BamChromType": False  # True if annotated "chr1" elif annotated "1" then False
+    #         "--BamPrefix": False  # True if annotated "chr1" elif annotated "1" then False
     #         "--LibraryConstruction": DS  # DS if double strand, SS if single strand
     #     GCcorrect:
     #         "Enabled": True

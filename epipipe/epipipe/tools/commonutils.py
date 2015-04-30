@@ -1,95 +1,34 @@
 import pysam
 import re
-
+FMT = '{pref}{chr_no}'.format
 
 def unpack(chrom, start, end, *rest):
     return chrom, start, end, rest
 
 
-def corr_fasta_chr(args, chrom):
-    if not args.FastaChromType:
-        chrom = chrom.replace('chr', '')
-    elif 'chr' not in chrom:
-            chrom = 'chr{}'.format(chrom)
-    return chrom
+
+def corr_chrom(prefix, chrom):
+    curr_chrom = ''.join(char for char in chrom if char.isdigit())
+    return FMT(pref=prefix, chr_no=curr_chrom)
 
 
-# def unpack1(n, seq):
-#     it = iter(seq)
-#     for _ in range(n - 1):
-#         yield next(it, None)
-#     yield tuple(it)
-
-
-# def read_bed(args):
-#     if args.bed:
-#         with open(args.bed, 'r') as bedfile:
-#             for line in bedfile:
-#                 chrom, start, end, rest = unpack(*(re.split(r'\s+',
-#                                                  line.rstrip())))
-#                 yield (str(chrom), int(start), int(end))
-
-def read_bed_W(args):
+def read_bed(args):
+    bampref = args.BamPrefix
     if args.bed:
         with open(args.bed, 'r') as bedfile:
             for line in bedfile:
                 chrom, start, end, rest = unpack(*(re.split(r'\s+',
                                                  line.rstrip())))
-                yield (str(chrom), int(start), int(end))
+                yield (corr_chrom(bampref, str(chrom)), int(start), int(end))
 
 
-def read_bed_WO(args):
-    if args.bed:
-        with open(args.bed, 'r') as bedfile:
-            for line in bedfile:
-                chrom, start, end, rest = unpack(*(re.split(r'\s+',
-                                                 line.rstrip())))
-                yield (str(chrom).replace('chr',''), int(start), int(end))
-
-
-                
 def read_mappa(args):
-    if args.bed:
-        with open(args.bed, 'r') as bedfile:
-            for line in bedfile:
-                chrom, start, end, rest = unpack(*(re.split(r'\s+',
-                                                 line.rstrip())))
-                yield (str(chrom), int(start), int(end), rest[-1])
-
-
-# def read_bed_W(args):
-#     if args.bed:
-#         with open(args.bed, 'r') as bedfile:
-#             for line in bedfile:
-#                 # input_line = (line.rstrip('\n')).split('\t')[:3]
-#                 chrom, start, end = re.split(r'\s+', line.rstrip())[:3]
-#                 if 'chr' not in chrom:
-#                     chrom = 'chr{}'.format(chrom)
-#                 yield (str(chrom), int(start), int(end))
-
-
-# def read_bed_WO(args):
-#     if args.bed:
-#         with open(args.bed, 'r') as bedfile:
-#             for line in bedfile:
-#                 input_line = (line.rstrip('\n')).split('\t')[:3]
-#                 # input_line = # re.split(r'\s+',str1)  # this splits by space
-#                 chrom, start, end = input_line
-#                 if 'chr' in chrom:
-#                     chrom = chrom.replace('chr', '')
-#                 yield (str(chrom), int(start), int(end))
-
-
-def strtobool(val):
-    if isinstance(val, bool) or isinstance(val, int):
-        return(val)
-    val = val.lower()
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
-        return 1
-    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
-        return 0
-    else:
-        raise ValueError("invalid truth value %r" % (val,))
+    bampref = args.BamPrefix
+    with open(args.MappabilityPath, 'r') as mappafile:
+        for line in mappafile:
+            chrom, start, end, rest = unpack(*(re.split(r'\s+', line.rstrip())))
+            yield (corr_chrom(bampref, str(chrom)),
+                   int(start), int(end), float(rest[-1]))
 
 
 class Cache(object):

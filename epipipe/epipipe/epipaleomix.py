@@ -217,7 +217,7 @@ def _print_usage():
     print_info("Usage:")
     print_info("  -- %s help           -- Display this message" % basename)
     print_info("  -- %s dryrun [...]   -- Perform dry run of pipeline on provided makefiles." % basename)
-    # print_info("     %s                   Equivalent to 'epipaleomix run --dry-run [...]'." % (" " * len(basename),))
+    print_info("  -- %s makefile [...] -- Generate makefile template to std.out." % basename)
     print_info("  -- %s run [...]      -- Run pipeline on provided makefiles." % basename)
 
 

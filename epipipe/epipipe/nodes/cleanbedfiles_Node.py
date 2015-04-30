@@ -2,24 +2,8 @@ from epipipe.node import CommandNode, Node
 from epipipe.atomiccmd.command import AtomicCmd
 from epipipe.atomiccmd.sets import ParallelCmds
 import os
-
-
-# class CleanFilesNodeold(CommandNode):
-#     def __init__(self, mappa, unique, inbedfile, outbedfile, dependencies=()):
-#         call = ['Rscript', './tools/cleanbedfiles.R',
-#                 '%(IN_MAPPA)s', str(unique), '%(IN_BED)s', '%(OUT_BED)s']
-#         cmd = AtomicCmd(call,
-#                         IN_MAPPA=mappa,
-#                         IN_BED=inbedfile,
-#                         OUT_BED=outbedfile)
-#         description = "<CreateGCModel: '%s' -> '%s', Uniqueness: '%s'" % \
-#                       (inbedfile,
-#                        outbedfile,
-#                        unique)
-#         CommandNode.__init__(self,
-#                              description=description,
-#                              command=cmd,
-#                              dependencies=dependencies)
+import epipipe.tools.splitbedfiles
+import epipipe.tools.merge_datafiles
 
 
 class CleanFilesNode(CommandNode):
@@ -47,7 +31,6 @@ class CleanFilesNode(CommandNode):
                              dependencies=dependencies)
 
 
-import tools.splitbedfiles
                                   
 class SplitBedFile(Node):
     def __init__(self, config, inbedfile, no_subbed, subnodes=(), dependencies=()):
@@ -76,11 +59,10 @@ class SplitBedFile(Node):
             lst.append(os.path.join(self.temp_root, filena + fmt.format(number) + fileext))
         return lst
 
-
-import tools.merge_datafiles
                                   
 class MergeDataFiles(Node):
     def __init__(self, d_bam, anal, bedn, subnodes=(), dependencies=()):
+#        self.infiles = [''.join(n.output_files) for n in dependencies]
         self.infiles = [''.join(n.output_files) for n in subnodes]
         self.anal = anal
         self.out = os.path.join(d_bam.o_path,

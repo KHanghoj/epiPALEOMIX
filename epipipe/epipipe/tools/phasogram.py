@@ -10,8 +10,8 @@ import pysam
 import argparse
 import gzip
 from collections import defaultdict, deque
-from epipipe.tools.commonutils import read_bed_W, \
-    read_bed_WO, strtobool, GC_correction, corr_fasta_chr # , Cache
+from epipipe.tools.commonutils import read_bed, \
+    GC_correction, corr_chrom
 
 
 class Phasogram(GC_correction):
@@ -84,21 +84,18 @@ def parse_args(argv):
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
     parser.add_argument('--MaxRange', help="...", type=int, default=1000)
-    parser.add_argument('--FastaChromType', help="...")
-    parser.add_argument('--BamChromType', help="...")
+    parser.add_argument('--FastaPrefix', help="...")
+    parser.add_argument('--BamPrefix', help="...")
     parser.add_argument('--MinMappingQuality', help="...", type=int,
                         default=25)
     return parser.parse_known_args(argv)
 
 
 def run(args):
-    read_bed = read_bed_W if strtobool(args.BamChromType) else read_bed_WO
-    args.FastaChromType = strtobool(args.FastaChromType) if args.GCmodel else True
-#    args.FastaChromType = strtobool(args.FastaChromType)
     samfile = pysam.Samfile(args.bam, "rb")
     Phaso = Phasogram(args)
     for chrom, start, end in read_bed(args):
-        Phaso.reset(corr_fasta_chr(args, chrom))
+        Phaso.reset(corr_chrom(args.FastaPrefix, chrom))
         for record in samfile.fetch(chrom, start, end):
             if record.mapq < args.MinMappingQuality:
                 continue  # do not analyze low quality records

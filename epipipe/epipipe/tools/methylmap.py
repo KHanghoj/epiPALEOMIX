@@ -11,11 +11,10 @@ import gzip
 from os.path import exists, splitext
 from shutil import move
 from collections import defaultdict, namedtuple
-from epipipe.tools.commonutils import read_bed_W, \
-    read_bed_WO, \
-    strtobool, \
+from epipipe.tools.commonutils import \
+    read_bed, \
     Cache, \
-    corr_fasta_chr
+    corr_chrom
 _PLUS_STRAND_BASES = ['CG', 'TG']
 _MINUS_STRAND_BASES = ['CG', 'CA']
 SSorDS = {
@@ -45,10 +44,10 @@ class Methyl_Level(object):
     def _init_dics(self):
         lib_info = SSorDS[self.arg.LibraryConstruction]
         forwdic = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0}
-        self.forw_five = merge_dics(forwdic, {'cig_idx': 0, 'skip': self._skip_five})
-        self.forw_three =  merge_dics(forwdic, {'cig_idx': -1, 'skip':self._skip_three})
-        self.rev_five = merge_dics(lib_info, {'cig_idx': -1, 'skip': self._skip_five})
-        self.rev_three = merge_dics(lib_info, {'cig_idx': 0, 'skip': self._skip_three})
+        self.forw_five = merge_dics(forwdic, {'skip': self._skip_five})
+        self.forw_three =  merge_dics(forwdic, {'skip':self._skip_three})
+        self.rev_five = merge_dics(lib_info, {'skip': self._skip_five})
+        self.rev_three = merge_dics(lib_info, {'skip': self._skip_three})
         # in a sam/bam file everything is plus strand oriented.even sequences, cigar, EVERYTHING
         # cig_idx -1 returns last cigar of the sequence from a positive strand
         # perspective. so [-1] can be the 5' end of a reverse read.
@@ -121,18 +120,18 @@ class Methyl_Level(object):
         for fast_idx in self._getindexes(fast_string):
             yield fast_idx, self._ReadBases - fast_idx
 
-    def _rightpart(self, inbases, basepos, cig_idx, skip):
+    def _rightpart(self, inbases, basepos, skip):
         curr_pos = self.record.aend-self._ReadBases
-        cigar_op, cigar_len = self.record.cigar[cig_idx]
+        cigar_op, cigar_len = self.record.cigar[-1]
         bases = self.record.seq[-self._ReadBases:]
         for fast_idx, inverse_idx in self._prep(curr_pos, skip):
             if (cigar_op == 0 and cigar_len >= inverse_idx and
                     bases[fast_idx:fast_idx+2] in inbases):
                 self.dic_pos[curr_pos+fast_idx][bases[fast_idx+basepos]] += 1
         
-    def _leftpart(self, inbases, basepos, cig_idx, skip):
+    def _leftpart(self, inbases, basepos, skip):
         curr_pos = self.record.pos
-        cigar_op, cigar_len = self.record.cigar[cig_idx]
+        cigar_op, cigar_len = self.record.cigar[0]
         bases = self.record.seq[:self._ReadBases]
         for fast_idx, _ in self._prep(curr_pos):
             if (fast_idx >= skip and cigar_op == 0 and
@@ -177,8 +176,8 @@ def parse_args(argv):
     parser.add_argument('bed', help="..", type=str)
     parser.add_argument('outputfile', help='..', type=str)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
-    parser.add_argument('--FastaChromType', dest='FastaChromType')
-    parser.add_argument('--BamChromType', dest='BamChromType')
+    parser.add_argument('--FastaPrefix', dest='FastaPrefix')
+    parser.add_argument('--BamPrefix', dest='BamPrefix')
     parser.add_argument('--ReadBases', help="..", type=int, default=6)
     parser.add_argument('--SkipBases', help="..", type=int, default=0)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
@@ -192,12 +191,10 @@ def parse_args(argv):
 
 
 def run(args):
-    read_bed = read_bed_W if strtobool(args.BamChromType) else read_bed_WO
-    args.FastaChromType = strtobool(args.FastaChromType)
     samfile = pysam.Samfile(args.bam, "rb")
     Met_Score = Methyl_Level(args)
     for chrom, start, end in read_bed(args):
-        Met_Score.reset_dict(corr_fasta_chr(args, chrom), start, end)
+        Met_Score.reset_dict(corr_chrom(args.FastaPrefix, chrom), start, end)
         for record in samfile.fetch(chrom, start, end):
             Met_Score.update(record)
         Met_Score.call_final_ms()

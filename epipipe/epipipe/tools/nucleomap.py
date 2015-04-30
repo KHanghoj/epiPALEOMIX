@@ -7,8 +7,8 @@ from collections import deque
 from itertools import islice, izip, tee
 from os.path import exists, splitext
 from shutil import move
-from epipipe.tools.commonutils import read_bed_W, \
-    read_bed_WO, strtobool, GC_correction, corr_fasta_chr  # , Cache
+from epipipe.tools.commonutils import \
+    corr_chrom, GC_correction, read_bed
 import gzip
 
 
@@ -172,8 +172,8 @@ def parse_args(argv):
     parser.add_argument('--MinDepth', help="..", type=int, default=5)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--GCmodel', help='..', type=str, default=None)
-    parser.add_argument('--FastaChromType', dest='FastaChromType')
-    parser.add_argument('--BamChromType', dest='BamChromType')
+    parser.add_argument('--FastaPrefix', dest='FastaPrefix')
+    parser.add_argument('--BamPrefix', dest='BamPrefix')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--NucleosomeSize', dest='SIZE', help="..", type=int, default=147)
     parser.add_argument('--NucleosomeFlanks', dest='FLANKS', help="..", type=int, default=25)
@@ -182,12 +182,10 @@ def parse_args(argv):
 
 
 def run(args):
-    read_bed = read_bed_W if strtobool(args.BamChromType) else read_bed_WO
-    args.FastaChromType = strtobool(args.FastaChromType) if args.GCmodel else True
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = Nucleosome_Prediction(args)
     for chrom, start, end in read_bed(args):
-        nucl_pred_cls.reset_deques(corr_fasta_chr(args, chrom), start, end)
+        nucl_pred_cls.reset_deques(corr_chrom(args.FastaPrefix, chrom), start, end)
         for record in samfile.fetch(chrom, start, end):
             nucl_pred_cls.update_depth(record)
         nucl_pred_cls.call_final_window()

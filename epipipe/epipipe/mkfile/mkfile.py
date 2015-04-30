@@ -11,7 +11,7 @@ _TEMPLATE_EPIPALEOMIX = \
 #DOT NOT CHANGES THE NAMES ON THIS INDENTATION LEVEL
 Prefixes:
     "--FastaPath": path/to/referenceFastafile
-    "--FastaChromType": False  # True if annotated "chr1" elif annotated "1" then False
+    "--FastaPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr'
     "--MappabilityPath": path/to/Mappabilityfile
 BedFiles:
     EnabledFilter: False  # set to True if mappability filtering of bedfiles intended
@@ -31,7 +31,7 @@ BamInputs:
             # DOT NOT CHANGES THE VARIABLE NAMES ON THIS INDENTATION LEVEL
             "BamPath": path/to/bamfile
             "--MinMappingQuality": 30
-            "--BamChromType": False  # True if annotated "chr1" elif annotated "1" then False
+            "--BamPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr' 
             "--LibraryConstruction": DS  # DS if double strand, SS if single strand
         GCcorrect:
             "Enabled": True
@@ -68,7 +68,7 @@ BamInputs:
     #         # DOT NOT CHANGES THE VARIABLE NAMES ON THIS INDENTATION LEVEL
     #         "BamPath": path/to/bamfile
     #         "--MinMappingQuality": 30
-    #         "--BamChromType": False  # True if annotated "chr1" elif annotated "1" then False
+    #         "--BamPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr' 
     #         "--LibraryConstruction": DS  # DS if double strand, SS if single strand
     #     GCcorrect:
     #         "Enabled": True
