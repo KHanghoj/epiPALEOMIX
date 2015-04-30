@@ -37,7 +37,6 @@ BamInputs:
             "Enabled": True
             # mininimum and maximum length of used reads (roughly)
             "MapMinMaxReadLength": [30, 75] 
-            "Resolution": 15  # Will be removed in newer versions, i think??
             "--MappaUniqueness": 0.9  # The reference uniqueness minimum
         NucleoMap:   # The nucleosome calling tool
             "Enabled": True
@@ -74,7 +73,6 @@ BamInputs:
     #         "Enabled": True
     #         # mininimum and maximum length of used reads (roughly)
     #         "MapMinMaxReadLength": [30, 75] 
-    #         "Resolution": 15  # Will be removed in newer versions, i think??
     #         "--MappaUniqueness": 0.9  # The reference uniqueness minimum
     #     NucleoMap:   # The nucleosome calling tool
     #         "Enabled": True

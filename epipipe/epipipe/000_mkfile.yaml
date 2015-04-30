@@ -24,7 +24,6 @@ BamInputs:
         GCcorrect:
             "Enabled": True
             "MapMinMaxReadLength": [30, 75]  # the range of readlength
-            "Resolution": 15  # Will be removed in newer versions, i think??
             "--MappaUniqueness": 0.9  # The reference uniqueness minimum
         NucleoMap:
             "Enabled": True
@@ -58,7 +57,6 @@ BamInputs:
     #     GCcorrect:
     #         "Enabled": True
     #         "MapMinMaxReadLength": [30, 75]  # the range of readlength
-    #         "Resolution": 15  # Will be removed in newer versions, i think??
     #         "--MappaUniqueness": 0.9  # The reference uniqueness minimum
     #     NucleoMap:
     #         "Enabled": True

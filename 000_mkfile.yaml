@@ -1,7 +1,7 @@
 # -*- mode: Yaml; -*-
 Prefixes:
     "--FastaPath": /Users/kehanghoej/Desktop/chrome.fa
-    "--FastaPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr'
+    "--FastaPrefix": ''  # if annotaed by number only 1  leave it like '' else add the prefix i.e. 'chr'
     "--MappabilityPath": /Users/kehanghoej/Desktop/GENOME_51_50.40000-20000.mappability
 BedFiles:
     EnabledFilter: False
@@ -24,7 +24,6 @@ BamInputs:
         GCcorrect:
             "Enabled": True
             "MapMinMaxReadLength": [30, 75]  # the range of readlength
-            "Resolution": 15  # Will be removed in newer versions, i think??
             "--MappaUniqueness": 0.9  # The reference uniqueness minimum
         NucleoMap:
             "Enabled": True
@@ -58,7 +57,6 @@ BamInputs:
     #     GCcorrect:
     #         "Enabled": True
     #         "MapMinMaxReadLength": [30, 75]  # the range of readlength
-    #         "Resolution": 15  # Will be removed in newer versions, i think??
     #         "--MappaUniqueness": 0.9  # The reference uniqueness minimum
     #     NucleoMap:
     #         "Enabled": True

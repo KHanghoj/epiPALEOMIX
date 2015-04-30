@@ -152,11 +152,11 @@ def concat_nodes(nodecls, bam, ran, subnodes=()):
 
 def calc_gcmodel(d_bam):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
-        scale = d_bam.opts['GCcorrect']['Resolution']
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
         d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
-        node_one = concat_nodes(GccorrectNode_Mid, d_bam, xrange(rlmin, rlmax+1, scale))
+        # node_one = concat_nodes(GccorrectNode_Mid, d_bam, xrange(rlmin, rlmax+1, scale))
+        node_one = concat_nodes(GccorrectNode_Mid, d_bam, xrange(rlmin, rlmax+1, 15))
         node_two = concat_nodes(CreateGCModelNode, d_bam, FINETUNERANGE, subnodes=node_one)
         d_bam.opts['BamInfo']['--GCmodel'] = \
             (out for out in node_two[0].output_files if out.endswith('.txt')).next()

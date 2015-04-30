@@ -36,7 +36,6 @@ _VALIDATION_OPTIONS = {
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=True),
     "MapMinMaxReadLength": IsListOf(IsUnsignedInt),
-    "Resolution": IsUnsignedInt(default=15),
     "--MappaUniqueness": IsFloat(default=0.9)
 }
 _VALIDATION_NUCLEO = {
