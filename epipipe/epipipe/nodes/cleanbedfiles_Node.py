@@ -62,7 +62,6 @@ class SplitBedFile(Node):
                                   
 class MergeDataFiles(Node):
     def __init__(self, d_bam, anal, bedn, subnodes=(), dependencies=()):
-#        self.infiles = [''.join(n.output_files) for n in dependencies]
         self.infiles = [''.join(n.output_files) for n in subnodes]
         self.anal = anal
         self.out = os.path.join(d_bam.o_path,
