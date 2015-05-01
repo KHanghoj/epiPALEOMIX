@@ -2,8 +2,8 @@ from epipipe.node import CommandNode, Node
 from epipipe.atomiccmd.command import AtomicCmd
 from epipipe.atomiccmd.sets import ParallelCmds
 import os
-import epipipe.tools.splitbedfiles
-import epipipe.tools.merge_datafiles
+import epipipe.tools.splitbedfiles as splitbed
+import epipipe.tools.merge_datafiles as mergedata
 
 
 class CleanFilesNode(CommandNode):
@@ -49,7 +49,7 @@ class SplitBedFile(Node):
 
     def _run(self, _config, _temp):
         inputs = [self.infile]+self.outputnames
-        tools.splitbedfiles.main(inputs)
+        splitbed.main(inputs)
 
     def _createbednames(self, no_subbed):
         ''' make each bedfile filename '''
@@ -81,4 +81,4 @@ class MergeDataFiles(Node):
         assert len(inputs) > 2, 'Need at least one output and one input'
         if self.anal == 'Phasogram':
             inputs.append('--merge')
-        tools.merge_datafiles.main(inputs)
+        mergedata.main(inputs)

@@ -155,7 +155,6 @@ def calc_gcmodel(d_bam):
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', [56, 57])
         d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
-        # node_one = concat_nodes(GccorrectNode_Mid, d_bam, xrange(rlmin, rlmax+1, scale))
         node_one = concat_nodes(GccorrectNode_Mid, d_bam, xrange(rlmin, rlmax+1, 15))
         node_two = concat_nodes(CreateGCModelNode, d_bam, FINETUNERANGE, subnodes=node_one)
         d_bam.opts['BamInfo']['--GCmodel'] = \
@@ -171,6 +170,7 @@ def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
         nodes.append(GeneralExecuteNode(anal, d_bam, bedn+str(idx),
                                         bed_p, dependencies=m_node))
     mergenode = MergeDataFiles(d_bam, anal, bedn, subnodes=nodes)
+#    mergenode = MergeDataFiles(d_bam, anal, bedn, dependencies=nodes)
     if not d_make.bed_plot[bedn] or anal is 'WriteDepth': # if bedplot is false -> no plot
         return mergenode
     infile = (out for out in mergenode.output_files).next()
