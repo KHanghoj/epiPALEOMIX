@@ -9,34 +9,28 @@ update .profile/.bashrc by write following in terminal:
 
 CREATE MAKE FILE TEMPLATE
     # prints to std.out
-
     ~/install/epipipe/epipaleomix.py makefile >  000_makefile.yaml
 
-    # I've added some paths for bam, bed, reference, and mappability files to play around with
-    # feel free to use your own, though
+    # I've added some paths for bam, bed, reference, and mappability files to play around with (see buttom). Feel free to use your own, though
 
 EXECUTE:
-    # ~/install/epipipe/epipaleomix.py dryrun path/to/makefile  # you can add several makefiles. Not properly tested though
-    # ~/install/epipipe/epipaleomix.py run path/to/makefile
-    # ~/install/epipipe/epipaleomix.py -h  # for help
+    # ~/install/epipipe/pypeline/epipaleomix.py dryrun 000_mkfile.yaml --max-threads 8 # you can add several makefiles. Not properly tested though
+    # ~/install/epipipe/pypeline/epipaleomix.py run path/to/makefile
+    # ~/install/epipipe/pypeline/epipaleomix.py -h  # for help
          --max-threads "default 4 integer"
          --destination "default ./OUTPUT"
          --temp-root   "default ./temp"
 
 TOOLS/PACKAGES:
-Python 2.7:
+-- Bedtools
+-- Python 2.7:
         -- Numpy
         -- Pysam
-        -- ??
-
-R:
+-- R:
         -- ggplot2
         -- reshape2
         -- TSA
         -- GridExtra
-        -- zoo # should be removed
-
-Bedtools
 
 
 MISSING/TODO:
@@ -51,8 +45,6 @@ MISSING/TODO:
 ############
 ####PATHS TO SOME OF THE STUFF THAT I'VE BEEN WORKING ON. JUST ADDED THEM IF YOU NEEDED SOMETHING TO START OUT WITH
 ############
-
-
 # The paths are all on the Ginzburg server
 BedFiles:
     /home/krishang/data/nucleosomes/bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed
@@ -66,7 +58,7 @@ BedFiles:
     # Elephant: Does not work properly yet
     /home/krishang/data/nucleosomes/bedfiles/CTCF_elephant_2kb.bed  # because of the scaffolded reference genome this does not work properly
     /home/krishang/data/nucleosomes/bedfiles/CTCF_elephant_2kb_chrom1_27.bed   # because of the scaffolded reference genome this does not work properly
-    # Pig: does not work yet. sparsely tested
+    # Pig: doesn't work yet. sparsely tested
     /home/krishang/data/nucleosomes/bedfiles/CTCF_pig_2kb.bed
 
 ReferencePaths:
@@ -80,7 +72,7 @@ GENOME-WIDE Mappability
     # read length 51:
     /home/krishang/data/nucleosomes/reference/mappability_51/GENOME_51_50.40000-20000.mappability
 
-    # i'll make mappability 51 read length on the horse genome in the
+    # i'll make mappability map (51 read length) of the horse genome in the
     # weekend when the servers are up and running properly
 
 Human/Neanderthal/Denisova BAM:
@@ -112,5 +104,3 @@ OTHER BAM:
     /home/krishang/data/nucleosomes/newmammoth/P964.bam  # Palkopoulou et al., 2015
     /home/krishang/data/nucleosomes/pig_16th/pig_16th.bam # Ramirez et al., 2015
 
-
-        

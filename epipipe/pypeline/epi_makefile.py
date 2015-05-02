@@ -88,7 +88,8 @@ _VALIDATION = {
     "Prefixes": {
         "--FastaPath": IsStr,
         "--FastaPrefix": Or(IsStr, ValueIn(('',)), default=''),
-        "--MappabilityPath": IsStr
+        "--MappabilityPath": Or(IsStr, ValueIn(('',)), default=''),
+#        "--MappabilityPath": IsStr
     },
     "BedFiles": {
         'EnabledFilter': IsBoolean(default=True),

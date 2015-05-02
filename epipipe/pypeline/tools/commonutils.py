@@ -8,7 +8,7 @@ def unpack(chrom, start, end, *rest):
 
 
 def corr_chrom(prefix, chrom):
-    curr_chrom = ''.join(char for char in chrom if char.isdigit() or char in 'XYMT')
+    curr_chrom = ''.join(char for char in chrom if char.isdigit() or char in 'XYMTUn')
     return FMT(pref=prefix, chr_no=curr_chrom)
 
 

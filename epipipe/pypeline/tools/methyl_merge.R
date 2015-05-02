@@ -74,7 +74,7 @@ main = function(a){
  remove_from_thesides = as.integer(0.05*nrow(df))
  df=df[remove_from_thesides:(nrow(df)-remove_from_thesides),]
  df$x=seq((-nrow(df)/2)+1,nrow(df)/2,1)
- df$smooth  extendsmooth(df$y, smooth_val)
+ df$smooth = extendsmooth(df$y, smooth_val)
  df$names = nam
  # xx=-750:-125
  # df[(df$x %in%xx),]
