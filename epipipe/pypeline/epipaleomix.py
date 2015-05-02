@@ -233,7 +233,7 @@ def main(argv):
         _print_usage()
         return 1
     elif args[0] in ("mkfile", "makefile"):
-        return mkfile.main(args[1:])
+        return epi_mkfile.main(args[1:])
     elif not args[1:]:
         _print_usage()
         print_err("\nPlease specify at least one makefile!")

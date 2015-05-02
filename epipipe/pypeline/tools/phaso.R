@@ -46,7 +46,7 @@ nam = unlist(strsplit(IN_path,'/'))
 nam = nam[length(nam)]
 nam = unlist(strsplit(nam,'\\.'))[1]
 
-if (file.info(IN_path)$size>55){
+if (file.info(IN_path)$size>1000){
 	a=read.table(IN_path)
 	df = data.frame(a)
 	colnames(df) = c('x','y')
