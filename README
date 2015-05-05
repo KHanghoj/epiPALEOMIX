@@ -8,7 +8,7 @@ update .profile/.bashrc by write following in terminal:
         export PYTHONPATH=$PYTHONPATH:~/install/epipipe/
 
 CREATE MAKE FILE TEMPLATE
-    # prints to std.out
+    # prints to std.out (standard out)
     ~/install/epipipe/epipaleomix.py makefile >  000_makefile.yaml
 
     # I've added some paths for bam, bed, reference, and mappability files to play around with (see buttom). Feel free to use your own, though
