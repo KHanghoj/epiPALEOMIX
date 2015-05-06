@@ -4,7 +4,7 @@ import sys
 import pysam
 import argparse
 from collections import deque
-from itertools import islice, izip, tee
+from itertools import islice
 from os.path import exists, splitext
 from shutil import move
 from pypeline.tools.commonutils import \
@@ -40,13 +40,13 @@ class Nucleosome_Prediction(GC_correction):
         self._actual_idx = (record.pos - self._last_ini)
         if self._actual_idx > self._read_max_len:
             if self._actual_idx > self._seq_len:
-                nwisedat = self._nwise_zip(self._deq_depth, self._deq_pos)
-                self._call_window(nwisedat)  # call everything
+                if self._deq_depth:
+                    self._call_window(self._deq_depth)
                 self._deq_depth.extend(self._zeros)
                 self.writetofile()
             else:
-                nwisedat = self._nwise_cut()
-                self._call_window(nwisedat)  # call up to actual idx
+                shortwindow = islice(self._deq_depth, 0, self._actual_idx-1)
+                self._call_window(shortwindow, self._actual_idx-1)  # call up to actual idx
                 self._deq_depth.extend([0]*(self._actual_idx -
                                             self._TOTAL_WIN_LENGTH))
             self._actual_idx = self._TOTAL_WIN_LENGTH
@@ -66,28 +66,22 @@ class Nucleosome_Prediction(GC_correction):
             elif cigar in (2, 3, 6):
                 self._actual_idx += count
 
-    def _nwise_cut(self):
-        return self._nwise_zip(islice(self._deq_depth, 0, self._actual_idx-1),
-                               islice(self._deq_pos, 0, self._actual_idx-1))
+    def _depthwindows(self, deque, deq_len):
+        n = self._seq_len if deq_len is None else deq_len
+        lst = list(deque)
+        for idx in xrange(0, n-self._TOTAL_WIN_LENGTH+1):
+            yield idx, lst[idx:(idx+self._TOTAL_WIN_LENGTH)]
 
-    def _nwise(self, deque_lst, n=None):
-        n = self._TOTAL_WIN_LENGTH if n is None else n
-        return izip(*(islice(g, i, None)
-                      for i, g in enumerate(tee(deque_lst, n))))
-
-    def _nwise_zip(self, deq, pos):
-        return izip(self._nwise(deq), self._nwise(pos))
-
+    
     def call_final_window(self):
-        self._call_window(self._nwise_zip(self._deq_depth, self._deq_pos))
+        self._call_window(self._deq_depth)
         
-    def _call_window(self, nwisedat):
+    def _call_window(self, deque, deq_len=None):
         ''' docstring '''
-        for self.win_depth, self.win_position in nwisedat:
+        for idx, self.win_depth in self._depthwindows(deque, deq_len):
             # returns two tuples that are unpacked by
             # self.win_depth and self.win_position
-            if (self.win_depth[self._POSITION_OFFSET+self._CENTERINDEX] <
-                self._mindepth):
+            if (self.win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._mindepth):
                 continue
             dep_posses = self._call_max(self.win_depth[self._POSITION_OFFSET:
                                                        self._POSITION_OFFSET +
@@ -106,8 +100,8 @@ class Nucleosome_Prediction(GC_correction):
                     score = ((float(center_depth) / mean_spacer) /
                              (sizeofwindow+1.0))
 
-                    start_pos = self.win_position[min_idx]
-                    end_pos = self.win_position[max_idx]
+                    start_pos = self._deq_pos[(idx+min_idx)]
+                    end_pos = self._deq_pos[(idx+max_idx)]
                     self._output_dic[start_pos] = [end_pos, center_depth, score]
 
     def _check_width(self, start, end, incre):
@@ -172,7 +166,7 @@ def parse_args(argv):
     parser.add_argument('--MinDepth', help="..", type=int, default=5)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--GCmodel', help='..', type=str, default=None)
-    parser.add_argument('--FastaPrefix', dest='FastaPrefix')
+    parser.add_argument('--FastaPrefix', dest='FastaPrefix', default='')
     parser.add_argument('--BamPrefix', dest='BamPrefix')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--NucleosomeSize', dest='SIZE', help="..", type=int, default=147)
