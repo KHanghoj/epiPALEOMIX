@@ -3,7 +3,9 @@
 Single-, di- and tetranucleotides
 ### note: we need to find a solution of nucleosome mapping with wide peaks.
 ### need to change the code to fit only one dyad
-python ~/install/python_scripts/basecomposition.py ../subsamples/nucleomap/subsample_0_80_Saqqaq ../Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+python ~/install/python_scripts/basecomposition.py
+../subsamples/nucleomap/subsample_0_80_Saqqaq
+../Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
 '''
 from __future__ import print_function
 from random import choice
@@ -46,7 +48,7 @@ def update_dic(base_list, n_nucl, nucleo_dic):
     ''' doc '''
     str_tempbase = ''.join(base_list)
     for i in range(0, len(base_list)-n_nucl+1, n_nucl):
-    # extra minus 1 is because the len() is not zero based
+        # extra minus 1 is because the len() is not zero based
         try:
             nucleo_dic[i][str_tempbase[i:i+n_nucl]] += 1
         except KeyError:
@@ -99,7 +101,7 @@ def read_bed(args):
 
 
 def main(argv):
-    ''' dfs '''
+    ''' dfs s'''
     tempbasewin = []
     args = parse_args(argv)
     samfile = pysam.Samfile(args.bam, "rb")
@@ -108,7 +110,7 @@ def main(argv):
     end_nucl = -1
     last_chrom = -1
     last_dyad = -1
-    windowsize = len(range(0, _HALF_NUC*2+1))
+    windowsize = len(range(0, _HALF_NUC*2 + 1))
 
     dinucl_update = get_dic_fornucl(_DINUCLEO, windowsize)
     tetranucl_update = get_dic_fornucl(_TETRANUCLEO, windowsize)
@@ -118,7 +120,7 @@ def main(argv):
     for chrom, start, end, depth, score in read_bed(args):
             if score < _SCORE:  # arbitrary value
                 continue
-            if abs(start-end) > 0:  # remove wide nuclesome calls
+            if abs(start - end) > 0:  # remove wide nuclesome calls
                 continue
             dyad = start
             if dyad == last_dyad and chrom == last_chrom:
