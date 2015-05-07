@@ -193,6 +193,9 @@ def run(config, makefiles):
         splitbednode = split_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
+            ## check that all bedfile chromosomes are present in
+            ## each bam tested
+            ## if not stop analysis here. Raise error
             gcnode = calc_gcmodel(d_bam)
             m_node = make_metanode(gcnode+splitbednode, d_bam.bam_name)
             for bedinfo in checkbed_list(d_make.bedfiles):
