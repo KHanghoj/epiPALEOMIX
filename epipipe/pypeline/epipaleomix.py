@@ -26,6 +26,8 @@ from pypeline.common.console import \
     print_err, \
     print_info
 from pypeline.epi_mkfile import epi_mkfile
+from pypeline.tools import checkchromprefix
+
 
 FINETUNERANGE = [-10, -5, 5, 10]
 ANALYSES = ['Phasogram', 'WriteDepth', 'NucleoMap', 'MethylMap']
@@ -180,19 +182,27 @@ def make_metanode(depen_nodes, bamname):
     return MetaNode(description=descrip_fmt(bamname),
                     dependencies=depen_nodes)
 
+def checkbedfilechroms(bedfiles, d_make):
+    for bam_name, opts in d_make.makefile['BamInputs'].items():
+        baminfo = opts['BamInfo']
+        bamprefix = baminfo['--BamPrefix']
+        for bedfile, bedpath in checkbedfiles_ext(bedfiles):
+            checkchromprefix.main([baminfo['BamPath'], bedpath, '--BamPrefix', bamprefix])
 
 def run(config, makefiles):
     check_path(config.temp_root)
-    logfile_template = time.strftime("Epiomix_pipe.%Y%m%d_%H%M%S_%%02i.log")
+    logfile_template = time.strftime("Epipaleomix_pipe.%Y%m%d_%H%M%S_%%02i.log")
     pypeline.logger.initialize(config, logfile_template)
     logger = logging.getLogger(__name__)
     pipeline = Pypeline(config)
     topnodes = []
     for make in read_epiomix_makefile(makefiles):
         d_make = make_collect(make)
+        checkbedfilechroms(d_make.bedfiles, d_make)
         splitbednode = split_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
+#            checkbedfilechroms(d_make.bedfiles, d_bam.baminfo)
             ## check that all bedfile chromosomes are present in
             ## each bam tested
             ## if not stop analysis here. Raise error
