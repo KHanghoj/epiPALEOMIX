@@ -182,12 +182,15 @@ def make_metanode(depen_nodes, bamname):
     return MetaNode(description=descrip_fmt(bamname),
                     dependencies=depen_nodes)
 
-def checkbedfilechroms(bedfiles, d_make):
+def check_chrom_prefix(bedfiles, d_make):
+    bampref, fapref, fapath = '--BamPrefix', '--FastaPrefix', '--FastaPath'
     for bam_name, opts in d_make.makefile['BamInputs'].items():
         baminfo = opts['BamInfo']
-        bamprefix = baminfo['--BamPrefix']
         for bedfile, bedpath in checkbedfiles_ext(bedfiles):
-            checkchromprefix.main([baminfo['BamPath'], bedpath, '--BamPrefix', bamprefix])
+            checkchromprefix.main([baminfo['BamPath'], baminfo.get(bampref),
+                                   d_make.prefix.get(fapath), d_make.prefix.get(fapref),
+                                   bedpath])
+
 
 def run(config, makefiles):
     check_path(config.temp_root)
@@ -198,14 +201,10 @@ def run(config, makefiles):
     topnodes = []
     for make in read_epiomix_makefile(makefiles):
         d_make = make_collect(make)
-        checkbedfilechroms(d_make.bedfiles, d_make)
+        check_chrom_prefix(d_make.bedfiles, d_make)
         splitbednode = split_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
-#            checkbedfilechroms(d_make.bedfiles, d_bam.baminfo)
-            ## check that all bedfile chromosomes are present in
-            ## each bam tested
-            ## if not stop analysis here. Raise error
             gcnode = calc_gcmodel(d_bam)
             m_node = make_metanode(gcnode+splitbednode, d_bam.bam_name)
             for bedinfo in checkbed_list(d_make.bedfiles):
