@@ -9,15 +9,15 @@ update .profile/.bashrc by write following in terminal:
 
 CREATE MAKE FILE TEMPLATE
     # prints to std.out (standard out)
-    ~/install/epipipe/epipaleomix.py makefile >  000_makefile.yaml
+    ~/install/epipipe/epipaleomix/epaleomix.py makefile >  000_makefile.yaml
 
     # I've added some paths for bam, bed, reference, and mappability files to play around with (see buttom). Feel free to use your own, though
 
 EXECUTE:
-        # ~/install/epipipe/pypeline/epipaleomix.py mkfile > 003_mkfile.yaml
+        # ~/install/epipipe/epipaleomix/epaleomix.py mkfile > 003_mkfile.yaml
         # Fill in the paths/options in 003_mkfile.yaml
-        # ~/install/epipipe/pypeline/epipaleomix.py dryrun 003_mkfile.yaml
-        #simple version with 4 cores
+        #  ~/install/epipipe/epipaleomix/epaleomix.py dryrun 003_mkfile.yaml
+        # simple version with 4 cores (default)
         # ~/install/epipipe/pypeline/epipaleomix.py run 003_mkfile.yaml
         # defining destination paths and temporary folders:
         # ~/install/epipipe/pypeline/epipaleomix.py run 003_mkfile.yaml --max-threads 8 --destination OUTPUT1 --temp-root temp1
