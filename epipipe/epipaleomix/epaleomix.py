@@ -55,7 +55,7 @@ class make_collect(object):
                 bedf[bedn] = bedopts
         return bedf, bedp
 
-
+    
 class bam_collect(object):
     def __init__(self, config, bam_name, opts, d_make):
         self.bam_name = bam_name
@@ -246,6 +246,7 @@ def main(argv):
         return 1
     # NOTE THAT WE SPLICE OUT ANOTHER INPUT BEFORE PASSING ON TO RUN FUNC
     return run(config, args[1:])
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
