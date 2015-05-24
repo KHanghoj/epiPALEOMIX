@@ -8,7 +8,7 @@ from itertools import islice
 from os.path import exists, splitext
 from shutil import move
 from epipaleomix.tools.commonutils import \
-    corr_chrom, GC_correction, read_bed
+    GC_correction, read_bed
 import gzip
 
 
@@ -162,8 +162,6 @@ def parse_args(argv):
     parser.add_argument('--MinDepth', help="..", type=int, default=5)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--GCmodel', help='..', type=str, default=None)
-    parser.add_argument('--FastaPrefix', dest='FastaPrefix', default='')
-    parser.add_argument('--BamPrefix', dest='BamPrefix', default='')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--NucleosomeSize', dest='SIZE', help="..", type=int, default=147)
     parser.add_argument('--NucleosomeFlanks', dest='FLANKS', help="..", type=int, default=25)
@@ -176,8 +174,7 @@ def run(args):
     nucl_pred_cls = Nucleosome_Prediction(args)
     flanks = (nucl_pred_cls._TOTAL_WIN_LENGTH/2)+1
     for chrom, start, end, bedcoord in read_bed(args):
-        nucl_pred_cls.reset_deques(corr_chrom(args.FastaPrefix, chrom),
-                                   start, end, bedcoord)
+        nucl_pred_cls.reset_deques(chrom, start, end, bedcoord)
         start = 0 if start-flanks < 0 else start-flanks
         for record in samfile.fetch(chrom, start, end+flanks):
             if record.mapq < args.MinMappingQuality:

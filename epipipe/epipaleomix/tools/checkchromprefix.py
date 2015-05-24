@@ -1,5 +1,4 @@
 import pysam, re, sys, os, argparse
-from epipaleomix.tools.commonutils import corr_chrom
 
 def unpack(chrom, *rest):
     return chrom
@@ -9,9 +8,7 @@ def pa(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser(prog='Checking Bedfile chromosomes')
     parser.add_argument('BamPath', type=str)
-    parser.add_argument('BamPrefix', type=str)
     parser.add_argument('FastaPath', type=str)
-    parser.add_argument('FastaPrefix', type=str)
     parser.add_argument('BedPath', type=str)
     return parser.parse_known_args(argv)
 
@@ -27,31 +24,30 @@ def get_fasta_chrom(args):
     return fastachroms
     
 
+def checkasserts(checked, bed_bam_chroms, args):
+    assert all(checked), \
+        ('chromosome: "%s" in "%s" is/are not present in "%s"' %
+         (', '.join(bed_bam_chroms[idx] for idx, c in enumerate(checked) if not c),
+          os.path.basename(args.BedPath), os.path.basename(args.BamPath)))
+
+
 
 def run(args):
     samfile = pysam.Samfile(args.BamPath, 'rb')
     bamchrom = [dic['SN'] for dic in samfile.header['SQ']]
     with open(args.BedPath, 'r') as fin:
         chromlast = ''
-        bed_bam_chroms, bed_fasta_chroms = [], []
+        bed_bam_chroms = []
         for line in fin:
             chrom = unpack(*re.split(r'\s+', line.rstrip()))
             if chrom != chromlast:
-                bed_bam_chroms.append(corr_chrom(args.BamPrefix, chrom))
-                bed_fasta_chroms.append(corr_chrom(args.FastaPrefix, chrom))
+                bed_bam_chroms.append(chrom)
                 chromlast = chrom
         checked = [(c in bamchrom) for c in bed_bam_chroms]
-        assert all(checked), \
-            ('chromosome: "%s" in "%s" is/are not present in "%s"' %
-             (', '.join(bed_bam_chroms[idx] for idx, c in enumerate(checked) if not c),
-              os.path.basename(args.BedPath), os.path.basename(args.BamPath)))
-        
+        checkasserts(checked, bed_bam_chroms, args)
         referencechrom = get_fasta_chrom(args)
-        checked = [(c in referencechrom) for c in bed_fasta_chroms]
-        assert all(checked), \
-            ('chromosome: "%s" in "%s" is/are not present in "%s"' %
-             (', '.join(bed_fasta_chroms[idx] for idx, c in enumerate(checked) if not c),
-              os.path.basename(args.BedPath), os.path.basename(args.FastaPath)))
+        checked = [(c in referencechrom) for c in bed_bam_chroms]
+        checkasserts(checked, bed_bam_chroms, args)
 
 
 def main(argv):

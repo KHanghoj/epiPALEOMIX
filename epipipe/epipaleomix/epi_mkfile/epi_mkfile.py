@@ -11,8 +11,7 @@ _TEMPLATE_EPIPALEOMIX = \
 #DOT NOT CHANGES THE NAMES ON THIS INDENTATION LEVEL
 Prefixes:
     "--FastaPath": path/to/referenceFastafile  # REQUIRED
-    "--FastaPrefix": ''  # if annotaed by digits only ('1')  leave it '' else add the prefix i.e. 'chr'
-    "--MappabilityPath": path/to/Mappabilityfile # leave empty ('') if no mappability file
+    "--MappabilityPath": path/to/Mappabilityfile # leave empty if no mappability file
 BedFiles:  # AT LEAST ONE BEDFILE IS REQUIRED
     EnabledFilter: False  # if True, bed coordinates not overlapping a mappability region with at at least 0.9 in uniqueness (user definable)
     UniquenessFilter: 0.9  # filtering bed regions with low uniqueness
@@ -28,7 +27,6 @@ BamInputs:
         BamInfo:
             "BamPath": path/to/bamfile  # REQUIRED
             "--MinMappingQuality": 30
-            "--BamPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr' 
             "--LibraryConstruction": DS  # DS if double strand, SS if single strand
         GCcorrect:
             "Enabled": True
@@ -65,7 +63,6 @@ BamInputs:
     #         # DOT NOT CHANGES THE VARIABLE NAMES ON THIS INDENTATION LEVEL
     #         "BamPath": path/to/bamfile
     #         "--MinMappingQuality": 30
-    #         "--BamPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr' 
     #         "--LibraryConstruction": DS  # DS if double strand, SS if single strand
     #     GCcorrect:
     #         "Enabled": True

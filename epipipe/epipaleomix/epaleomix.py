@@ -181,9 +181,8 @@ def check_chrom_prefix(bedfiles, d_make):
     for bam_name, opts in d_make.makefile['BamInputs'].items():
         baminfo = opts['BamInfo']
         for bedfile, bedpath in checkbedfiles_ext(bedfiles):
-            checkchromprefix.main([baminfo['BamPath'], baminfo.get('--BamPrefix'),
+            checkchromprefix.main([baminfo['BamPath'],
                                    d_make.prefix.get('--FastaPath'),
-                                   d_make.prefix.get('--FastaPrefix'),
                                    bedpath])
 
 

@@ -1,7 +1,6 @@
 # -*- mode: Yaml; -*-
 Prefixes:
     "--FastaPath": reference/hs.build37.1.fa
-    "--FastaPrefix": ''  # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr'
     "--MappabilityPath": saqqaq/chr22_31_50.40000-20000.mappability
 BedFiles:
     EnabledFilter: False
@@ -9,18 +8,15 @@ BedFiles:
     CTCFbed: 
         Path: bedfiles/CTCF_human_2kb_rmoverlap.bed
         MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
-        NOSubFiles: 5 # splits the bedfile inputs into subfiles to take advantage of all cpu's
     TSSHousekeeping: 
         Path: bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed
         MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
-        NOSubFiles: 5  # splits the bedfile inputs into subfiles to take advantage of all cpu's
 BamInputs:
     BAM1:
         BamInfo:
             "BamPath": saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
             "--MinMappingQuality": 30
-            "--BamPrefix": '' # if annotaed by number only '1'  leave it '' else add the prefix i.e. 'chr'
-            "--LibraryConstruction": DS  # DS if double strand, SS if single strand
+            "--LibraryConstruction": DS  # {SS,DS} DS if double strand, SS if single strand
         GCcorrect:
             "Enabled": True
             "MapMinMaxReadLength": [30, 75]  # the range of readlength
@@ -52,7 +48,6 @@ BamInputs:
     #     BamInfo:
     #         "BamPath": saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
     #         "--MinMappingQuality": 30
-    #         "--BamPrefix": False  # True if annotated "chr1" elif annotated "1" then False
     #         "--LibraryConstruction": DS  # DS if double strand, SS if single strand
     #     GCcorrect:
     #         "Enabled": True

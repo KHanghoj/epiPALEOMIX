@@ -30,7 +30,6 @@ _VALID_BED_NAME = _VALID_TARGET_NAME = \
 _VALIDATION_OPTIONS = {
     "BamPath": IsStr,
     "--MinMappingQuality": IsUnsignedInt(default=30),
-    "--BamPrefix": Or(IsStr, ValueIn(('',)), default=''),
     "--LibraryConstruction": IsStr
 }
 _VALIDATION_GCCORRECT = {
@@ -77,7 +76,7 @@ _VALIDATION_TOOLS = {
 
 _VALIDATION_BED = {
     "Path": IsStr,
-    "MakeMergePlot": IsBoolean(default=True)
+    "MakeMergePlot": IsBoolean(default=False)
 }
 
 _VALIDATION = {
@@ -86,8 +85,7 @@ _VALIDATION = {
     },
     "Prefixes": {
         "--FastaPath": IsStr,
-        "--FastaPrefix": Or(IsStr, ValueIn(('',)), default=''),
-        "--MappabilityPath": Or(IsStr, ValueIn(('',)), default=''),
+        "--MappabilityPath": Or(IsStr, IsNone)
     },
     "BedFiles": {
         'EnabledFilter': IsBoolean(default=True),

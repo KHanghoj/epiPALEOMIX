@@ -8,7 +8,7 @@ from collections import deque
 from os.path import exists, splitext
 from shutil import move
 from epipaleomix.tools.commonutils import read_bed, \
-    GC_correction, corr_chrom
+    GC_correction
 
 
 class Write_Depth(GC_correction):
@@ -114,8 +114,6 @@ def parse_args(argv):
     parser.add_argument('outputfile', help='...', type=str)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
-    parser.add_argument('--FastaPrefix')
-    parser.add_argument('--BamPrefix')
     parser.add_argument('--MinMappingQuality', help="...", type=int,
                         default=25)
     parser.add_argument('--DequeLength', help="...", type=int, default=1000)
@@ -126,8 +124,7 @@ def run(args):
     samfile = pysam.Samfile(args.bam, "rb")
     Corr_Depth = Write_Depth(args)
     for chrom, start, end, bedcoord in read_bed(args):
-        Corr_Depth.reset_deques(corr_chrom(args.FastaPrefix, chrom),
-                                start, end, bedcoord)
+        Corr_Depth.reset_deques(chrom, start, end, bedcoord)
         for record in samfile.fetch(chrom, start, end):
             if record.mapq < args.MinMappingQuality:
                 continue  # do not analyze low quality records

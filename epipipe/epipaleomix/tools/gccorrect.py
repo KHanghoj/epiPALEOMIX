@@ -6,7 +6,6 @@ import argparse
 from collections import defaultdict
 from epipaleomix.tools.commonutils import \
     Cache, \
-    corr_chrom, \
     read_mappa
 _BUFFER = 2
 
@@ -24,7 +23,7 @@ class GCcorrect(object):
         self.reads_forw, self.reads_back = {}, {}
         records = self.samfile.fetch(chrom, start, end)
         # they need to be 0-based for fetching fasta seq:
-        self.chrom = corr_chrom(self.arg.FastaPrefix, chrom)
+        self.chrom = chrom
         self.start, self.end = start-1, end-1
         for record in records:
             if record.is_reverse:
@@ -79,8 +78,6 @@ def parse_args(argv):
     parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
-    parser.add_argument('--FastaPrefix')
-    parser.add_argument('--BamPrefix')
     parser.add_argument('--OffSet', type=str,
                         help='the offsetfile found by the midnode')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)

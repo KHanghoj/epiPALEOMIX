@@ -10,27 +10,19 @@ def unpack_mappa(chrom, start, end, *rest):
     return chrom, start, end, rest
 
 
-def corr_chrom(prefix, chrom):
-    curr_chrom = ''.join(char for char in chrom if char.isdigit() or char in 'XYMTUn')
-    return FMT(pref=prefix, chr_no=curr_chrom)
-
 def read_bed(args):
-    bampref = args.BamPrefix
     if args.bed:
         with open(args.bed, 'r') as bedfile:
             for line in bedfile:
                 chrom, start, end, bedc, rest = unpack(*(re.split(r'\s+', line.rstrip())))
-                yield (corr_chrom(bampref, str(chrom)),
-                       int(start), int(end), str(bedc))
+                yield str(chrom), int(start), int(end), str(bedc)
 
 
 def read_mappa(args):
-    bampref = args.BamPrefix
     with open(args.MappabilityPath, 'r') as mappafile:
         for line in mappafile:
             chrom, start, end, rest = unpack_mappa(*(re.split(r'\s+', line.rstrip())))
-            yield (corr_chrom(bampref, str(chrom)),
-                   int(start), int(end), float(rest[-1]))
+            yield str(chrom), int(start), int(end), float(rest[-1])
 
 
 class Cache(object):

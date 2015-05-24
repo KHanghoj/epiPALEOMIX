@@ -13,8 +13,7 @@ from shutil import move
 from collections import defaultdict, namedtuple
 from epipaleomix.tools.commonutils import \
     read_bed, \
-    Cache, \
-    corr_chrom
+    Cache
 _PLUS_STRAND_BASES = ['CG', 'TG']
 _MINUS_STRAND_BASES = ['CG', 'CA']
 SSorDS = {
@@ -175,8 +174,6 @@ def parse_args(argv):
     parser.add_argument('bed', help="..", type=str)
     parser.add_argument('outputfile', help='..', type=str)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
-    parser.add_argument('--FastaPrefix', dest='FastaPrefix')
-    parser.add_argument('--BamPrefix', dest='BamPrefix')
     parser.add_argument('--ReadBases', help="..", type=int, default=6)
     parser.add_argument('--SkipBases', help="..", type=int, default=0)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
@@ -193,8 +190,7 @@ def run(args):
     samfile = pysam.Samfile(args.bam, "rb")
     Met_Score = Methyl_Level(args)
     for chrom, start, end, bedcoord in read_bed(args):
-        Met_Score.reset_dict(corr_chrom(args.FastaPrefix, chrom),
-                             start, end, bedcoord)
+        Met_Score.reset_dict(chrom, start, end, bedcoord)
         for record in samfile.fetch(chrom, start, end):
             if record.mapq < args.MinMappingQuality:
                 continue  # do not analyze low quality records
