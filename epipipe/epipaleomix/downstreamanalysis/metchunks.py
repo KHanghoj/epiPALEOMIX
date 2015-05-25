@@ -77,10 +77,12 @@ def methylepipal(args):
                 while endval < start:
                     endval += CHUNKRANGE
 
-            if dea > 9:
+            if dea > 10:
                 if (float(dea)/tot) == 1:
                     continue
-
+            # may calc the means before summing to avoid a single CpG position skewing everything.
+            # calculate the mean of means
+            # tempmean += dea/tot
             totdea += dea
             tottot += tot
             checked += 1
