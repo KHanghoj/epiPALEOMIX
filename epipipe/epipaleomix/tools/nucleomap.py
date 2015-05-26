@@ -64,7 +64,7 @@ class Nucleosome_Prediction(GC_correction):
 
     def _depthwindows(self, deque, deq_len):
         n = self._seq_len if deq_len is None else deq_len
-        lst = list(deque)
+        lst = list(deque) # this is not optimal
         for idx in xrange(0, n-self._TOTAL_WIN_LENGTH+1):
             yield idx, lst[idx:(idx+self._TOTAL_WIN_LENGTH)]
 
@@ -92,9 +92,9 @@ class Nucleosome_Prediction(GC_correction):
                 if spacerL or spacerR:
                     center_depth, min_idx, max_idx = dep_posses
                     sizeofwindow = (max_idx-min_idx)
-                    mean_spacer = 1.0 + (0.5 * (spacerL + spacerR))
-                    # dividing by width of nucleosome called
-                    score = ((float(center_depth) / mean_spacer) /
+                    mean_spacer = (0.5 * (spacerL + spacerR))
+                    # subtracting peak by mean of flanks
+                    score = ((float(center_depth) - mean_spacer) /
                              (sizeofwindow+1.0))
                     start_pos = idx+self._last_ini+min_idx
                     end_pos = idx+self._last_ini+max_idx
