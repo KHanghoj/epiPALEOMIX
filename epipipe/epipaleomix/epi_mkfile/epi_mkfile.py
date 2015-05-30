@@ -37,7 +37,6 @@ BamInputs:
         NucleoMap:   # The nucleosome calling tool
             "Enabled": True
             "Apply_GC_Correction": True  # GCcorrect Enabled must be True
-            "--MinDepth": 20  # the minimum depth for a called nucleosome. suggested defualy is X coverage
             "--DequeLen": 2000
             "--NucleosomeSize": 147
             "--NucleosomeFlanks": 25
@@ -72,7 +71,6 @@ BamInputs:
     #     NucleoMap:   # The nucleosome calling tool
     #         "Enabled": True
     #         "Apply_GC_Correction": True
-    #         "--MinDepth": 20  # the minimum depth for a called nucleosome. suggested defualy is X coverage
     #         "--DequeLen": 2000
     #         "--NucleosomeSize": 147
     #         "--NucleosomeFlanks": 25

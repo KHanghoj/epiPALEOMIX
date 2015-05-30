@@ -24,7 +24,6 @@ BamInputs:
         NucleoMap:
             "Enabled": True
             "Apply_GC_Correction": True
-            "--MinDepth": 20
             "--DequeLen": 2000
             "--NucleosomeSize": 147
             "--NucleosomeFlanks": 25
@@ -56,7 +55,6 @@ BamInputs:
     #     NucleoMap:
     #         "Enabled": True
     #         "Apply_GC_Correction": True
-    #         "--MinDepth": 20
     #         "--DequeLen": 2000
     #         "--NucleosomeSize": 147
     #         "--NucleosomeFlanks": 25
