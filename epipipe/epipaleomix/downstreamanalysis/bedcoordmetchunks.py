@@ -16,12 +16,11 @@ def writetofile(totdea,tottot, totmean, meanchecked, bedc):
     chrom, start, end = bedc.split('_')
     sys.stdout.write(FMT(chrom, start, end, totdea, tottot,
                          float(totdea)/tottot, totmean, meanchecked, float(totmean)/meanchecked))
-    # print(chrom, start, end, dea, tot, float(dea)/tot, file=sys.stdout)
 
 
 def methylepipal(args):
     with gzip.open(args.metpath) as f_in:
-        print(f_in.next(), file=sys.stderr) # removes the header
+        f_in.next() # removes the header
         checked = 0
         totdea, tottot, lastbedc = 0, 0, ''
         totmean, meanchecked = 0, 0
