@@ -95,7 +95,7 @@ def run(args):
             # chrom 22 then chrom 1 should be arguments. for testing fixed to 22
             # because chunks can overlap with 50%
             if start-last_end < 0 and last_chrom == chrom:
-                start = start + ((end-start)/2)
+                start += (end-start)/2
             last_chrom, last_end = chrom, end
             GC.getreads(chrom, start, end)
     GC.writetofile()
