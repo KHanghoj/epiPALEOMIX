@@ -4,7 +4,6 @@ import sys
 import pysam
 import argparse
 from collections import deque
-from itertools import islice
 from os.path import exists, splitext
 from shutil import move
 from epipaleomix.tools.commonutils import \
@@ -23,83 +22,100 @@ class Nucleosome_Prediction(GC_correction):
         self._CENTERINDEX = (self._SIZE-1)/2
         GC_correction.__init__(self)
         self._mindepth = int(self.arg.MinDepth)
-        self._seq_len = int(self.arg.DequeLen)
+        self._seq_len = int(self._TOTAL_WIN_LENGTH*4)
         self._zeros = [0]*self._seq_len
-        self._read_max_len = self._seq_len-(self.arg.MaxReadLen+100)
-        self._deq_depth = deque(maxlen=self._seq_len)
-        self._last_ini = -(self._seq_len+1)
-        self._actual_idx, self.f_output = None, None
+        self._deq_depth = deque(self._zeros, maxlen=self._seq_len)
+        self._mainlist = []
+        self._last_ini = None
+        self.f_output = None
         self._GC_model_len = 0
+        self._outputlist = []
         self._output_dic = dict()
         self._fmt = '{0}\t{1}\t{2}\t{3}\t{4}\t{bedcoord}\n'
         self._GCmodel_ini()
         self._makeoutputfile()
 
     def update_depth(self, record):
-        self._actual_idx = (record.pos - self._last_ini)
-        if self._actual_idx > self._read_max_len:
-            if self._actual_idx > self._seq_len:
-                if self._deq_depth:
-                    self._call_window(self._deq_depth)
-                self._deq_depth.extend(self._zeros)
-                self.writetofile()
+        if not self._last_ini:
+            self._last_ini = record.pos+1
+            self._last_pos = record.pos
+        _jump_idx = (record.pos - self._last_pos)
+        if _jump_idx:
+            if _jump_idx > self._seq_len:
+                _jump_idx = ((self._TOTAL_WIN_LENGTH-1)/2)+1
+                self._mainlist.extend(self._deq_depth)
+                self._mainlist.extend(self._zeros[:_jump_idx])
+                self._call_window(self._mainlist)
+                self._mainlist = self._zeros[:_jump_idx] # need to add flanks of zero as starting new point
+                self._last_ini = record.pos+1-_jump_idx
+                self._deq_depth = deque(self._zeros, maxlen=self._seq_len)
             else:
-                # call up to actual idx
-                self._call_window(self._deq_depth, self._actual_idx-1)
-                self._deq_depth.extend([0]*(self._actual_idx -
-                                            self._TOTAL_WIN_LENGTH))
-            self._actual_idx = self._TOTAL_WIN_LENGTH
-            self._last_ini = record.pos-self._TOTAL_WIN_LENGTH
+                while _jump_idx:
+                    self._mainlist.append(self._deq_depth.popleft())
+                    self._deq_depth.append(0)
+                    _jump_idx -= 1
+        self._last_pos = record.pos
+
         if record.is_reverse:
             corr_depth = self._get_gc_corr_dep(record.aend-self._GC_model_len)
         else:
             corr_depth = self._get_gc_corr_dep(record.pos)
+
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
-                for idx in xrange(self._actual_idx, self._actual_idx + count):
+                for idx in xrange(_jump_idx, _jump_idx + count):
                     self._deq_depth[idx] += corr_depth
-                self._actual_idx += count
+                _jump_idx += count
             elif cigar in (2, 3, 6):
-                self._actual_idx += count
+                _jump_idx += count
 
-    def _depthwindows(self, deque, deq_len):
-        n = self._seq_len if deq_len is None else deq_len
-        lst = list(deque) # this is not optimal
+    def _depthwindows(self, lst):
+        n = len(lst)
         for idx in xrange(0, n-self._TOTAL_WIN_LENGTH+1):
             yield idx, lst[idx:(idx+self._TOTAL_WIN_LENGTH)]
-
     
     def call_final_window(self):
-        if self._deq_depth:
-            self._call_window(self._deq_depth)
+        self._mainlist.extend(self._deq_depth)
+        self._call_window(self._mainlist)
         
-    def _call_window(self, deque, deq_len=None):
+    def _call_window(self, deque):
         ''' docstring '''
-        if deq_len:
-            deque = islice(deque, 0, deq_len)
-        for idx, self.win_depth in self._depthwindows(deque, deq_len):
-            if self.win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._mindepth:
+        last, last_score = [], 0
+        for idx, win_depth in self._depthwindows(deque):
+            if win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._mindepth:
                 continue
-            dep_posses = self._call_max(self.win_depth[self._POSITION_OFFSET:
-                                                       self._POSITION_OFFSET +
-                                                       self._SIZE])
+            dep_posses = self._call_max(win_depth[self._POSITION_OFFSET:
+                                                  self._POSITION_OFFSET +
+                                                  self._SIZE])
             if dep_posses:
-                spacerL = (sum(self.win_depth[:self._NEIGHBOR]) /
+                spacerL = (sum(win_depth[:self._NEIGHBOR]) /
                            float(self._NEIGHBOR))
-                spacerR = (sum(self.win_depth[-self._NEIGHBOR:]) /
+                spacerR = (sum(win_depth[-self._NEIGHBOR:]) /
                            float(self._NEIGHBOR))
                 # both cannot be 0
                 if spacerL or spacerR:
                     center_depth, min_idx, max_idx = dep_posses
                     sizeofwindow = (max_idx-min_idx)
                     mean_spacer = (0.5 * (spacerL + spacerR))
-                    # subtracting peak by mean of flanks
-                    score = ((float(center_depth) - mean_spacer) /
+                    # divide peak by mean of flanks then by width of nucleosome
+                    score = ((float(center_depth) / mean_spacer) /
                              (sizeofwindow+1.0))
                     start_pos = idx+self._last_ini+min_idx
                     end_pos = idx+self._last_ini+max_idx
                     if start_pos >= self.start and start_pos <= self.end:
-                        self._output_dic[start_pos] = [end_pos, center_depth, score]
+                        currlist = [start_pos, end_pos, center_depth]
+                        if currlist == last:
+                            score = max(last_score, score)
+                        else:
+                            if last:
+                                self._outputlist.append(last+[last_score])
+                        last = currlist
+                        last_score = score
+        if self._outputlist[-1][:2] != last[:2]: # check if the last call is new
+            self._outputlist.append(last+[last_score])
+        # finally, check if the score of the called nucleosome is greater than the previous
+        elif self._outputlist[-1][-1] < last_score:
+            self._outputlist[-1][-1] = last_score
 
     def _check_width(self, start, end, incre):
         for idx in xrange(start, end, incre):
@@ -123,11 +139,12 @@ class Nucleosome_Prediction(GC_correction):
 
     def writetofile(self):
         ''' dfs '''
-        if self._output_dic:
-            for key, val in iter(sorted(self._output_dic.iteritems())):
+        if self._outputlist:
+            for dat in self._outputlist: 
                 self.f_output.write(self._fmt.format(self.chrom,
-                                    key, *val, bedcoord=self.bedcoord))
-            self._output_dic.clear()
+                                                     *dat,
+                                                     bedcoord=self.bedcoord))
+            self._outputlist = []
 
     def _makeoutputfile(self):
         ''' want to write to file every chrom, to keep scalablility'''
@@ -144,9 +161,10 @@ class Nucleosome_Prediction(GC_correction):
             pass
 
     def reset_deques(self, chrom, start, end, bedcoord):
-        self._deq_depth.clear()
-        self._output_dic.clear()
-        self._last_ini = -(self._seq_len+1)
+        self._deq_depth = deque(self._zeros, maxlen=self._seq_len)
+        self._outputlist = []
+        self._last_ini = None
+        self._mainlist = [] # everytime new bed is called. flanks are made automatically. see run func
         self.start, self.end, self.chrom = start, end, chrom
         self.bedcoord = bedcoord
 

@@ -61,7 +61,7 @@ class GeneralExecuteNode(Node):
 
 class General_Plot_Node(CommandNode):
     def __init__(self, infile, anal_name, dependencies=()):
-        call = ['Rscript', '%(AUX_R)s', '%(IN_TXT)s', '%(OUT_FILEPATH)s']
+        call = ['Rscript', '%(AUX_R)s', str(50), '%(IN_TXT)s', '%(OUT_FILEPATH)s']
         outfile = os.path.splitext(os.path.splitext(infile)[0])[0]+'.pdf'
         r_anal = os.path.join(prefix, RPATHS[anal_name])
         if anal_name in EXTRAS:
