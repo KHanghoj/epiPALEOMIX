@@ -111,11 +111,12 @@ class Nucleosome_Prediction(GC_correction):
                                 self._outputlist.append(last+[last_score])
                         last = currlist
                         last_score = score
-        if self._outputlist[-1][:2] != last[:2]: # check if the last call is new
-            self._outputlist.append(last+[last_score])
+        if self._outputlist and last:
+            if self._outputlist[-1][:2] != last[:2]: # check if the last call is new
+                self._outputlist.append(last+[last_score])
         # finally, check if the score of the called nucleosome is greater than the previous
-        elif self._outputlist[-1][-1] < last_score:
-            self._outputlist[-1][-1] = last_score
+            elif self._outputlist[-1][-1] < last_score:
+                self._outputlist[-1][-1] = last_score
 
     def _check_width(self, start, end, incre):
         for idx in xrange(start, end, incre):
