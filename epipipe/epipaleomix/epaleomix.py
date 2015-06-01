@@ -141,8 +141,8 @@ def main_anal_to_run(opts):
             yield analysis
 
 
-def makegcnodes(d_bam, rang, subnodes=()):
-    return [GccorrectNode(d_bam, rl, subnodes=subnodes) for rl in rang]
+def makegcnodes(d_bam, rang, subn=()):
+    return [GccorrectNode(d_bam, rl, subnodes=subn) for rl in rang]
 
 
 def concat_gcsubnodes(nodecls, bam, ran, subn=()):
@@ -154,7 +154,7 @@ def calc_gcmodel(d_bam):
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', MakefileError)
         return concat_gcsubnodes(CreateGCModelNode, d_bam, FINETUNERANGE,
-                                   subnodes=concat_gcsubnodes(GccorrectNode_Mid,
+                                   subn=concat_gcsubnodes(GccorrectNode_Mid,
                                                               d_bam, xrange(rlmin, rlmax+1, 15)))
     return []
 
