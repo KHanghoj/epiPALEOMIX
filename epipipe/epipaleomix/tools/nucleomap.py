@@ -176,7 +176,6 @@ def parse_args(argv):
     parser.add_argument('bed', help="..", type=str)
     parser.add_argument('outputfile', help='..', type=str)
     parser.add_argument('--MaxReadLen', help="..", type=int, default=150)
-    parser.add_argument('--DequeLen', help="..", type=int, default=2000)
     parser.add_argument('--MinDepth', help="..", type=int, default=5)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--GCmodel', help='..', type=str, default=None)

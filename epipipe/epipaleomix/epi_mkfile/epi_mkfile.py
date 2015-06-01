@@ -37,7 +37,6 @@ BamInputs:
         NucleoMap:   # The nucleosome calling tool
             "Enabled": True
             "Apply_GC_Correction": True  # GCcorrect Enabled must be True
-            "--DequeLen": 2000
             "--NucleosomeSize": 147
             "--NucleosomeFlanks": 25
             "--NucleosomeOffset": 12
@@ -71,7 +70,6 @@ BamInputs:
     #     NucleoMap:   # The nucleosome calling tool
     #         "Enabled": True
     #         "Apply_GC_Correction": True
-    #         "--DequeLen": 2000
     #         "--NucleosomeSize": 147
     #         "--NucleosomeFlanks": 25
     #         "--NucleosomeOffset": 12

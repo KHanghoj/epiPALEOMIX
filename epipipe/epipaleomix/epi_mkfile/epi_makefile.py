@@ -40,7 +40,6 @@ _VALIDATION_GCCORRECT = {
 _VALIDATION_NUCLEO = {
     "Enabled": IsBoolean(default=True),
     "Apply_GC_Correction": IsBoolean(default=True),
-    "--DequeLen": IsUnsignedInt(default=2000),
     "--NucleosomeFlanks": IsUnsignedInt(default=25),
     "--NucleosomeSize": IsUnsignedInt(default=147),
     "--NucleosomeOffset": IsUnsignedInt(default=12)
