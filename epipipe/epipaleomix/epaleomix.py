@@ -153,7 +153,6 @@ def calc_gcmodel(d_bam):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', MakefileError)
-        d_bam.opts['NucleoMap']['--MaxReadLen'] = rlmax
         return concat_gcsubnodes(CreateGCModelNode, d_bam, FINETUNERANGE,
                                    subnodes=concat_gcsubnodes(GccorrectNode_Mid,
                                                               d_bam, xrange(rlmin, rlmax+1, 15)))
