@@ -1,6 +1,7 @@
 args <- commandArgs(trailingOnly = TRUE)
-IN_path = args[1]
-OUT_path = args[2]
+smooth_val <- as.integer(args[1])
+IN_path = args[2]
+OUT_path = args[3]
 
 # require(ggplot2); require(zoo); require(TSA); require(gridExtra)
 require(ggplot2)
@@ -81,7 +82,7 @@ main = function(a){
  df
 }
 
-smooth_val = 50
+#smooth_val = 50
 nam = unlist(strsplit(IN_path,'/'))
 nam = nam[length(nam)]
 nam = unlist(strsplit(nam,'\\.'))[1]

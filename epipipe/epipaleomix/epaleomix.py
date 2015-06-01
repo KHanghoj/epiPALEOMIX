@@ -134,7 +134,7 @@ def checkbed_list(bedfiles):
             all([bedp.endswith('.bed') for bedp in bedpaths])):
             yield bedname, bedpaths
 
-            
+
 def main_anal_to_run(opts):
     for analysis, options in opts.iteritems():
         if analysis in ANALYSES and options['Enabled']:
@@ -145,8 +145,8 @@ def makegcnodes(d_bam, rang, subnodes=()):
     return [GccorrectNode(d_bam, rl, subnodes=subnodes) for rl in rang]
 
 
-def concat_gcsubnodes(nodecls, bam, ran, subnodes=()):
-    return [nodecls(bam, subnodes=makegcnodes(bam, ran, subnodes))]
+def concat_gcsubnodes(nodecls, bam, ran, subn=()):
+    return [nodecls(bam, subnodes=makegcnodes(bam, ran, subn))]
 
 
 def calc_gcmodel(d_bam):
@@ -176,6 +176,7 @@ def make_metanode(depen_nodes, bamname):
     descrip_fmt = "Metanode: '{}': GC correction and bedfile split"
     return MetaNode(description=descrip_fmt.format(bamname),
                     dependencies=depen_nodes)
+
 
 def check_chrom_prefix(bedfiles, d_make):
     for bam_name, opts in d_make.makefile['BamInputs'].items():

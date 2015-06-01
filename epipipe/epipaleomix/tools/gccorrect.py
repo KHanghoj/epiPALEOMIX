@@ -62,8 +62,6 @@ class GCcorrect(object):
         gcfmt = '{}\t{}\t{}\t{}\n'.format
         with open(self.arg.OutputFile, 'w') as f:
             for gc in range(0, self.rl+1):
-                # out(fmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
-                #     str(self.reference_gc[gc])))
                 f.write(gcfmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
                         str(self.reference_gc[gc])))
         self.fasta.closefile()

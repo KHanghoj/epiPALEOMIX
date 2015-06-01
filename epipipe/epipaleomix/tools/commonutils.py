@@ -1,13 +1,17 @@
 import pysam
 import re
-FMT = '{pref}{chr_no}'.format
 
 
 def unpack(chrom, start, end, bedcoord, *rest):
     return chrom, start, end, bedcoord, rest
 
+
 def unpack_mappa(chrom, start, end, *rest):
     return chrom, start, end, rest
+
+
+def _unpack_mappa(chrom, start, end, score):
+    return chrom, int(start), int(end), float(score)
 
 
 def read_bed(args):
@@ -23,6 +27,12 @@ def read_mappa(args):
         for line in mappafile:
             chrom, start, end, rest = unpack_mappa(*(re.split(r'\s+', line.rstrip())))
             yield str(chrom), int(start), int(end), float(rest[-1])
+
+def _read_mappa(args):
+    with open(args.MappabilityPath, 'r') as mappafile:
+        for line in mappafile:
+            chrom, start, end, score = _unpack_mappa(*(re.split(r'\s+', line.rstrip())))
+            yield chrom, start, end, score
 
 
 class Cache(object):

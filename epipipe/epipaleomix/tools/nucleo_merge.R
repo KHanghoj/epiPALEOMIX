@@ -1,6 +1,7 @@
 args <- commandArgs(trailingOnly = TRUE)
-IN_path = args[1]
-OUT_path = args[2]
+smooth_val <- as.integer(args[1])
+IN_path = args[2]
+OUT_path = args[3]
 
 smoothfunc = function(idx, seq, windowsize){
 sum(seq[idx:(idx+windowsize-1)])/(windowsize)
@@ -64,7 +65,7 @@ p1=ggplot(df, aes(x,y))+ geom_line()+
 	coord_cartesian(xlim=c(0,size)) +
 	theme(legend.position="none")
 }
-smooth_val = 50
+#smooth_val = 50
 
 
 nam = unlist(strsplit(IN_path,'/'))
