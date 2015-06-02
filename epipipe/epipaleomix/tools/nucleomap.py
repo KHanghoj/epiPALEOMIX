@@ -4,6 +4,7 @@ import sys
 import pysam
 import argparse
 from collections import deque
+from itertools import islice
 from os.path import exists, splitext
 from shutil import move
 from epipaleomix.tools.commonutils import \
@@ -19,10 +20,11 @@ class Nucleosome_Prediction(GC_correction):
         self._OFFSET, self._NEIGHBOR = self.arg.OFFSET, self.arg.FLANKS
         self._POSITION_OFFSET = self._OFFSET+self._NEIGHBOR
         self._TOTAL_WIN_LENGTH = self._SIZE+(2*self._OFFSET)+(2*self._NEIGHBOR)
+        self._HALFWINDOW =  (self._TOTAL_WIN_LENGTH/2)+1
         self._CENTERINDEX = (self._SIZE-1)/2
         GC_correction.__init__(self)
         self._mindepth = int(self.arg.MinDepth)
-        self._seq_len = int(self._TOTAL_WIN_LENGTH*4)
+        self._seq_len = int(self._TOTAL_WIN_LENGTH*2)
         self._zeros = [0]*self._seq_len
         self._deq_depth = deque(self._zeros, maxlen=self._seq_len)
         self._mainlist = []
@@ -30,7 +32,6 @@ class Nucleosome_Prediction(GC_correction):
         self.f_output = None
         self._GC_model_len = 0
         self._outputlist = []
-        self._output_dic = dict()
         self._fmt = '{0}\t{1}\t{2}\t{3}\t{4}\t{bedcoord}\n'
         self._GCmodel_ini()
         self._makeoutputfile()
@@ -39,16 +40,21 @@ class Nucleosome_Prediction(GC_correction):
         if not self._last_ini:
             self._last_ini = record.pos+1
             self._last_pos = record.pos
-        _jump_idx = (record.pos - self._last_pos)
+        _jump_idx = record.pos - self._last_pos
         if _jump_idx:
-            if _jump_idx > self._seq_len:
-                _jump_idx = ((self._TOTAL_WIN_LENGTH-1)/2)+1
+            if _jump_idx >= self._seq_len:
                 self._mainlist.extend(self._deq_depth)
-                self._mainlist.extend(self._zeros[:_jump_idx])
-                self._call_window(self._mainlist)
-                self._mainlist = self._zeros[:_jump_idx] # need to add flanks of zero as starting new point
-                self._last_ini = record.pos+1-_jump_idx
+                self._call_window()
+                self._mainlist = self._zeros[:self._HALFWINDOW]
+                self._last_ini = record.pos+1-self._HALFWINDOW
                 self._deq_depth = deque(self._zeros, maxlen=self._seq_len)
+                _jump_idx = 0
+                # the islice elif is a simple trick to speed up the process a bit
+                # not sure it is actually the case
+            elif _jump_idx > self._TOTAL_WIN_LENGTH:
+                self._mainlist.extend(islice(self._deq_depth,0,_jump_idx))
+                self._deq_depth.extend(self._zeros[:_jump_idx])
+                _jump_idx = 0
             else:
                 while _jump_idx:
                     self._mainlist.append(self._deq_depth.popleft())
@@ -69,19 +75,19 @@ class Nucleosome_Prediction(GC_correction):
             elif cigar in (2, 3, 6):
                 _jump_idx += count
 
-    def _depthwindows(self, lst):
-        n = len(lst)
+    def _depthwindows(self):
+        n = len(self._mainlist)
         for idx in xrange(0, n-self._TOTAL_WIN_LENGTH+1):
-            yield idx, lst[idx:(idx+self._TOTAL_WIN_LENGTH)]
+            yield idx, self._mainlist[idx:(idx+self._TOTAL_WIN_LENGTH)]
     
     def call_final_window(self):
         self._mainlist.extend(self._deq_depth)
-        self._call_window(self._mainlist)
+        self._call_window()
         
-    def _call_window(self, deque):
+    def _call_window(self):
         ''' docstring '''
         last, last_score = [], 0
-        for idx, win_depth in self._depthwindows(deque):
+        for idx, win_depth in self._depthwindows():
             if win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._mindepth:
                 continue
             dep_posses = self._call_max(win_depth[self._POSITION_OFFSET:
