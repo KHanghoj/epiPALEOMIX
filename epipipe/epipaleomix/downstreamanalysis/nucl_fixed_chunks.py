@@ -11,7 +11,7 @@ def p_a(args):
     parser.add_argument('nuclpath', type=str)
     parser.add_argument('--chunksize', default=2000, type=int)
     parser.add_argument('--mindyaddist', default=140, type=int)
-    parser.add_argument('--mincoverage', default=2, type=int)
+    parser.add_argument('--mincoverage', default=1, type=int)
     parser.add_argument('--scorecutoff', default=1, type=float)
     return parser.parse_args(args)
 
@@ -67,12 +67,16 @@ def nuclchunks(args):
                         writetofile(Dat)
                     Dat.reset(chrom, start, score)
                     Dat.chunkend = CHUNKRANGE
+                    while Dat.chunkend < start:
+                        Dat.chunkend += CHUNKRANGE
+                    continue
                 if Dat.chunkend < start:
                     if len(Dat.last_start) >= COVERAGE:
                         writetofile(Dat)
                     Dat.reset(chrom, start, score)
                     while Dat.chunkend < start:
                         Dat.chunkend += CHUNKRANGE
+                    continue
                 
                 if start-Dat.last_start[-1] >= MINDYADDIST:
                     Dat.scoreupdate(start, score)
