@@ -6,17 +6,17 @@ OUT_path = args[4]
 
 require(ggplot2)
 source('~/research/projects/epiomix/epipipe/epipaleomix/downstreamanalysis/extendsmooth.R')
-merge.data = function(uniq, df){
- keep <- df$rela_pos==uniq
- deamin = sum(df[keep,3])
- tot = sum(df[keep,4])
- deamin/tot
- }
+merge.data <- function(uniq, df){
+    keep <- df$rela_pos==uniq
+    deamin = sum(df[keep,3])
+    tot = sum(df[keep,4])
+    deamin/tot
+}
 
-merge.data1 = function(uniq){
- keep <- a$rela_pos==uniq
- mean(a[keep,3]/a[keep,4])
- }
+merge.data1 <- function(uniq){
+    keep <- a$rela_pos==uniq
+    mean(a[keep,3]/a[keep,4])
+}
 
 read.data.frames <-  function(f_in, windowsize){
     df <- read.table(f_in)
@@ -27,7 +27,7 @@ read.data.frames <-  function(f_in, windowsize){
     df$x <- as.integer(max(df$x)/2) - df$x
     df$smooth <- extendsmooth(df$y, windowsize)
     df$plotname <- makename(f_in)
-    as.data.frame((df))
+    as.data.frame(df)
 }
 
 plotting <- function(df){
@@ -43,7 +43,16 @@ plotting <- function(df){
 files <- list.files(IN_path, pattern='MethylMap',recursive=T,full.names=T)
 files <- files[grepl(BEDTYPE, files)]
 
-dfs <- do.call(rbind, lapply(files, read.data.frames, windowsize=smooth_val))
+dfs <- do.call(rbind, parallel::mclapply(files, read.data.frames, windowsize=smooth_val, mc.cores=3))
 pdf(OUT_path)
 print(plotting(dfs))
+dev.off()
+
+fourierlist <- fourier(dfs) # from the CTCF calc
+pdf(paste0(unlist(strsplit(OUT_path ,'\\.'))[1], '_fourierLEFTpart.pdf'))
+print(plotting.fourier(fourierlist$left, 'left'))
+dev.off()
+
+pdf(paste0(unlist(strsplit(OUT_path ,'\\.'))[1], '_fourierRIGHTpart.pdf'))
+print(plotting.fourier(fourierlist$right, 'right'))
 dev.off()
