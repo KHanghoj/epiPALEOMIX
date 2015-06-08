@@ -35,7 +35,8 @@ CHANGENAMES <- list('EtoI' = 'Exon to Intron',
                     'PROMLOW'= 'Low',
                     'CpGISLmidthird' = 'Intermediate',
                     'CpGISLtopthird' = 'Low',
-                    'CpGISLlowestthird' = 'High')
+                    'CpGISLlowestthird' = 'High',
+                    'ISL' = 'CpG Islands with Shores (2kb) and Shelves (2kb)')
 
 
 choosename <- function(n){
@@ -49,8 +50,8 @@ require(TSA)
 calc.periodo <- function(n, bigdf, modelt) {
                                         # mod = lm(y~poly(x,modelt),data=df,na.action=na.omit)
     df <- bigdf[[n]]
-    mod <- lm(y~poly(x,modelt),data=df,na.action=na.omit)
-    #mod <- lm(smooth~poly(x,modelt),data=df,na.action=na.omit)
+    #mod <- lm(y~poly(x,modelt),data=df,na.action=na.omit)
+    mod <- lm(smooth~poly(x,modelt),data=df,na.action=na.omit)
     df$pred <- predict(mod)
     mod_pred <- df$smooth - df$pred
     per <- periodogram(mod_pred,plot=F)
@@ -62,12 +63,11 @@ calc.periodo <- function(n, bigdf, modelt) {
 plotting.fourier <- function(df, side){
     sidesinfo <- list('left' = 'from -950 to -50 relative to ',
                       'right' = 'from 50 to 950 relative to')
-    p <- ggplot(df,aes(x,y))+
-        geom_line()+ facet_wrap(~plotname,ncol=3,scales='free_y') +
-            theme(legend.position="none") +
-                labs(title=sprintf('Fourier Transformation: %s %s',sidesinfo[[side]],choosename(BEDTYPE)),
-                     y='Signal Power)',
-                     x='WaveLength (bp)')
+    p <- ggplot(df,aes(x,y)) + geom_line()+ facet_wrap(~plotname,ncol=3,scales='free_y') +
+        theme(legend.position="none") +
+            labs(title=sprintf('Fourier Transformation: %s %s',sidesinfo[[side]],choosename(BEDTYPE)),
+                 y='Signal Power)',
+                 x='WaveLength (bp)')
     p
 }
 

@@ -3,7 +3,7 @@ smooth_val <- as.integer(args[1])
 IN_path = args[2]
 BEDTYPE = args[3]
 OUT_path = args[4]
-
+FOURIERBOOL = args[5]
 #  Rscript nucleo_merge.R 50 ~/Desktop/results/allresults/RISESAMPLEOUTPUT/ CTCF ~/Desktop/hmm.pdf
 source('~/research/projects/epiomix/epipipe/epipaleomix/downstreamanalysis/extendsmooth.R')
 require(ggplot2) #; require(TSA); require(gridExtra)
@@ -16,7 +16,7 @@ read.data.frames <-  function(file, windowsize){
     df <- data.frame(table(df$rela_pos))
     colnames(df) <- c('x','count')
     df$x <- as.numeric(as.character(df$x))
-    df$x <- as.integer(max(df$x)/2) - df$x
+    df$x <- as.integer(df$x-as.integer(max(df$x)/2))
     df$smooth <- extendsmooth(df$count, windowsize)
     df$plotname <- makename(file)
     as.data.frame(df)
@@ -39,3 +39,15 @@ dfs <-  do.call(rbind, parallel::mclapply(files, read.data.frames, windowsize=sm
 pdf(OUT_path)
 plotting(dfs)
 dev.off()
+
+print(FOURIERBOOL)
+if (!is.na(FOURIERBOOL)){
+fourierlist <- fourier(dfs) # from the CTCF calc
+pdf(paste0(unlist(strsplit(OUT_path ,'\\.'))[1], '_fourierLEFTpart.pdf'))
+print(plotting.fourier(fourierlist$left, 'left'))
+dev.off()
+
+pdf(paste0(unlist(strsplit(OUT_path ,'\\.'))[1], '_fourierRIGHTpart.pdf'))
+print(plotting.fourier(fourierlist$right, 'right'))
+dev.off()
+}
