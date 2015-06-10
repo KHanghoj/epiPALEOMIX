@@ -9,42 +9,44 @@ def unpackepipal(chrom, start, dea, tot, bedc):
 def p_a(args):
     parser = argparse.ArgumentParser(prog='chunk methylation data')
     parser.add_argument('metpath')
+    parser.add_argument('out')
     return parser.parse_args(args)
 
 
-def writetofile(totdea,tottot, totmean, meanchecked, bedc):
+def writetofile(f_out, totdea,tottot, totmean, meanchecked, bedc):
     chrom, start, end = bedc.split('_')
-    sys.stdout.write(FMT(chrom, start, end, totdea, tottot,
+    f_out.write(FMT(chrom, start, end, totdea, tottot,
                          float(totdea)/tottot, totmean, meanchecked, float(totmean)/meanchecked))
 
 
 def methylepipal(args):
-    with gzip.open(args.metpath) as f_in:
+    with gzip.open(args.metpath, 'rb') as f_in:
         f_in.next() # removes the header
         checked = 0
         totdea, tottot, lastbedc = 0, 0, ''
         totmean, meanchecked = 0, 0
-        h = '#chrom\tpos\tend\tdea\ttotalcoverage\tdearate\tsumofmeans\tsiteschecked\tmeanofmeans'
-        sys.stdout.write(FMT(*h.split('\t')))
-        for line in f_in:
-            if checked % 100000 == 0:
-                print('checked {} methylated sites'.format(checked), file=sys.stderr)
-            chrom, start, dea, tot, bedc = unpackepipal(*re.split(r'\s+', line.rstrip()))
-            if bedc != lastbedc:
-                if tottot:
-                    writetofile(totdea, tottot, totmean, meanchecked, lastbedc)
-                totdea, tottot, lastbedc  = 0, 0, bedc
-                totmean, meanchecked = 0, 0
-            if dea > 10:
-                if (float(dea)/tot) == 1:
-                    continue
-            totdea += dea
-            tottot += tot
-            totmean += float(dea)/tot
-            meanchecked += 1
-            checked += 1
-        if tottot:
-            writetofile(totdea, tottot, totmean, meanchecked, lastbedc)
+        h = '#chrom\tpos\tend\tdea\ttotalcoverage\tdearate\tsumofmeans\tCpGsites\tmeanofmeans'
+        with gzip.open(args.out, 'wb') as f_out:
+            f_out.write(FMT(*h.split('\t')))
+            for line in f_in:
+                if checked % 100000 == 0:
+                    print('checked {} methylated sites'.format(checked), file=sys.stderr)
+                chrom, start, dea, tot, bedc = unpackepipal(*re.split(r'\s+', line.rstrip()))
+                if bedc != lastbedc:
+                    if tottot:
+                        writetofile(f_out, totdea, tottot, totmean, meanchecked, lastbedc)
+                    totdea, tottot, lastbedc  = 0, 0, bedc
+                    totmean, meanchecked = 0, 0
+                if dea > 10:  # remove potential SNP's C>T. Does not represent methylation
+                    if (float(dea)/tot) == 1:
+                        continue
+                totdea += dea
+                tottot += tot
+                totmean += float(dea)/tot
+                meanchecked += 1
+                checked += 1
+            if tottot:
+                writetofile(f_out, totdea, tottot, totmean, meanchecked, lastbedc)
 
 
 def main(argv):

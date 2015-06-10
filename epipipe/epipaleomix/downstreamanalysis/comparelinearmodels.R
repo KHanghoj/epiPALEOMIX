@@ -42,10 +42,9 @@ makemodel <- function(sample, cutoffcov, cutoffcpg){
 }
 
 concatmodels <- function(f){
-    lengthtocenter <- as.numeric(unlist(strsplit(unlist(
-        strsplit(f,'_'))[3],'k'))[2])/2
+#    lengthtocenter <- as.numeric(unlist(strsplit(unlist(
+#        strsplit(f,'_'))[3],'k'))[2])/2
     print(f)
-    
     sample <- read.table(f)
     sample$nampos <- sprintf('%s_%s', sample[,1], sample[,2]+(lengthtocenter))
     output <- data.frame(makemodel(sample, 100, 10),
@@ -79,6 +78,65 @@ files <- list.files('temp/', pattern='bedcoord.txt.gz',full.names=T)
 print(files)
 d <- cbind('tissuetype'=metdatanamconverter[,2], do.call(cbind, lapply(files, concatmodels)))
 write.table(d, file='lmdata.txt',row.names=F,col.names=T,quote=F,sep='\t')
+
+
+# cross testing
+mergedataframes <- function(df1,df2){
+    mdf <- merge(df1,df2, by='V10', suffixes = c(".df1",".df2"))
+    print(mdf)
+    merge(mdf, gccont, by.x='V10', by.y='region')
+}
+readdf <-  function(f){
+    df <- read.table(f)
+    nam <- unlist(strsplit(f, '/'))
+    nam <- nam[length(nam)]
+    df$name <- unlist(strsplit(nam, '_'))[1]
+    df$V10 <- with(df, sprintf('%s_%s_%s', V1,V2,V3))
+    df
+}
+concatdfs <- function(files){
+    mergedataframes(readdf(files[1]),
+                   readdf(files[2]))
+}
+f.complex <- function(df){
+    print(nrow(df))
+    delta = df$V5.df2-df$V5.df1
+    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent*df$CpGcount*delta,
+               na.action='na.exclude')
+}
+f.complex.1 <- function(df){
+    print(nrow(df))
+    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent*df$CpGcount*df$V5.df2,
+               na.action='na.exclude')
+}
+
+f.simpler <- function(df){
+    print(nrow(df))
+    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent,
+               na.action='na.exclude')
+}
+f.simplest <- function(df){
+    print(nrow(df))
+    lm(df$V6.df1 ~ df$V6.df2,
+               na.action='na.exclude')
+}
+
+gccont <- read.table('methyl450k_1500_wochr.gccontentnew')
+files <- list.files(, pattern='bedcoord.txt.gz',full.names=T)
+#files <- files[grepl('Denisova|AltaiNeanderthal',files)]
+print(files)
+
+library(gtools)
+combinations(length(8),2, set=TRUE, repeats.allowed=FALSE)
+
+mergedf <- concatdfs(files[c(3,6)])
+summary(f.complex(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
+summary(f.complex.1(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
+summary(f.simpler(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
+summary(f.simplest(mergedf[mergedf$V8.df2>5&mergedf$V5.df2>10,]))$r.squared
+
+mod = f.complex.1(mergedf[mergedf$V8.df2>=50&mergedf$V5.df2>100,])
+
 
 
 
