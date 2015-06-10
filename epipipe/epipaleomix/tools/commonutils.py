@@ -54,6 +54,7 @@ class Cache(object):
                 start < self._last_start:
 
             self._end = start + self._seq_len
+            # fetch is 0-based. if 20000000 to 20000001. you get the 20000001th base
             self._fasta_str = self._fasta.fetch(chrom,
                                                 start=start, end=self._end)
             self._last_start = start
