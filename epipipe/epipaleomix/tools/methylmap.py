@@ -40,6 +40,7 @@ class Methyl_Level(object):
         self._init_dics()
         self._updatefunc = self._choosefunc()
 
+
     def _init_dics(self):
         lib_info = SSorDS[self.arg.LibraryConstruction]
         forwdic = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0}
@@ -47,6 +48,10 @@ class Methyl_Level(object):
         self.forw_three =  merge_dics(forwdic, {'skip':self._skip_three})
         self.rev_five = merge_dics(lib_info, {'skip': self._skip_five})
         self.rev_three = merge_dics(lib_info, {'skip': self._skip_three})
+        if self.arg.LibraryConstruction == 'SS':
+            self._call_ms = self._call_ms_SS
+        else:
+            self._call_ms = self._call_ms_DS
         # in a sam/bam file everything is plus strand oriented.even sequences, cigar, EVERYTHING
         # cig_idx -1 returns last cigar of the sequence from a positive strand
         # perspective. so [-1] can be the 5' end of a reverse read.
@@ -99,13 +104,28 @@ class Methyl_Level(object):
         self._updatefunc()
         self.last_end = self.record.aend
 
-    def _call_ms(self):
+    # def _call_ms(self):
+    #     for pos, basescore in sorted(self.dic_pos.iteritems()):
+    #         if pos >= self.start and pos <= self.end:  # make sure overlapping genomic sites do not get counted twice
+    #             top = basescore.get('T', 0)+basescore.get('A', 0)
+    #             low = top+basescore.get('C', 0)+basescore.get('G', 0)
+    #             self.rowsapp(self.na_tup(pos, top, low))
+
+    def _call_ms_DS(self):
         for pos, basescore in sorted(self.dic_pos.iteritems()):
             if pos >= self.start and pos <= self.end:  # make sure overlapping genomic sites do not get counted twice
                 top = basescore.get('T', 0)+basescore.get('A', 0)
                 low = top+basescore.get('C', 0)+basescore.get('G', 0)
                 self.rowsapp(self.na_tup(pos, top, low))
 
+    def _call_ms_SS(self):
+        for pos, basescore in sorted(self.dic_pos.iteritems()):
+            if pos >= self.start and pos <= self.end:  # make sure overlapping genomic sites do not get counted twice
+                top = basescore.get('T', 0)
+                low = top+basescore.get('C', 0)
+                self.rowsapp(self.na_tup(pos, top, low))
+
+                
     def call_final_ms(self):
         self._call_ms()
         self._writetofile()
