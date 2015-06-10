@@ -83,7 +83,7 @@ write.table(d, file='lmdata.txt',row.names=F,col.names=T,quote=F,sep='\t')
 # cross testing
 mergedataframes <- function(df1,df2){
     mdf <- merge(df1,df2, by='V10', suffixes = c(".df1",".df2"))
-    print(mdf)
+    print(nrow(mdf))
     merge(mdf, gccont, by.x='V10', by.y='region')
 }
 readdf <-  function(f){
@@ -122,15 +122,17 @@ f.simplest <- function(df){
 }
 
 gccont <- read.table('methyl450k_1500_wochr.gccontentnew')
-files <- list.files(, pattern='bedcoord.txt.gz',full.names=T)
+gccont <- read.table('PROM_HOUSEKEEPING_wochr.gccontentnew',h=T)
+files <- list.files(pattern='bedcoord.txt.gz',full.names=T)
+files <- list.files(pattern='bedcoord.gz',full.names=T)
 #files <- files[grepl('Denisova|AltaiNeanderthal',files)]
 print(files)
 
 library(gtools)
 combinations(length(8),2, set=TRUE, repeats.allowed=FALSE)
 
-mergedf <- concatdfs(files[c(3,6)])
-summary(f.complex(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
+mergedf <- concatdfs(files[c(3, 6)])
+summary(f.complex(mergedf[mergedf$V8.df2>100&mergedf$V5.df2>400,]))$r.squared
 summary(f.complex.1(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
 summary(f.simpler(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
 summary(f.simplest(mergedf[mergedf$V8.df2>5&mergedf$V5.df2>10,]))$r.squared
