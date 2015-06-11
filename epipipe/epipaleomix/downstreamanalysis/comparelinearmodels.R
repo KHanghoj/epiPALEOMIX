@@ -86,6 +86,76 @@ mergedataframes <- function(df1,df2){
     print(nrow(mdf))
     merge(mdf, gccont, by.x='V10', by.y='region')
 }
+## readdf <-  function(f){
+##     df <- read.table(f)
+##     nam <- unlist(strsplit(f, '/'))
+##     nam <- nam[length(nam)]
+##     df$name <- unlist(strsplit(nam, '_'))[1]
+##     df$V10 <- with(df, sprintf('%s_%s_%s', V1,V2,V3))
+##     df
+## }
+concatdfs <- function(d1, d2){
+    mergedataframes(d1,
+                   d2)
+}
+f.complex <- function(df){
+#    print(nrow(df))
+    delta = df$V5.df2-df$V5.df1
+    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent*df$CpGcount*delta,
+               na.action='na.exclude')
+}
+f.complex.1 <- function(df){
+#    print(nrow(df))
+    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent*df$CpGcount,
+               na.action='na.exclude')
+}
+
+f.simpler <- function(df){
+#    print(nrow(df))
+    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent,
+               na.action='na.exclude')
+}
+f.simplest <- function(df){
+#    print(nrow(df))
+    lm(df$V6.df1 ~ df$V6.df2,
+               na.action='na.exclude')
+}
+
+
+runlms <- function(idx, mergedf){
+    cutoffcov = ARGUMENTLIST[[idx]][1]
+    cutoffcpg = ARGUMENTLIST[[idx]][2]
+    mergedf <-  mergedf[mergedf$V5.df1>=cutoffcov & mergedf$V8.df1>=cutoffcpg,]
+    n <- c('simplest', 'simpler', 'semicomplex', 'complex')
+    if(nrow(mergedf)>10){
+        val <- c(summary(f.simplest(mergedf))$r.squared,
+                 summary(f.simpler(mergedf))$r.squared,
+                 summary(f.complex.1(mergedf))$r.squared,
+                 summary(f.complex(mergedf))$r.squared
+                 )        
+        data.frame('linearmodel'=n,
+                   'rsquared'=val,
+                   'compared'=paste(mergedf$name.df1[1],mergedf$name.df2[1],sep='_'),
+                   'cov_cpg_cutoff'=paste(cutoffcov, cutoffcpg,sep='_'),
+                   'datapoints'=nrow(mergedf)
+                   )
+        ## data.frame('simplest'=summary(f.simplest(mergedf))$r.squared,
+        ##            'simpler'=summary(f.simpler(mergedf))$r.squared,
+        ##            'semicomplex'=summary(f.complex.1(mergedf))$r.squared,
+        ##            'complex'=summary(f.complex(mergedf))$r.squared,
+        ##            'datapoints'=nrow(mergedf),
+        ##            'compared'=paste(mergedf$name.df1[1],mergedf$name.df2[1],sep='_'),
+        ##            'cov_cpg_cutoff'=paste(cutoffcov, cutoffcpg,sep='_')
+        ##            )
+    }
+}
+
+bigfunc <-  function(idx){
+    mergedf <- concatdfs(DFS[[COMBINAT[idx,1]]],
+                          DFS[[COMBINAT[idx,2]]])
+    do.call(rbind, lapply(names(ARGUMENTLIST), runlms, mergedf=mergedf))
+}
+
 readdf <-  function(f){
     df <- read.table(f)
     nam <- unlist(strsplit(f, '/'))
@@ -94,50 +164,54 @@ readdf <-  function(f){
     df$V10 <- with(df, sprintf('%s_%s_%s', V1,V2,V3))
     df
 }
-concatdfs <- function(files){
-    mergedataframes(readdf(files[1]),
-                   readdf(files[2]))
-}
-f.complex <- function(df){
-    print(nrow(df))
-    delta = df$V5.df2-df$V5.df1
-    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent*df$CpGcount*delta,
-               na.action='na.exclude')
-}
-f.complex.1 <- function(df){
-    print(nrow(df))
-    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent*df$CpGcount*df$V5.df2,
-               na.action='na.exclude')
-}
 
-f.simpler <- function(df){
-    print(nrow(df))
-    lm(df$V6.df1 ~ df$V6.df2*df$GCcontent,
-               na.action='na.exclude')
-}
-f.simplest <- function(df){
-    print(nrow(df))
-    lm(df$V6.df1 ~ df$V6.df2,
-               na.action='na.exclude')
-}
-
-gccont <- read.table('methyl450k_1500_wochr.gccontentnew')
-gccont <- read.table('PROM_HOUSEKEEPING_wochr.gccontentnew',h=T)
+gccont <- read.table('methyl450k_2000_wochr.gccontentnew', h=T)
+#gccont <- read.table('PROM_HOUSEKEEPING_wochr.gccontentnew',h=T)
 files <- list.files(pattern='bedcoord.txt.gz',full.names=T)
-files <- list.files(pattern='bedcoord.gz',full.names=T)
+#files <- list.files(pattern='bedcoord.gz',full.names=T)
 #files <- files[grepl('Denisova|AltaiNeanderthal',files)]
 print(files)
 
 library(gtools)
-combinations(length(8),2, set=TRUE, repeats.allowed=FALSE)
+COMBINAT <- combinations(length(files),2, set=TRUE, repeats.allowed=FALSE)
+COMBINAT <- expand.grid(1:length(files),1:length(files))
+ARGUMENTLIST <-  list('none'=c(0,0),
+                      '1'=c(10,10),
+                      '2'=c(20,20),
+                      '3'=c(30,20),
+                      '4'=c(50,20),
+                      '450'=c(50,50),
+                      '5'=c(100,20),
+                      '6'=c(150,30))
 
-mergedf <- concatdfs(files[c(3, 6)])
-summary(f.complex(mergedf[mergedf$V8.df2>100&mergedf$V5.df2>400,]))$r.squared
-summary(f.complex.1(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
-summary(f.simpler(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
-summary(f.simplest(mergedf[mergedf$V8.df2>5&mergedf$V5.df2>10,]))$r.squared
+DFS <- parallel::mclapply(files,readdf, mc.cores=10)
+names(DFS) = 1:length(files)
+mega <- do.call(rbind, parallel::mclapply(1:nrow(COMBINAT),bigfunc, mc.cores=20))
 
-mod = f.complex.1(mergedf[mergedf$V8.df2>=50&mergedf$V5.df2>100,])
+write.table(mega, file='crosscompare.txt',row.names=F,col.names=T,quote=F,sep='\t')
+
+
+require(ggplot2)
+a=read.table('crosscomparedata.txt',h=T)
+b = a[a$datapoints>10000&grepl('complex|semicomplex',a$linearmodel),]
+b = a[a$cov_cpg_cutoff=='10_10',]
+b = a[grepl('10_10|20_20', a$cov_cpg_cutoff)&grepl('complex|semicomplex',a$linearmodel),]
+ggplot(b,aes(x=compared, y=rsquared, shape=linearmodel,col=cov_cpg_cutoff, size=datapoints)) +
+    geom_point() +
+    theme(axis.text.x = element_text(angle = -90, hjust = 0,size=8))
+a=read.table('lmdata.txt', h=T, row.names=1)
+
+## mega <- do.call(rbind, parallel::mclapply(20, bigfunc, mc.cores=2))
+
+
+
+## mergedf <- concatdfs(files[c(3, 6)])
+## summary(f.complex(mergedf[mergedf$V8.df2>100&mergedf$V5.df2>400,]))$r.squared
+## summary(f.complex.1(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
+## summary(f.simpler(mergedf[mergedf$V8.df2>25&mergedf$V5.df2>10,]))$r.squared
+## summary(f.simplest(mergedf[mergedf$V8.df2>5&mergedf$V5.df2>10,]))$r.squared
+
+## mod = f.complex.1(mergedf[mergedf$V8.df2>=50&mergedf$V5.df2>100,])
 
 
 
