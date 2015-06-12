@@ -14,70 +14,70 @@
 
 ## summary(lm(V9.alt~V9.den*delta  , data=df))
 
-f.complex <- function(x, bigdf, df){
-    summary(lm(bigdf[,x] ~ df$V6*df$V5, na.action='na.exclude'))$r.squared
-}
-f.simpler <- function(x, bigdf, df){
-    summary(lm(bigdf[,x] ~ df$V6+df$V5, na.action='na.exclude'))$r.squared
-}
-f.simplest <- function(x, bigdf, df){
-    summary(lm(bigdf[,x] ~ df$V6, na.action='na.exclude'))$r.squared
-}
+## f.complex <- function(x, bigdf, df){
+##     summary(lm(bigdf[,x] ~ df$V6*df$V5, na.action='na.exclude'))$r.squared
+## }
+## f.simpler <- function(x, bigdf, df){
+##     summary(lm(bigdf[,x] ~ df$V6+df$V5, na.action='na.exclude'))$r.squared
+## }
+## f.simplest <- function(x, bigdf, df){
+##     summary(lm(bigdf[,x] ~ df$V6, na.action='na.exclude'))$r.squared
+## }
 
-makemodel <- function(sample, cutoffcov, cutoffcpg){
+## makemodel <- function(sample, cutoffcov, cutoffcpg){
 
-    aux <- which(sample[,'V5'] >= cutoffcov)
-    aux <- aux[which(sample[aux,'V8'] >= cutoffcpg)]
-    sampleselect <- sample[aux,]
+##     aux <- which(sample[,'V5'] >= cutoffcov)
+##     aux <- aux[which(sample[aux,'V8'] >= cutoffcpg)]
+##     sampleselect <- sample[aux,]
 
-    print(table(keep <- metdata$nampos %in% sampleselect$nampos))
-    bigdf <- metdata[keep,2:57]
-    print(sprintf('%s_%s',nrow(bigdf), nrow(sampleselect)))
-    cbind(do.call(rbind, parallel::mclapply(1:ncol(bigdf),f.simplest,
-                                            bigdf=bigdf, df=sampleselect, mc.cores=25)),
-          do.call(rbind, parallel::mclapply(1:ncol(bigdf),f.simpler,
-                                            bigdf=bigdf, df=sampleselect, mc.cores=25)),
-          do.call(rbind, parallel::mclapply(1:ncol(bigdf),f.complex,
-                                            bigdf=bigdf, df=sampleselect, mc.cores=25)))
-}
+##     print(table(keep <- metdata$nampos %in% sampleselect$nampos))
+##     bigdf <- metdata[keep,2:57]
+##     print(sprintf('%s_%s',nrow(bigdf), nrow(sampleselect)))
+##     cbind(do.call(rbind, parallel::mclapply(1:ncol(bigdf),f.simplest,
+##                                             bigdf=bigdf, df=sampleselect, mc.cores=25)),
+##           do.call(rbind, parallel::mclapply(1:ncol(bigdf),f.simpler,
+##                                             bigdf=bigdf, df=sampleselect, mc.cores=25)),
+##           do.call(rbind, parallel::mclapply(1:ncol(bigdf),f.complex,
+##                                             bigdf=bigdf, df=sampleselect, mc.cores=25)))
+## }
 
-concatmodels <- function(f){
-#    lengthtocenter <- as.numeric(unlist(strsplit(unlist(
-#        strsplit(f,'_'))[3],'k'))[2])/2
-    print(f)
-    sample <- read.table(f)
-    sample$nampos <- sprintf('%s_%s', sample[,1], sample[,2]+(lengthtocenter))
-    output <- data.frame(makemodel(sample, 100, 10),
-                         makemodel(sample, 100, 50),
-                         makemodel(sample, 100, 100),
-                         makemodel(sample, 200, 50),
-                         makemodel(sample, 300, 50),
-                         makemodel(sample, 400, 50),
-                         makemodel(sample, 500, 50),
-                         makemodel(sample, 600, 50))
+## concatmodels <- function(f){
+## #    lengthtocenter <- as.numeric(unlist(strsplit(unlist(
+## #        strsplit(f,'_'))[3],'k'))[2])/2
+##     print(f)
+##     sample <- read.table(f)
+##     sample$nampos <- sprintf('%s_%s', sample[,1], sample[,2]+(lengthtocenter))
+##     output <- data.frame(makemodel(sample, 100, 10),
+##                          makemodel(sample, 100, 50),
+##                          makemodel(sample, 100, 100),
+##                          makemodel(sample, 200, 50),
+##                          makemodel(sample, 300, 50),
+##                          makemodel(sample, 400, 50),
+##                          makemodel(sample, 500, 50),
+##                          makemodel(sample, 600, 50))
 
-    nam <- unlist(strsplit(f, '/'))
-    nam <- nam[length(nam)]
-    nam <- unlist(strsplit(nam, '_'))[1]
-    modelnames <- c('simplest', 'medium', 'complex')
-    totlength = lengthtocenter*2
-    colnames(output) <- c(paste(sprintf('%s.%s.100.10',nam,totlength),modelnames, sep='.'),
-                          paste(sprintf('%s.%s.100.50',nam,totlength),modelnames, sep='.'),
-                          paste(sprintf('%s.%s.100.100',nam,totlength),modelnames, sep='.'),
-                          paste(sprintf('%s.%s.200.50',nam,totlength),modelnames, sep='.'),
-                          paste(sprintf('%s.%s.300.50',nam,totlength),modelnames, sep='.'),
-                          paste(sprintf('%s.%s.400.50',nam,totlength),modelnames, sep='.'),
-			  paste(sprintf('%s.%s.500.50',nam,totlength),modelnames, sep='.'),
-			  paste(sprintf('%s.%s.600.50',nam,totlength),modelnames, sep='.'))		     
-    output
-}
-load('complete450kdatasetwithcoord_sorted.Rdata')  #CALLED metdata  samples from column 2 to 57 incl.
-metdata$nampos <- with(metdata, sprintf('%s_%s', chr, genomicpos))
-metdatanamconverter <- read.table('methyl450kIDtoTissueSample',h=T)
-files <- list.files('temp/', pattern='bedcoord.txt.gz',full.names=T)
-print(files)
-d <- cbind('tissuetype'=metdatanamconverter[,2], do.call(cbind, lapply(files, concatmodels)))
-write.table(d, file='lmdata.txt',row.names=F,col.names=T,quote=F,sep='\t')
+##     nam <- unlist(strsplit(f, '/'))
+##     nam <- nam[length(nam)]
+##     nam <- unlist(strsplit(nam, '_'))[1]
+##     modelnames <- c('simplest', 'medium', 'complex')
+##     totlength = lengthtocenter*2
+##     colnames(output) <- c(paste(sprintf('%s.%s.100.10',nam,totlength),modelnames, sep='.'),
+##                           paste(sprintf('%s.%s.100.50',nam,totlength),modelnames, sep='.'),
+##                           paste(sprintf('%s.%s.100.100',nam,totlength),modelnames, sep='.'),
+##                           paste(sprintf('%s.%s.200.50',nam,totlength),modelnames, sep='.'),
+##                           paste(sprintf('%s.%s.300.50',nam,totlength),modelnames, sep='.'),
+##                           paste(sprintf('%s.%s.400.50',nam,totlength),modelnames, sep='.'),
+## 			  paste(sprintf('%s.%s.500.50',nam,totlength),modelnames, sep='.'),
+## 			  paste(sprintf('%s.%s.600.50',nam,totlength),modelnames, sep='.'))		     
+##     output
+## }
+## load('complete450kdatasetwithcoord_sorted.Rdata')  #CALLED metdata  samples from column 2 to 57 incl.
+## metdata$nampos <- with(metdata, sprintf('%s_%s', chr, genomicpos))
+## metdatanamconverter <- read.table('methyl450kIDtoTissueSample',h=T)
+## files <- list.files('temp/', pattern='bedcoord.txt.gz',full.names=T)
+## print(files)
+## d <- cbind('tissuetype'=metdatanamconverter[,2], do.call(cbind, lapply(files, concatmodels)))
+## write.table(d, file='lmdata.txt',row.names=F,col.names=T,quote=F,sep='\t')
 
 
 # cross testing
@@ -175,6 +175,7 @@ print(files)
 library(gtools)
 COMBINAT <- combinations(length(files),2, set=TRUE, repeats.allowed=FALSE)
 COMBINAT <- expand.grid(1:length(files),1:length(files))
+COMBINAT <- COMBINAT[COMBINAT[,1]-COMBINAT[,2]!=0,]
 ARGUMENTLIST <-  list('none'=c(0,0),
                       '1'=c(10,10),
                       '2'=c(20,20),
