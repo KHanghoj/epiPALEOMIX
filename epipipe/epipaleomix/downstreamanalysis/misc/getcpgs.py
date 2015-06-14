@@ -9,16 +9,14 @@ FMT = '{}\t{}\t{}\n'.format
 def unpack(chrom, start, end, *rest):
     return str(chrom), int(start), int(end)
 
-
 def getcpgs(seq, l):
     return (seq.count('C')+seq.count('G'))/float(l), seq.count('CG')
-
 
 for fin in files:
     fasta = Cache(referencepath)
     with open(fin,'r') as infile:
         fout, _ = os.path.splitext(os.path.basename(fin))
-        with open(fout+'.gccontentnew', 'w') as outfile:
+        with open(fout+'.gccontent', 'w') as outfile:
             outfile.write(FMT('region','GCcontent', 'CpGcount'))
             for line in infile:
                 chrom, start, end = unpack(*re.split(r'\s', line.rstrip()))
@@ -37,22 +35,3 @@ for fin in files:
 #                 yield elem
 #     else:
 #         yield (path, tree)
-
-
-
-
-# for fin in files:
-#     curr, lst = '', []
-#     with open(fin,'r') as infile:
-#         fout, _ = os.path.splitext(fin)
-#         with open(fout+'.gccontent', 'w') as outfile:
-#             outfile.write(FMT('name','GCcontent', 'CpGcount'))
-#             for line in infile:
-#                 if line.startswith('>'):
-#                     if curr:
-#                         outfile.write(FMT('_'.join(re.split(r':|-',curr[1:])),
-#                                           *getcpgs(''.join(lst))))
-#                     curr = line.rstrip()
-#                     lst = []
-#                 else:
-#                     lst.append(line.rstrip().upper())

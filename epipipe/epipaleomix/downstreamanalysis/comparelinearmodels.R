@@ -75,7 +75,7 @@ concatdfs <- function(d1, d2){
     mergedataframes(d1,
                    d2)
 }
-f.complex <- function(df){
+'f.complex <- function(df){
     delta = df$V5.df2-df$V5.df1
     lm(df$V6.df1 ~ df$V6.df2*df$GCcontent*df$CpGcount*delta,
                na.action='na.exclude')
