@@ -3,8 +3,7 @@ mergedataframes <- function(df1,df2){
 }
 
 concatdfs <- function(d1, d2){
-    mergedataframes(d1,
-                   d2)
+    mergedataframes(d1, d2)
 }
 
 readdf <-  function(f){
@@ -21,7 +20,7 @@ getmean <- function(x,y){
     rowMeans(dfsmerge[,c(x,y)],na.rm=T)
 }
 
-files <- list.files(pattern='Bcskeletalmuscle0111002')
+files <- list.files(pattern='Panc1')
 dfs <- parallel::mclapply(files,readdf,mc.cores=2)
 dfsmerge <- merge(dfs[[1]],dfs[[2]], by='region', suffixes = c(".df1",".df2"),all=T)
 
@@ -30,12 +29,18 @@ finaldf <- data.frame(do.call(rbind,strsplit(dfsmerge$region,'_')),
                       getmean(12,24))
 names(finaldf) <- c('chr', 'start', 'end', 'meancoverage', 'meanpercentmethyl')
 finaldf$bin <- cut(finaldf$meanpercentmethyl, breaks = c(-1,seq(10, 100,10)),labels=1:10)
+finaldf[,1] = sapply(strsplit(as.character(finaldf[,1]),'chr'),'[[',2)
+
+write.table(finaldf, file='Panc_comb_wochr.bed',row.names=F,col.names=F,quote=F,sep='\t')
 
 f <- function(idx){
 mean(finaldf$meanpercentmethy[finaldf$bin==idx],na.rm=T)
 
 }
+
 cbind(1:10,sapply(1:10,f))
+
+
 ## otherstuff
 a <- read.table('Saqqaq_MethylMap_methyl450k2000_bedcoord.txt.gz')
 b <- a[a$V5>10,]
