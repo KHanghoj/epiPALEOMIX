@@ -53,6 +53,7 @@ concatdfs <- function(files){
     idx <- 1:length(GEBOS)
     lapply(idx, mergedataframes, dfsG=dfsGEBOS, dfsP=dfsPROMS)
 }
+
 fil.cov <- function(cov, cpgs, df){
     df[with(df, V5.GEBO>=cov & V5.PROM>=cov & V8.PROM>=cpgs & V8.GEBO>=cpgs),]
 }
@@ -86,6 +87,7 @@ linear.GEBO <- function(mdf){
 }
 
 
+
 runlms <- function(n, dfsone, dfstwo){
 
     cov <- ARGUMENTLIST[[n]][1]
@@ -95,8 +97,10 @@ runlms <- function(n, dfsone, dfstwo){
     mdf <- merge(dfsone, dfstwo, by='GEBOREGION', suffixes = c(".one",".two"))
     if(nrow(mdf)>100){
         ## l <- linear.PROM(mdf)
+        
         l <- linear.complex(mdf)
-        #l <- linear.log.complex(mdf)
+
+        ## l <- linear.log.complex(mdf)
         ## l <- linear.GEBO(mdf)
         return(data.frame('linearmodel'='COMPLEX',
                           'rsquared'=summary(l)$r.squared,
@@ -107,14 +111,53 @@ runlms <- function(n, dfsone, dfstwo){
     }else {return(NULL)}
 }
 
+getnrow <- function(t,mdf){
+    nrow()
+}
 
+
+getlmfromPROM <- function(t, mdf, cutoff){
+    mdfprom <- mdf[mdf$PROMCATEGORY.two==t,]
+    if (nrow(mdfprom)>100){
+        data.frame('linearmodel'='COMPLEX',
+                   'rsquared'=summary(lm(V6.PROM.one~V6.PROM.two*OVERALLPROMCpGCOUNT.two*V8.PROM.two, ## PROMCATEGORY.two* ,
+                       data=mdfprom))$r.squared,
+                   'prom'=t,
+                   'compared'=paste(mdfprom$name.PROM.one[1],mdfprom$name.PROM.two[1],sep='_'),
+                   'cov_cpg_cutoff'=cutoff,
+                   'datapoints'=nrow(mdfprom))
+    }
+}
+
+prom.stuff <- function(n, dfsone, dfstwo){
+    cov <- ARGUMENTLIST[[n]][1]
+    cpgs <-  ARGUMENTLIST[[n]][2]
+    dfsone <- fil.cov(cov, cpgs, dfsone)
+    dfstwo <- fil.cov(cov,cpgs, dfstwo)
+    mdf <- merge(dfsone, dfstwo, by='GEBOREGION', suffixes = c(".one",".two"))
+    if(nrow(mdf)>100){
+        return(do.call(rbind, lapply(PROMOTERS,
+                              getlmfromPROM,
+                              mdf=mdf,
+                              cutoff=paste(dfsone$name.PROM[1],dfstwo$name.PROM[1],sep='_'))))
+    }else {return(NULL)}
+}
+
+bigfunc.prom <- function(idx, dfs){
+    dfsone <- dfs[[COMBINAT[idx,1]]]
+    dfstwo <- dfs[[COMBINAT[idx,2]]]
+    do.call(rbind, lapply(names(ARGUMENTLIST), prom.stuff, dfsone=dfsone,dfstwo=dfstwo))
+}
+
+
+PROMOTERS = c('LOW', 'INTERMEDIATE', 'HIGH')
 
 files <- list.files(recursive=T,full.names=T)
-## files <- files[grepl('ALL', files)]
-files <- files[grepl('bedcoord', files)]
-## INFOTABLE = read.table('~/data/bedfiles/PROM_GEBO_autosom_wochr.INFOFILE.FINAL', comment.char='!',h=T)
-INFOTABLE = read.table('~/data/bedfiles/PROM_GEBO_HOUSEKEEPING_autosom_wochr.INFOFILE.FINAL',
-    comment.char='!',h=T)
+files <- files[grepl('ALL', files)]
+##files <- files[grepl('bedcoord', files)]
+INFOTABLE = read.table('~/data/bedfiles/PROM_GEBO_autosom_wochr.INFOFILE.FINAL', comment.char='!',h=T)
+##INFOTABLE = read.table('~/data/bedfiles/PROM_GEBO_HOUSEKEEPING_autosom_wochr.INFOFILE.FINAL',
+##     comment.char='!',h=T)
 testdfs <- concatdfs(files)
 
 COMBINAT <- expand.grid(1:length(testdfs),1:length(testdfs))
@@ -130,12 +173,12 @@ ARGUMENTLIST <-  list('none'=c(0,0),
                       '6'=c(150,20),
                       '7'=c(400,20))
 
-mega <- do.call(rbind, parallel::mclapply(1:nrow(COMBINAT),bigfunc, dfs=testdfs,mc.cores=20))
+## mega <- do.call(rbind, parallel::mclapply(1:nrow(COMBINAT),bigfunc, dfs=testdfs,mc.cores=20))
 ## lapply(1:nrow(COMBINAT),bigfunc, dfs=testdfs)
 require(ggplot2)
 splot <- function(){
-    mega <- do.call(rbind, parallel::mclapply(1:nrow(COMBINAT),bigfunc, dfs=testdfs,mc.cores=20))
-    print(ggplot(mega,aes(compared, rsquared, col=cov_cpg_cutoff, size=datapoints))+geom_point() +
+    mega <- do.call(rbind, parallel::mclapply(1:nrow(COMBINAT),bigfunc.prom, dfs=testdfs,mc.cores=20))
+    print(ggplot(mega,aes(compared, rsquared, col=cov_cpg_cutoff, shape=prom, size=datapoints))+geom_point() +
     theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5,size=8),
           legend.position='bottom'));dev.off()
 }
