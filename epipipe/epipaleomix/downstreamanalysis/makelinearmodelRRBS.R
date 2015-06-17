@@ -128,8 +128,10 @@ splot <- function(s){
                 legend.position='bottom'));dev.off()
 }
 m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('compWCpGonly',model))
+## m <- subset(mega,datapoints>500&grepl('compWCpGonly',model))
 splot('compWCpGonly.pdf')
 m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('compWCpGandcontent',model))
+m <- subset(mega,datapoints>500&grepl('compWCpGandcontent',model))
 splot('compWCpGandcontent.pdf')
 m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('complex',model))
 splot('complex.pdf')
