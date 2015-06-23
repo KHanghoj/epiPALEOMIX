@@ -36,15 +36,11 @@ readsampledf <- function(f){
     nam <- getnames(f)
     print(nam)
     df <-  read.table(f)
-    print(nrow(df)) ## removing zeros and top values
-    df <- df[df$V6>quantile(df$V6)[1]&df$V6<quantile(df$V6)[4],]
-    if(nrow(df)>10000){
-        df$nampos <- sprintf('%s_%s_%s', df[,1], df[,2], df[,3])
-        dfm <- merge(df, GCCONT, by='nampos')
-        dfm$nampos <- sprintf('%s_%s', dfm[,2], dfm[,3]+lengthtocenter)
-        dfm$nam <- nam
-        dfm
-     }
+    df$nampos <- sprintf('%s_%s_%s', df[,1], df[,2], df[,3])
+    dfm <- merge(df, GCCONT, by='nampos')
+    dfm$nampos <- sprintf('%s_%s', dfm[,2], dfm[,3]+lengthtocenter)
+    dfm$nam <- nam
+    dfm
 }
 
 
@@ -55,7 +51,7 @@ makemodel <- function(argl, tissue, sample){
     aux <- aux[which(sample[aux,9] >= cpg)]
     sampleselect <- sample[aux,]
     mdf <- merge(sampleselect,tissue, by='nampos', suffixes=c('sam','tis'))
-    if(nrow(mdf)>100){data.frame('model'=c('simplest', 'medium', 'complex','compWCpGonly','compWCpGandcontent'),
+    if(nrow(mdf)>100){data.frame('model'=c('simplest', 'medium', 'complex', 'compWCpGonly','compWCpGandcontent'),
                                  'rsquared'=c(f.simplest(mdf), f.simpler(mdf),
                                      f.complex(mdf),f.compWCpGonly(mdf), f.compWCpGacontent(mdf)),
                                  'datapoints'=nrow(mdf),
@@ -93,6 +89,7 @@ concattis <- function(sampleidx){
     sample <- SAMPLEDATA[[sampleidx]]
     ## do.call(rbind, lapply(TISSUE.N, analpertis, sample=sample))
     do.call(rbind, parallel::mclapply(TISSUE.N, analpertis, sample=sample, mc.cores=4))
+
 }
 
 runanalyses <- function(){
@@ -103,32 +100,20 @@ runanalyses <- function(){
 GCCONT <- read.table('/home/krishang/data/methylation/RRBS/temp/RRBScoordinates.gccontent')
 colnames(GCCONT) <- c('nampos', 'GCcont', 'CpG')
 
-samplefiles <- list.files('temp', pattern='bedcoord.txt.gz',full.names=T)
-## samplefiles <- samplefiles[length(samplefiles)]
-SAMPLE.N <- sapply(samplefiles, getnames)
-print(SAMPLE.N)
-## print(samplefiles)
-SAMPLEDATA <-  parallel::mclapply(samplefiles, readsampledf, mc.cores=10)
-names(SAMPLEDATA) <- SAMPLE.N
-SAMPLEDATA <- SAMPLEDATA[!sapply(SAMPLEDATA,is.null)]
-SAMPLE.N <- names(SAMPLEDATA)
-print(names(SAMPLEDATA))
-print(SAMPLE.N)
-
 tissuefiles <- list.files('/home/krishang/data/methylation/RRBS',pattern='comb_wochr.bed')
 TISSUE.N <- sapply(tissuefiles, getnames)
 TISSUEDATA <-  parallel::mclapply(tissuefiles, readtissuedf,mc.cores=10)
 names(TISSUEDATA) <- TISSUE.N
+samplefiles <- list.files('temp', pattern='bedcoord.txt.gz',full.names=T)
+SAMPLE.N <- sapply(samplefiles, getnames)
 
+SAMPLEDATA <-  parallel::mclapply(samplefiles, readsampledf,mc.cores=10)
+names(SAMPLEDATA) <- SAMPLE.N
 
 bigdf <- runanalyses()
+write.table(bigdf, file='RRBSlinearmodel_new.txt',row.names=F,col.names=T,quote=F,sep='\t')
 
-write.table(bigdf, file='RRBSlinearmodel_quantilecutoff.txt',row.names=F,col.names=T,quote=F,sep='\t')
-
-exit()
-
-
-mega <- read.table('RRBSlinearmodel_quantilecutoff.txt',h=T)
+mega <- read.table('RRBSlinearmodel_new.txt',h=T)
 mega$compared <- with(mega, paste(samplename, tissuename, sep='_'))
 require(ggplot2)
 m <- subset(mega, datapoints>5000&grepl('complex|compWCpG',model))
@@ -136,11 +121,25 @@ m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('compW
 m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('simplest',model))
 #m <- subset(mega, cov_cpg_cutoff=='0_0' & grepl('simplest|medium',model))
 
-splot <- function(){
+splot <- function(s){
+    pdf(s)
     print(ggplot(m,aes(compared, rsquared, col=tissuename, shape=cov_cpg_cutoff))+geom_point() +
           theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5,size=8),
                 legend.position='bottom'));dev.off()
 }
+m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('compWCpGonly',model))
+## m <- subset(mega,datapoints>500&grepl('compWCpGonly',model))
+splot('compWCpGonly.pdf')
+m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('compWCpGandcontent',model))
+m <- subset(mega,datapoints>500&grepl('compWCpGandcontent',model))
+splot('compWCpGandcontent.pdf')
+m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('complex',model))
+splot('complex.pdf')
+m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('simplest',model))
+splot('simplest.pdf')
+m <- subset(mega,grepl('0_0|10_0',cov_cpg_cutoff) &datapoints>50000&grepl('medium',model))
+splot('medium.pdf')
+
 splot <- function(){
     print(ggplot(m,aes(compared, rsquared, col=cov_cpg_cutoff, shape=model,size=datapoints))+geom_point() +
           theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5,size=8),
