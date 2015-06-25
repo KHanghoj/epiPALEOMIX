@@ -26,6 +26,8 @@ class GCcorrect(object):
         self.chrom = chrom
         self.start, self.end = start-1, end-1
         for record in records:
+            if record.mapq < self.arg.MinMappingQuality:
+                continue  # do not analyze low quality records
             if record.is_reverse:
                 self._update(record.aend-1, self.reads_back)
             else:

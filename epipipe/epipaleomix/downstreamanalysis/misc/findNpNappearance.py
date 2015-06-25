@@ -29,7 +29,6 @@ def unpack(c,s,e,*rest):
     return str(c), int(s), int(e)
 
                 
-                
 class Cache(object):
     ''' class doc '''
 
@@ -88,6 +87,7 @@ class FindNpN(object):
             self._rightpart(**self.rev_five)
         else:
             self._leftpart(**self.forw_five)
+
 
     def reset_dict(self, chrom, start, end):
         self.dic_pos = defaultdict(lambda: defaultdict(int))
@@ -150,7 +150,7 @@ class FindNpN(object):
                 self.dic_pos[curr_pos+fast_idx+1][bases[fast_idx+basepos]] += 1            
 
     def _makeoutputfile(self):
-        ''' want to write to file every chrom, to keep scalablility'''
+        ''' want to write to file every chrom, to keep scalable'''
         assert not exists(self.arg.outputfile), 'File exists already. Delete or move "%s" to run analyses with same outputname' % self.arg.outputfile
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
         self.f_output.write('#chr\tpos\tA\tC\tG\tT\n')
@@ -175,7 +175,6 @@ def parse_args(argv):
     parser.add_argument('outputfile', help='..', type=str)
     parser.add_argument('--ReadBases', help="..", type=int, default=2)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
-    parser.add_argument('--SkipThreePrime', help="..", type=int, default=0)
     parser.add_argument('--SkipFivePrime', help="..", type=int, default=0)
     return parser.parse_known_args(argv)
 
@@ -197,6 +196,8 @@ def run(args):
 
 def main(argv):
     args, unknown = parse_args(argv)
+    print(args)
+    print(unknown)
     run(args)
     return 0
 

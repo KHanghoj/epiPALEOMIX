@@ -104,13 +104,6 @@ class Methyl_Level(object):
         self._updatefunc()
         self.last_end = self.record.aend
 
-    # def _call_ms(self):
-    #     for pos, basescore in sorted(self.dic_pos.iteritems()):
-    #         if pos >= self.start and pos <= self.end:  # make sure overlapping genomic sites do not get counted twice
-    #             top = basescore.get('T', 0)+basescore.get('A', 0)
-    #             low = top+basescore.get('C', 0)+basescore.get('G', 0)
-    #             self.rowsapp(self.na_tup(pos, top, low))
-
     def _call_ms_DS(self):
         for pos, basescore in sorted(self.dic_pos.iteritems()):
             if pos >= self.start and pos <= self.end:  # make sure overlapping genomic sites do not get counted twice
@@ -195,7 +188,6 @@ def parse_args(argv):
     parser.add_argument('outputfile', help='..', type=str)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--ReadBases', help="..", type=int, default=6)
-    parser.add_argument('--SkipBases', help="..", type=int, default=0)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--LibraryConstruction', help="..", type=str,
                         choices=['DS', 'SS'])
