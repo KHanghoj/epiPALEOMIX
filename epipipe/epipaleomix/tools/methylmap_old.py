@@ -15,33 +15,10 @@ from epipaleomix.tools.commonutils import \
     read_bed, \
     Cache
 _PLUS_STRAND_BASES = ['CG', 'TG']
-_MINUS_STRAND_BASES_SS = ['CG', 'CT']
 _MINUS_STRAND_BASES = ['CG', 'CA']
-
 SSorDS = {
-    'SS': {'inbases': _MINUS_STRAND_BASES_SS, 'basepos': 1},
+    'SS': {'inbases': _PLUS_STRAND_BASES, 'basepos': 0},
     'DS': {'inbases': _MINUS_STRAND_BASES, 'basepos': 1}
-}
-
-# may implement this later on to simplify the MS_call functions to a single function
-####### script is not working now
-
-##### UNTIL NOW I DONT THUNK THE SCRIPT HAS BEEN WORKING IN SS LIBRARIES PROPERLY AS THE REVERSE STRAND DEAMINATION IS A T AT THE G POSITION OF A CPG not on the C position when fitted to the forward strand.
-##### INSTEAD:::: basepos +1 instead of 0 (fixed). Update the _MINUS_STRAND_BASES_SS to allow for CpG and CpT's. . now look for T's and G's. convert G's to C's in  CONV dict. almost done.
-SS_REV_BASECONV = {
-    'G': 'C',
-    'T': 'T'
-}
-
-BASECONV = {
-    'CONV_DS_MINUS': {'C': 'G',
-                      'T': 'A',
-                      'G': 'C',
-                      'A': 'T'},
-    'CONV_NORMAL': {'C': 'C',
-                    'T': 'T',
-                    'G': 'G',
-                    'A': 'A'}
 }
 
 
@@ -63,10 +40,12 @@ class Methyl_Level(object):
         self._init_dics()
         self._updatefunc = self._choosefunc()
 
+
     def _init_dics(self):
         lib_info = SSorDS[self.arg.LibraryConstruction]
-        self.forw_five = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0, 'skip': self._skip_five}
-        self.forw_three = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0, 'skip':self._skip_three}
+        forwdic = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0}
+        self.forw_five = merge_dics(forwdic, {'skip': self._skip_five})
+        self.forw_three =  merge_dics(forwdic, {'skip':self._skip_three})
         self.rev_five = merge_dics(lib_info, {'skip': self._skip_five})
         self.rev_three = merge_dics(lib_info, {'skip': self._skip_three})
         if self.arg.LibraryConstruction == 'SS':
@@ -94,8 +73,9 @@ class Methyl_Level(object):
             self._rightpart(**self.forw_three)
 
     def _both(self):
-        # both is only for single strand libraries as the 3' overhangs
-        # are remove in double strand library preparation.
+        # both is only for single strand libs
+        # this is because the 3' overhangs are remove in double strand library
+        # preparation.
         if self.record.is_reverse:
             self._rightpart(**self.rev_five)
             self._leftpart(**self.rev_three)
@@ -207,12 +187,12 @@ def parse_args(argv):
     parser.add_argument('bed', help="..", type=str)
     parser.add_argument('outputfile', help='..', type=str)
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
-    parser.add_argument('--ReadBases', help="..", type=int, default=2)
-    parser.add_argument('--MinMappingQuality', help="..", type=int, default=20)
+    parser.add_argument('--ReadBases', help="..", type=int, default=6)
+    parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--LibraryConstruction', help="..", type=str,
-                        choices=['DS', 'SS'], default='DS')
+                        choices=['DS', 'SS'])
     parser.add_argument('--Primes', help="..", type=str,
-                        choices=['both', 'five', 'three'], default='five')
+                        choices=['both', 'five', 'three'])
     parser.add_argument('--SkipThreePrime', help="..", type=int, default=0)
     parser.add_argument('--SkipFivePrime', help="..", type=int, default=0)
     return parser.parse_known_args(argv)

@@ -57,9 +57,9 @@ getmeans <- function(dfidx){
                'means'=extendsmooth(df$methylprop,WINSIZElate),  #/
                nam=df$nam[1])
 }
-WINSIZE = 50
+WINSIZE = 60
 WINHALF = WINSIZE/2
-WINSIZElate = 25
+WINSIZElate = 10
 files = list.files('HOXD104basesOUTPUT',recursive=T,pattern='.txt.gz',full.names=T)
 
 #files = list.files('HOXD10skipfirstbaseOUTPUT',recursive=T,pattern='.txt.gz',full.names=T)
@@ -73,11 +73,11 @@ names(DFS) = sampleN
 bigdf = do.call(rbind,lapply(names(DFS), getmeans))
 require(ggplot2)
 p <- ggplot(bigdf,aes(pos,means,col=nam))+geom_line()+
-    facet_wrap(~nam, scales='free_y')+
-    theme(axis.text.x = element_text(angle = 90, hjust = -.5, vjust=0.5, size=8),
-            legend.position='None')
+    facet_wrap(~nam, ncol=1, scales='free_y')+
+    ##theme(axis.text.x = element_text(angle = 90, hjust = -.5, vjust=0.5, size=8),
+            theme(legend.position='None')
 
-pdf('~/Desktop/tralaskip.pdf')
+pdf('~/Desktop/works.pdf')
 ## print(ggplot(bigdf,aes(pos,means,col=nam))+geom_line()+facet_wrap(~nam)+
 ##       theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5,size=6),
 ##             legend.position='bottom')+
