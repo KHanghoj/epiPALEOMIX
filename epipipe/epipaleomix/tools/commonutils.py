@@ -2,6 +2,15 @@ import pysam
 import re
 
 
+
+# def merge_dics(x, y):
+#     '''Given two dicts, merge them into a new dict as a shallow copy.'''
+#     z = x.copy()
+#     z.update(y)
+#     return z
+
+
+
 def unpack(chrom, start, end, bedcoord, *rest):
     return chrom, start, end, bedcoord, rest
 
