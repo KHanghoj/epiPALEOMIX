@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+# !/opt/local/bin/python
 '''  Object: To find the methylation value from a region. the methylation
 score (Ms)
 '''
@@ -14,20 +14,35 @@ from collections import defaultdict, namedtuple
 from epipaleomix.tools.commonutils import \
     read_bed, \
     Cache
+_PLUS_STRAND_BASES = ['CG', 'TG']
+_MINUS_STRAND_BASES_SS = ['CG', 'CT']
+_MINUS_STRAND_BASES = ['CG', 'CA']
 
-_FORW_STRAND_BASES = ['CG', 'TG']
-_REV_STRAND_BASES = ['CG', 'CA']
+SSorDS = {
+    'SS': {'inbases': _MINUS_STRAND_BASES_SS, 'basepos': 1},
+    'DS': {'inbases': _MINUS_STRAND_BASES, 'basepos': 1}
+}
 
-CONV_REV = {'N': 'N',
-            'C': 'G',
-            'T': 'A',
-            'G': 'C',
-            'A': 'T'}
-CONV_FORW = {'N': 'N',
-             'C': 'C',
-             'T': 'T',
-             'G': 'G',
-             'A': 'A'}
+# may implement this later on to simplify the MS_call functions to a single function
+####### script is not working now
+
+##### UNTIL NOW I DONT THUNK THE SCRIPT HAS BEEN WORKING IN SS LIBRARIES PROPERLY AS THE REVERSE STRAND DEAMINATION IS A T AT THE G POSITION OF A CPG not on the C position when fitted to the forward strand.
+##### INSTEAD:::: basepos +1 instead of 0 (fixed). Update the _MINUS_STRAND_BASES_SS to allow for CpG and CpT's. . now look for T's and G's. convert G's to C's in  CONV dict. almost done.
+SS_REV_BASECONV = {
+    'G': 'C',
+    'T': 'T'
+}
+
+BASECONV = {
+    'CONV_DS_MINUS': {'C': 'G',
+                      'T': 'A',
+                      'G': 'C',
+                      'A': 'T'},
+    'CONV_NORMAL': {'C': 'C',
+                    'T': 'T',
+                    'G': 'G',
+                    'A': 'A'}
+}
 
 
 class Methyl_Level(object):
@@ -35,6 +50,8 @@ class Methyl_Level(object):
     def __init__(self, arg):
         self.arg = arg
         self._ReadBases = self.arg.ReadBases
+        self._skip_five = self.arg.SkipFivePrime
+        self._skip_three = self.arg.SkipThreePrime
         self._fasta = Cache(self.arg.FastaPath)
         self.dic_pos = defaultdict(lambda: defaultdict(int))
         self.pat = re.compile('CG')
@@ -43,31 +60,26 @@ class Methyl_Level(object):
         self.na_tup = namedtuple('row', ('pos top lower'))
         self._makeoutputfile()
         self._row_size = int(1e6)
-        self._updatefunc = self._choosefunc(self.arg.Primes.lower())
-        self.forw_five = self._createargdict(_FORW_STRAND_BASES, 0, self.arg.SkipFivePrime, CONV_FORW)
-        self.forw_three = self._createargdict(_FORW_STRAND_BASES, 0, self.arg.SkipThreePrime, CONV_FORW)
-        self.rev_five = self._createargdict(_REV_STRAND_BASES, 1, self.arg.SkipFivePrime, CONV_REV)
-        self.rev_three = self._createargdict(_REV_STRAND_BASES, 1, self.arg.SkipThreePrime, CONV_REV)
+        self._init_dics()
+        self._updatefunc = self._choosefunc()
 
-        # self.forw_five = {'inbases': _FORW_STRAND_BASES, 'basepos': 0,
-        #                   'skip':  self.arg.SkipFivePrime, 'conv': CONV_FORW}
-        # self.forw_three = {'inbases': _FORW_STRAND_BASES, 'basepos': 0,
-        #                    'skip': self.arg.SkipThreePrime, 'conv': CONV_FORW}
-        # self.rev_five = {'inbases': _REV_STRAND_BASES, 'basepos': 1,
-        #                  'skip':  self.arg.SkipFivePrime, 'conv': CONV_REV}
-        # self.rev_three = {'inbases': _REV_STRAND_BASES, 'basepos': 1,
-        #                   'skip': self.arg.SkipThreePrime, 'conv': CONV_REV}
-
+    def _init_dics(self):
+        lib_info = SSorDS[self.arg.LibraryConstruction]
+        self.forw_five = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0, 'skip': self._skip_five}
+        self.forw_three = {'inbases': _PLUS_STRAND_BASES, 'basepos': 0, 'skip':self._skip_three}
+        self.rev_five = merge_dics(lib_info, {'skip': self._skip_five})
+        self.rev_three = merge_dics(lib_info, {'skip': self._skip_three})
+        if self.arg.LibraryConstruction == 'SS':
+            self._call_ms = self._call_ms_SS
+        else:
+            self._call_ms = self._call_ms_DS
         # in a sam/bam file everything is plus strand oriented.even sequences, cigar, EVERYTHING
         # cig_idx -1 returns last cigar of the sequence from a positive strand
         # perspective. so [-1] can be the 5' end of a reverse read.
 
-    def _createargdict(self, bases, basep, skip, convdict):
-        return {'inbases': bases, 'basepos': basep, 'skip':  skip, 'conv': convdict}
-        
-    def _choosefunc(self, prims):
+    def _choosefunc(self):
         dic={'both': self._both, 'five': self._only_5, 'three': self._only_3}
-        return dic[prims]
+        return dic[self.arg.Primes.lower()]
      
     def _only_5(self):
         if self.record.is_reverse:
@@ -104,26 +116,32 @@ class Methyl_Level(object):
 
     def update(self, record):
         self.record = record
-        if self.last_end < self.record.pos:  # if new read is not overlapping previous
+        if self.last_end < self.record.pos:
             self._call_ms()
             self.dic_pos.clear()
             if len(self.rows) > self._row_size:
                 self._writetofile()
-                del self.rows[:]  # clear all data
         self._updatefunc()
-        self.last_end = self.record.aend+100  # to avoid overlapping sites.
+        self.last_end = self.record.aend
 
-    def _call_ms(self):
+    def _call_ms_DS(self):
+        for pos, basescore in sorted(self.dic_pos.iteritems()):
+            if pos >= self.start and pos <= self.end:  # make sure overlapping genomic sites do not get counted twice
+                top = basescore.get('T', 0)+basescore.get('A', 0)
+                low = top+basescore.get('C', 0)+basescore.get('G', 0)
+                self.rowsapp(self.na_tup(pos, top, low))
+
+    def _call_ms_SS(self):
         for pos, basescore in sorted(self.dic_pos.iteritems()):
             if pos >= self.start and pos <= self.end:  # make sure overlapping genomic sites do not get counted twice
                 top = basescore.get('T', 0)
                 low = top+basescore.get('C', 0)
                 self.rowsapp(self.na_tup(pos, top, low))
+
                 
     def call_final_ms(self):
         self._call_ms()
         self._writetofile()
-        del self.rows[:]  # clear all data
 
     def _prep(self, curr_pos, skip=0):
         ## skip is only used in right side functions
@@ -133,24 +151,24 @@ class Methyl_Level(object):
         for fast_idx in self._getindexes(fast_string):
             yield fast_idx, self._ReadBases - fast_idx
 
-    def _rightpart(self, inbases, basepos, skip, conv):
+    def _rightpart(self, inbases, basepos, skip):
         curr_pos = self.record.aend-self._ReadBases
         cigar_op, cigar_len = self.record.cigar[-1]
         bases = self.record.seq[-self._ReadBases:]
         for fast_idx, inverse_idx in self._prep(curr_pos, skip):
             if (cigar_op == 0 and cigar_len >= inverse_idx and
-                bases[fast_idx:fast_idx+2] in inbases):
-                self.dic_pos[curr_pos+fast_idx+1][conv[bases[fast_idx+basepos]]] += 1
-
-    def _leftpart(self, inbases, basepos, skip, conv):
+                    bases[fast_idx:fast_idx+2] in inbases):
+                self.dic_pos[curr_pos+fast_idx+1][bases[fast_idx+basepos]] += 1
+        
+    def _leftpart(self, inbases, basepos, skip):
         curr_pos = self.record.pos
         cigar_op, cigar_len = self.record.cigar[0]
         bases = self.record.seq[:self._ReadBases]
         for fast_idx, _ in self._prep(curr_pos):
             if (fast_idx >= skip and cigar_op == 0 and
-                cigar_len >= fast_idx+2 and
-                bases[fast_idx:fast_idx+2] in inbases):
-                self.dic_pos[curr_pos+fast_idx+1][conv[bases[fast_idx+basepos]]] += 1            
+                    cigar_len >= fast_idx and
+                    bases[fast_idx:fast_idx+2] in inbases):
+                self.dic_pos[curr_pos+fast_idx+1][bases[fast_idx+basepos]] += 1            
 
     def _makeoutputfile(self):
         ''' want to write to file every chrom, to keep scalablility'''
@@ -158,18 +176,29 @@ class Methyl_Level(object):
             pathname, extens = splitext(self.arg.outputfile)
             move(self.arg.outputfile, pathname+'_old'+extens)
         self.f_output = gzip.open(self.arg.outputfile, 'ab')
-        self.fmt = "{chrom}\t{r.pos}\t{r.top}\t{r.lower}\t{bed}\n".format
+        self.fmt = "{chr}\t{r.pos}\t{r.top}\t{r.lower}\t{bed}\n".format
 
     def _writetofile(self):
         ''' every row contain chrom, genomicpos, top, lower, bedcoord'''
         for row in self.rows:
-            self.f_output.write(self.fmt(r=row,
-                                         chrom=self.chrom,
+            self.f_output.write(self.fmt(r=row, chr=self.chrom,
                                          bed=self.bedcoord))
+        del self.rows[:]  # EMPTY LIST AFTER WRITING TO FILE
 
     def closefiles(self):
+        try:
+            self._fasta.closefile()
+        except AttributeError:
+            pass
         self.f_output.close()
-        self._fasta.closefile()
+
+
+def merge_dics(x, y):
+    '''Given two dicts, merge them into a new dict as a shallow copy.'''
+    z = x.copy()
+    z.update(y)
+    return z
+
 
 def parse_args(argv):
     ''' docstring '''
@@ -180,8 +209,10 @@ def parse_args(argv):
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--ReadBases', help="..", type=int, default=2)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=20)
-    parser.add_argument('--Primes', help="..", type=str, default='five',
-                        choices=['both', 'five', 'three'])
+    parser.add_argument('--LibraryConstruction', help="..", type=str,
+                        choices=['DS', 'SS'], default='DS')
+    parser.add_argument('--Primes', help="..", type=str,
+                        choices=['both', 'five', 'three'], default='five')
     parser.add_argument('--SkipThreePrime', help="..", type=int, default=0)
     parser.add_argument('--SkipFivePrime', help="..", type=int, default=0)
     return parser.parse_known_args(argv)
