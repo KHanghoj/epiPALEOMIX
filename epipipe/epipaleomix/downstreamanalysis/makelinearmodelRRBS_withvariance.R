@@ -1,34 +1,12 @@
-# f.complex <- function(mdf){
-#     summary(lm(methylpercent ~ cpgread*deaminatedsites*CpGsites*deaminvariance*nodeaminvariance, na.action='na.exclude',data=mdf))$r.squared
-# }
-# f.simpler <- function(mdf){
-#     summary(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites, na.action='na.exclude',data=mdf))$r.squared
-# }
-# f.simplest <- function(mdf){
-#     summary(lm(methylpercent ~ methylprop*cpgread, na.action='na.exclude',data=mdf))$r.squared
-# }
-
-
-## f.mediumcov <- function(mdf){
-##     summary(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance, na.action='na.exclude',data=mdf))$r.squared
-## }
-## f.mostcomplexcov <- function(mdf){
-##     summary(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance*nodeaminvariance, na.action='na.exclude',data=mdf))$r.squared
-## }
-f.medium <- function(mdf){
-    # print('medium')
-    # print(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance, na.action='na.exclude',data=mdf))
-    summary(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance, na.action='na.exclude',data=mdf))$r.squared
-}
-
-## as a covariant ost Rsquared: 60+:
 f.mostcomplex <- function(mdf){
-    print('mostcomplex')
-    print(summary(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance*nodeaminvariance, na.action='na.exclude',data=mdf)))
+    ## print('mostcomplex')
+    ## print(summary(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance*nodeaminvariance, na.action='na.exclude',data=mdf)))
     summary(lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance*nodeaminvariance, na.action='na.exclude',data=mdf))$r.squared
 }
+
+
 ## NOT as a covariant Rsquared: 55+: 
-f.mostcomplex <- function(mdf){
+f.mostcomplex_no <- function(mdf){
     #print('mostcomplex')
     #print(summary(lm(methylpercent ~ methylprop+cpgread+deaminatedsites+CpGsites+deaminvariance+nodeaminvariance, na.action='na.exclude',data=mdf)))
     summary(lm(methylpercent ~ methylprop+cpgread+deaminatedsites+CpGsites+deaminvariance+nodeaminvariance, na.action='na.exclude',data=mdf))$r.squared
@@ -44,37 +22,41 @@ getnames.unfilt <- function(f){
     unlist(strsplit(nam[length(nam)], '\\.'))[1]
 }
 
+getlengthtocenter <- function(f){
+    nam <- unlist(strsplit(f, '/'))
+    as.numeric(unlist(strsplit(unlist(strsplit(nam[length(nam)],'_'))[3],'k'))[2])/2
+}
+
 readtissuedf <- function(f){
-    df <-  read.table(f)
+    df <- fread(f, data.table=FALSE)
+    #df <-  read.table(f)
     colnames(df) <- c('chrom', 'pos', 'end', 'cov', 'methylpercent')    
     df$nampos <- sprintf('%s_%s', df[,1], df[,2])
-    df$nam <- getnames.unfilt(f)
-    #print(df$nam[1])
-    df
+    df$namtis <- getnames.unfilt(f)
+    df[,4:7]  ## only take the columns we need later on.
 }
 
 
 readsampledf <- function(f){
-    lengthtocenter <- as.numeric(unlist(strsplit(unlist(strsplit(f,'_'))[3],'k'))[2])/2
+    lengthtocenter <- getlengthtocenter(f)
     nam <- getnames(f)
     print(nam)
-    df <-  read.table(f, comment.char='!',h=T)
+    df <- fread(sprintf('zcat %s', f), data.table=FALSE,h=T)
     print(nrow(df)) ## removing zeros and top values
     if(nrow(df)>5000){
         df$nampos <- sprintf('%s_%s', df[,1], df[,2]+lengthtocenter)
-        df$nam <- nam
+        df$namsam <- nam
         df
-     }
+    }
 }
 
 makemodel <- function(cov, tissue, sample){
     aux <- which(sample[,5] >= cov) ## it is column 5 after removing GCCONT, as nampos is no longer first column
-    ## aux <- which(sample[,6] >= cov)
     sampleselect <- sample[aux,]
-    print(c(tissue$nam[1],sample$nam[1], cov))
-    mdf <- merge(sampleselect,tissue, by='nampos', suffixes=c('sam','tis'))
-    if(nrow(mdf)>100){data.frame('model'=c('medium','mostcomplex'),
-                                 'rsquared'=c(f.medium(mdf), f.mostcomplex(mdf)),
+    print(c(tissue$namtis[1],sample$namsam[1], cov))
+    mdf <- join(sampleselect, tissue, by='nampos',type='inner')
+    if(nrow(mdf)>100){data.frame('model'=c('mostcomplex'),
+                                 'rsquared'=f.mostcomplex(mdf),
                                  'datapoints'=nrow(mdf),
                                  'cov_cutoff'=cov,
                                  'samplename'=mdf$namsam[1],
@@ -82,13 +64,10 @@ makemodel <- function(cov, tissue, sample){
                                  )
                   }
 }
-CUTOFFVAL <- seq(0,250,10)
-#CUTOFFVAL <- seq(0,250,20)
-#CUTOFFVAL <- seq(140,150,20)
 
-analpertis <- function(sampleidx, tissuedf){
-    sample = SAMPLEDATA[[sampleidx]]
-    print(c(tissuedf$nam[1],sample$nam[1]))
+
+analpertis <- function(tissuefilespath, sample){
+    tissuedf <- readtissuedf(tissuefilespath)
     do.call(rbind, parallel::mclapply(CUTOFFVAL,
                                       makemodel,
                                       tissue=tissuedf,
@@ -96,49 +75,29 @@ analpertis <- function(sampleidx, tissuedf){
                                       mc.cores=12))
 }
 
-concattis <- function(tissuefilespath){
-#    tissuename = getnames.unfilt(tissuefilespath)    
-    tissuedf = readtissuedf(tissuefilespath)
-    do.call(rbind, lapply(SAMPLE.N, analpertis, tissuedf=tissuedf))
-}
-
-runanalyses <- function(){
+runanalyses<- function(samplepath){
+    sample <- readsampledf(samplepath)
     tissuefiles <- list.files('/home/krishang/data/methylation/RRBS/ucscdownfiltered',pattern='.bed',full.names=T)
-    tissuefiles <- tissuefiles[grepl('Osteo', tissuefiles)]
-    do.call(rbind, lapply(tissuefiles, concattis))
+#    tissuefiles <- tissuefiles[grepl('Osteo', tissuefiles)]
+#    tissuefiles <- tissuefiles[grepl('_1', tissuefiles)]
+    do.call(rbind, lapply(tissuefiles, analpertis, sample=sample))
 }
 
-#####
+require(data.table)
+require(plyr)
 
-# concattis <- function(sampleidx){
-#     sample <- SAMPLEDATA[[sampleidx]]
-#     ## do.call(rbind, lapply(TISSUE.N, analpertis, sample=sample))
-#     do.call(rbind, lapply(TISSUE.N, analpertis, sample=sample))
-# }
+CUTOFFVAL <- seq(0,250,10)
+samplefiles <- list.files('/home/krishang/data/methyl_rawdata/bedcoord_RRBSk1500', pattern='bedcoord.txt.gz',full.names=T)
+#samplefiles <- samplefiles[grepl('RRBS', samplefiles)]
+#samplefiles <- samplefiles[grepl('Alt', samplefiles)]
+print(samplefiles)
 
-# runanalyses <- function(){
-#     do.call(rbind, lapply(SAMPLE.N, concattis))
-# }
-#####
+mega <- do.call(rbind, lapply(samplefiles, runanalyses))
 
-samplefiles <- list.files('temp', pattern='bedcoord.txt.gz',full.names=T)
-samplefiles <- samplefiles[grepl('RRBS', samplefiles)]
-samplefiles <- samplefiles[grepl('Alt', samplefiles)]
-SAMPLE.N <- sapply(samplefiles, getnames)
-print(SAMPLE.N)
+write.table(mega, file='BIGDF_RRBSlinearmodel_newmethyl_withvariance_ALL.txt',row.names=F,col.names=T,quote=F,sep='\t')
 
-SAMPLEDATA <-  parallel::mclapply(samplefiles, readsampledf, mc.cores=10)
-names(SAMPLEDATA) <- SAMPLE.N
-SAMPLEDATA <- SAMPLEDATA[!sapply(SAMPLEDATA,is.null)]
-SAMPLE.N <- names(SAMPLEDATA)
-print(names(SAMPLEDATA))
-print(SAMPLE.N)
+quit('n')
 
-bigdf <- runanalyses()
-
-write.table(bigdf, file='only_Alt_RRBSlinearmodel_newmethyl_withvariance_bothstrands.txt',row.names=F,col.names=T,quote=F,sep='\t')
-
-exit()
 
 mega <- read.table('RRBSlinearmodel_binomdataeffect.txt',h=T)
 mega$compared <- with(mega, paste(samplename, tissuename, sep='_'))
