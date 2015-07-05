@@ -6,9 +6,9 @@ FMT='{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format
 
 ##MEANMETHYL = 0.07    # TpG/(CpG+(TpG-seqerror)) genome-wide for now
 ## THIS DOES NOT WORK MEANMETHYL = 0.4    # TpG/(CpG+(TpG-seqerror)) for sites containing a T only
-##SEQERROR = 0.003/3     # mean(c(708,495))*3/ (639816-(27566-mean(c(708,495))))
-## divide with three as it is only the T error i'm interested in.
 
+## divide with three as it is only the T error i'm interested in.
+SEQERROR = 0.003/3     # mean(c(708,495))*3/ (639816-(27566-mean(c(708,495))))
 def unpackepipal(chrom, start, dea, tot, bedc):
     return chrom, int(start), int(dea), int(tot), str(bedc)
 
@@ -20,20 +20,11 @@ def p_a(args):
     return parser.parse_args(args)
 
 
-# def writetofile(f_out, deaminatedsites, coverage, CpGsites, bedc):
-#     chrom, start, end = bedc.split('_')
-#     if deaminatedsites:
-#         methylprop = binom.cdf(deaminatedsites,coverage, MEANMETHYL)
-#     else:
-#         methylprop = binom.pmf(1,coverage, SEQERROR)*(1.0/coverage)  # the methylation proxy is the chance of having a sequencing error. observing a C when actual base was a T
-#     f_out.write(FMT(chrom, start, end, deaminatedsites, coverage, methylprop, CpGsites))
-
 def writetofile(f_out, ds, cs, tot, bedc):
     chrom, start, end = bedc.split('_')
-    #ds = ds if ds else [0]
     dssum = sum(ds)  # number of deaminated
     totsum = sum(tot) # total number of reads
-    rate = float(dssum)/totsum if dssum else 1.0/totsum
+    rate = float(dssum)/totsum if dssum else ((1.0/totsum)*SEQERROR)
     f_out.write(FMT(chrom, start, end, dssum, totsum,  rate, len(tot), np.var(ds), np.var(cs), sum(cs)))
 
 
