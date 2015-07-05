@@ -1,3 +1,5 @@
+##Rscript  /Users/kehanghoej/research/projects/epiomix/epipipe/epipaleomix/downstreamanalysis/makehoxd10plot.R
+
 smoothfunc <- function(idx, seq, windowsize){
     sum(seq[idx:(idx+windowsize-1)])/(windowsize)
 }
@@ -28,7 +30,8 @@ readsampledf <- function(f){
     nam <- getnames(f)
     print(nam)
     df <-  read.table(f, comment.char='!',h=T)
-    df <- df[df$genomicpos<176998251,]
+
+    #df <- df[df$genomicpos<176998251,]
     ##df <- df[df$genomicpos<176999000,]
     vecpos = c()
     vecval = c()
@@ -57,12 +60,14 @@ getmeans <- function(dfidx){
                'means'=extendsmooth(df$methylprop,WINSIZElate),  #/
                nam=df$nam[1])
 }
-WINSIZE = 60
+WINSIZE = 50
 WINHALF = WINSIZE/2
-WINSIZElate = 10
+WINSIZElate = 2
 files = list.files('HOXD104basesOUTPUT',recursive=T,pattern='.txt.gz',full.names=T)
+files = list.files(pattern='HOXD10',recursive=T,full.names=T)
+print(files)
+## files = list.files('HOXD10skipfirstbaseOUTPUT',recursive=T,pattern='.txt.gz',full.names=T)
 
-#files = list.files('HOXD10skipfirstbaseOUTPUT',recursive=T,pattern='.txt.gz',full.names=T)
 genes = cbind('nam'=c('hoxd10','hoxd9','hoxd8'),
     data.frame('start'=c(176981492,176987413,176994468),
                'end'=c(176984670,176989645,176997423)))
