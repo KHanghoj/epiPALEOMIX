@@ -2,6 +2,8 @@ from __future__ import print_function
 #import os.path, re, pysam
 import os.path, re
 from epipaleomix.tools.commonutils import Cache
+## files = ['/home/krishang/data/methylation/RRBS/RRBScoordinates.bed']
+## files = ['/home/krishang/data/methylation/crosscompare/2kchunkschrom1.txt']
 files = ['/home/krishang/data/bedfiles/methyl450k_1500_wochr.bed','/home/krishang/data/bedfiles/methyl450k_2000_wochr.bed']
 referencepath='/home/krishang/data/reference_human/hs.build37.1.fa'
 FMT = '{}\t{}\t{}\n'.format
@@ -17,7 +19,6 @@ for fin in files:
     with open(fin,'r') as infile:
         fout, _ = os.path.splitext(os.path.basename(fin))
         with open(fout+'.gccontent', 'w') as outfile:
-            outfile.write(FMT('region','GCcontent', 'CpGcount'))
             for line in infile:
                 chrom, start, end = unpack(*re.split(r'\s', line.rstrip()))
                 regionname = '{}_{}_{}'.format(chrom,start, end)

@@ -2,7 +2,9 @@ from __future__ import print_function
 from epipaleomix.tools.commonutils import Cache
 import os.path, re
 #files = ['PROM_minusstrand_autosom_wochr.fa', 'PROM_plusstrand_autosom_wochr.fa']
-files = ['PROM_autosom_wochr.fa']
+files = ['PROM_GEBO_autosom_wochr.INFOFILE']
+files = ['PROM_HOUSEKEEPING_wochr.bed']
+
 WINDOWLENGTH = 500
 HIGHCPG = 0.75
 MIDCPG = 0.48

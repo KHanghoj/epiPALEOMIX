@@ -61,13 +61,15 @@ with gzip.open(outname, 'wb') as fout:
             while True:
 
                 if not row_one:                # finished row_two and quit
-                    fout.write(FMT(**row_two))
-                    finishedfile(fout, ftwo)
+                    if row_two:
+                        fout.write(FMT(**row_two))
+                        finishedfile(fout, ftwo)
                     break
 
                 if not row_two:                # finished row_one and quit
-                    fout.write(FMT(**row_one))
-                    finishedfile(fout, fone)
+                    if row_one:
+                        fout.write(FMT(**row_one))
+                        finishedfile(fout, fone)
                     break
 
                 if row_one['bedc'] == row_two['bedc']:
