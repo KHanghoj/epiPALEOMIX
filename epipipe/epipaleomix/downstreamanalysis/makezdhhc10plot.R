@@ -72,14 +72,15 @@ WINSIZE = 40
 WINHALF = WINSIZE/2
 WINSIZElate = 1
 #files = list.files('HOXD104basesOUTPUT',recursive=T,pattern='.txt.gz',full.names=T)
-files = list.files(pattern='HOXD10',recursive=T,full.names=T)
+files = list.files(pattern='ZDHHC4',recursive=T,full.names=T)
 print(files)
 ## files = list.files('HOXD10skipfirstbaseOUTPUT',recursive=T,pattern='.txt.gz',full.names=T)
 
-genes = cbind('nam'=c('hoxd10','hoxd9','hoxd8'),
-    data.frame('start'=c(176981492,176987413,176994468),
-               'end'=c(176984670,176989645,176997423)))
-##chr2:176,979,251-176,998,251
+## genes = cbind('nam'=c('hoxd10','hoxd9','hoxd8'),
+##     data.frame('start'=c(176981492,176987413,176994468),
+##                'end'=c(176984670,176989645,176997423)))
+
+
 sampleN = sapply(files,getnames)
 DFS = lapply(files, readsampledf)
 names(DFS) = sampleN
@@ -92,16 +93,17 @@ p <- ggplot(bigdf,aes(pos,means,col=nam))+geom_line()+
     #         nam,totdea[1],
     #         totreads[1],CpGsites[1]))
 
-pdf('~/Desktop/hoxd10/works.pdf')
+pdf('works.pdf')
 ## print(ggplot(bigdf,aes(pos,means,col=nam))+geom_line()+facet_wrap(~nam)+
 ##       theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5,size=6),
 ##             legend.position='bottom')+
-print(p+labs(x='Genomic Position', y='Ms score')+
-      geom_segment(aes(x = genes$start[1], y = 0,
-                       xend = genes$end[1], yend = 0),col='black')+
-      geom_segment(aes(x = genes$start[2], y = 0,
-                       xend = genes$end[2], yend = 0),col='black')+
-      geom_segment(aes(x = genes$start[3], y = 0,
-                       xend = genes$end[3], yend = 0),col='black'));dev.off()
+print(p+labs(x='Genomic Position', y='Ms score'))## +
+      ## geom_segment(aes(x = genes$start[1], y = 0,
+      ##                  xend = genes$end[1], yend = 0),col='black')+
+      ## geom_segment(aes(x = genes$start[2], y = 0,
+      ##                  xend = genes$end[2], yend = 0),col='black')+
+      ## geom_segment(aes(x = genes$start[3], y = 0,
+      ##                  xend = genes$end[3], yend = 0),col='black'));
+      dev.off()
                                         #      facet_wrap(~nam, scales="free_y")+
 #dev.off()
