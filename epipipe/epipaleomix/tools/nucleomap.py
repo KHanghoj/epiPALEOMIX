@@ -4,7 +4,6 @@ import sys
 import pysam
 import argparse
 from collections import deque, namedtuple
-# from itertools import islice
 from os.path import exists, splitext
 from shutil import move
 from epipaleomix.tools.commonutils import \
@@ -118,22 +117,6 @@ class Nucleosome_Prediction(GC_correction):
                             lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
         if lasttup:
             self._outputlist.append(lasttup)
-        
-        # save the one with greatest score
-                       #  currlist = [start_pos, end_pos, center_depth]
-        #                 if currlist == last:
-        #                     score = max(last_score, score)
-        #                 else:
-        #                     if last:
-                                
-        #                 last = currlist
-        #                 last_score = score
-        # if self._outputlist and last:
-        #     if self._outputlist[-1][:2] != last[:2]: # check if the last call is new
-        #         self._outputlist.append(last+[last_score])
-        # # finally, check if the score of the called nucleosome is greater than the previous
-        #     elif self._outputlist[-1][-1] < last_score:
-        #         self._outputlist[-1][-1] = last_score
 
     def _check_width(self, start, end, incre):
         for idx in xrange(start, end, incre):
@@ -158,7 +141,6 @@ class Nucleosome_Prediction(GC_correction):
     def writetofile(self):
         ''' dfs '''
         if self._outputlist:
-            ## data is now a namedtuple but still same procedure
             for dat in self._outputlist: 
                 self.f_output.write(self._fmt.format(self.chrom,
                                                      *dat,
