@@ -3,8 +3,8 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
-from collections import deque, namedtuple
-# from itertools import islice
+from collections import deque
+from itertools import islice
 from os.path import exists, splitext
 from shutil import move
 from epipaleomix.tools.commonutils import \
@@ -32,10 +32,9 @@ class Nucleosome_Prediction(GC_correction):
         self.f_output = None
         self._GC_model_len = 0
         self._outputlist = []
-        self._fmt = '{}\t{}\t{}\t{}\t{}\t{bedcoord}\n'
+        self._fmt = '{0}\t{1}\t{2}\t{3}\t{4}\t{bedcoord}\n'
         self._GCmodel_ini()
         self._makeoutputfile()
-        self._calltuple = namedtuple('call', 's e depth score')
 
     def update_depth(self, record):
         if not self._last_ini:
@@ -49,6 +48,12 @@ class Nucleosome_Prediction(GC_correction):
                 self._mainlist = self._zeros[:self._HALFWINDOW]
                 self._last_ini = record.pos+1-self._HALFWINDOW
                 self._deq_depth = deque(self._zeros, maxlen=self._seq_len)
+                _jump_idx = 0
+                # the islice elif is a simple trick to speed up the process a bit
+                # not sure it is actually the case
+            elif _jump_idx > self._TOTAL_WIN_LENGTH:
+                self._mainlist.extend(islice(self._deq_depth,0,_jump_idx))
+                self._deq_depth.extend(self._zeros[:_jump_idx])
                 _jump_idx = 0
             else:
                 while _jump_idx:
@@ -81,7 +86,7 @@ class Nucleosome_Prediction(GC_correction):
         
     def _call_window(self):
         ''' docstring '''
-        lasttup = ()
+        last, last_score = [], 0
         for idx, win_depth in self._depthwindows():
             if win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._mindepth:
                 continue
@@ -98,42 +103,26 @@ class Nucleosome_Prediction(GC_correction):
                     center_depth, min_idx, max_idx = dep_posses
                     sizeofwindow = (max_idx-min_idx)
                     mean_spacer = (0.5 * (spacerL + spacerR))
-                    if mean_spacer < 1: # when GCcorrection, we see very low flanks. gives unrealistic high score
-                        mean_spacer = 1
                     # divide peak by mean of flanks then by width of nucleosome
                     score = ((float(center_depth) / mean_spacer) /
                              (sizeofwindow+1.0))
                     start_pos = idx+self._last_ini+min_idx
                     end_pos = idx+self._last_ini+max_idx
-
                     if start_pos >= self.start and start_pos <= self.end:
-                        if not lasttup: # initialize
-                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
-                            continue
-                        if start_pos <= lasttup.e: # the nucl dyad/center overlap
-                            if score > lasttup.score:
-                                lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
-                        else:  # they do not overlap. send lasttup to outputlist
-                            self._outputlist.append(lasttup)
-                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
-        if lasttup:
-            self._outputlist.append(lasttup)
-        
-        # save the one with greatest score
-                       #  currlist = [start_pos, end_pos, center_depth]
-        #                 if currlist == last:
-        #                     score = max(last_score, score)
-        #                 else:
-        #                     if last:
-                                
-        #                 last = currlist
-        #                 last_score = score
-        # if self._outputlist and last:
-        #     if self._outputlist[-1][:2] != last[:2]: # check if the last call is new
-        #         self._outputlist.append(last+[last_score])
-        # # finally, check if the score of the called nucleosome is greater than the previous
-        #     elif self._outputlist[-1][-1] < last_score:
-        #         self._outputlist[-1][-1] = last_score
+                        currlist = [start_pos, end_pos, center_depth]
+                        if currlist == last:
+                            score = max(last_score, score)
+                        else:
+                            if last:
+                                self._outputlist.append(last+[last_score])
+                        last = currlist
+                        last_score = score
+        if self._outputlist and last:
+            if self._outputlist[-1][:2] != last[:2]: # check if the last call is new
+                self._outputlist.append(last+[last_score])
+        # finally, check if the score of the called nucleosome is greater than the previous
+            elif self._outputlist[-1][-1] < last_score:
+                self._outputlist[-1][-1] = last_score
 
     def _check_width(self, start, end, incre):
         for idx in xrange(start, end, incre):
@@ -158,7 +147,6 @@ class Nucleosome_Prediction(GC_correction):
     def writetofile(self):
         ''' dfs '''
         if self._outputlist:
-            ## data is now a namedtuple but still same procedure
             for dat in self._outputlist: 
                 self.f_output.write(self._fmt.format(self.chrom,
                                                      *dat,

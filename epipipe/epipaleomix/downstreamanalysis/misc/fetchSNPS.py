@@ -12,6 +12,7 @@ def getchrom(f):
         # some initialization
         while True:
             try:
+                
                 currchrom, coord = (int(n) for n in next(fsnp).split('_'))
             except StopIteration:
                 if d:

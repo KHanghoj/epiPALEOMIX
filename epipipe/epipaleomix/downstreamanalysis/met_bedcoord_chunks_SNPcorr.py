@@ -19,11 +19,13 @@ def getSNPchrom(f):
     '''
     d=set()
     chrom = 0 
-    with open(f, 'r') as fsnp:
+    with gzip.open(f, 'rb') as fsnp:
         # some initialization
         while True:
             try:
-                currchrom, coord = (int(n) for n in next(fsnp).split('_'))
+                currchrom, coord = map(int, fsnp.next().split('\t',2)[:2])
+                ## currchrom, coord = (int(n) for n in fsnp.next().split('\t',2)[:2])
+                ## currchrom, coord = (int(n) for n in next(fsnp).split('_'))
             except StopIteration:
                 if d:
                     yield d
@@ -74,7 +76,8 @@ def methylepipal(args):
         f_in.next() # removes the header
         ds, cs, tot = [], [], []
         checked = 0
-        fetchSNP = getSNPchrom('/home/krishang/data/SNP142/snppos.txt')
+        ## fetchSNP = getSNPchrom('/home/krishang/data/SNP142/snppos.txt')
+        fetchSNP = getSNPchrom('/home/krishang/data/SNP142/cpgrelatedSNP_allmut.txt.gz')
         lastchrom = ''
         fetchSNP.send(None)  # initialize
         lastbedc = ''
