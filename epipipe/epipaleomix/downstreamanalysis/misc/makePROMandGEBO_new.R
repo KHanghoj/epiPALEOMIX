@@ -66,3 +66,42 @@ cat('remember to sort files:\n sort -k 1,1n -k 2,2n -k 3,3n PROM_autosom_wochr.b
 
 
 cat('remember to sort files:\n sort -k 1,1n -k 2,2n -k 3,3n GEBO_autosom_wochr.bed > tmp.file  && mv tmp.file GEBO_autosom_wochr.bed\n')
+
+exit('no')
+## this is a special short GEBO. only 1400 bp from tss+2000 to tss+3400
+plusstrand <- df$strand == '+'
+minusstrand <- df$strand == '-'
+
+
+plusdf <- with(df, data.frame(chrom=chrom[plusstrand], start=start[plusstrand]-400,
+                              end=start[plusstrand]+1000, GEBObegin=start[plusstrand]+2000,
+                              GEBOend=start[plusstrand]+3400,
+                              strand=strand[plusstrand], ID=ID[plusstrand]))
+
+minusdf <- with(df, data.frame(chrom=chrom[minusstrand], start=end[minusstrand]-1000,
+                               end=end[minusstrand]+400,
+                               GEBObegin=end[minusstrand]-3400,
+                               GEBOend=end[minusstrand]-2000,
+                               strand=strand[minusstrand],
+                               ID=ID[minusstrand]))
+
+df <- rbind(plusdf, minusdf)
+df$PROMREG=sprintf('%s_%s_%s',df[,1], df[,2], df[,3])
+df$GEBOREG=sprintf('%s_%s_%s',df[,1], df[,4], df[,5])
+print(table(keep <- !duplicated(df$PROMREG)))
+df <- df[keep,]
+
+normalprom = read.table('PROM_autosom_wochr.bed')
+normalprom$PROMREG=sprintf('%s_%s_%s',normalprom[,1], normalprom[,2], normalprom[,3])
+keep <- intersect(normalprom$PROMREG,df$PROMREG)
+df <-  df[(df$PROMREG%in%keep),]
+
+write.table(df[,c(1,4,5,6,7)], file='GEBOSHORT_autosom_wochr.bed',
+            row.names=F,col.names=F,quote=F,sep='\t')
+
+
+write.table(df, file='GEBOPROMTOGETHER_GEBOSHORT.INFOFILE',
+            row.names=F,col.names=T,quote=F,sep='\t')
+
+
+cat('remember to sort files:\n sort -k 1,1n -k 2,2n -k 3,3n GEBOSHORT_autosom_wochr.bed > tmp.file  && mv tmp.file GEBOSHORT_autosom_wochr.bed\n')
