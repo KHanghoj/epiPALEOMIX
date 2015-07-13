@@ -1,12 +1,19 @@
-## zcat allgeneshg19.bed.gz | cut -f 1,2,3,4,5 |sed 's/chr//g' | sed '/_/ d' | gzip - > allgeneshg19_cleaned.bed.gz
-df <- read.table('allgeneshg19_cleaned.bed.gz', comment.char='!', h=T)
-df <- df[!with(df, txEnd-txStart)>1500000,]  # remove super long transcripts greater than 1.5 million 
+require(data.table)
+df <- fread('zcat allgeneshg19withnm1.bed.gz',data.table=F)
+print(table(keep <- !(df$hg19.kgXref.refseq%in%"")))
+df <- df[keep,]
+df <- df[!with(df, hg19.knownGene.txEnd-hg19.knownGene.txStart)>1500000,]
+                                        # remove super long transcripts greater than 1.5 million 
+print(table(keep <- !grepl('_',df$hg19.knownGene.om)))
+df <- df[keep,]
 autosomal <- 1:22
 df <- df[(df[,2]%in%autosomal),]
 print(table(keep <- !duplicated(sprintf('%s_%s',as.character(df[,2]), as.numeric(df[,4])))))
 df <- df[keep,]
 print(table(keep <- !duplicated(sprintf('%s_%s',as.character(df[,2]), as.numeric(df[,5])))))
 df <- df[keep,]
+
+
 ## keep <- print(table(!duplicated(sprintf('%s_%s_%s',as.character(df[,2]), as.numeric(df[,4]),as.numeric(df[,5])))))
 ## df <- df[keep,]
 
@@ -19,19 +26,19 @@ df <- df[keep,]
 ## df <- as.data.frame(newdf)[,c(1,2,3,5,4)] #newdf[(disjointBins(newdf)==1),])
 ##                                         #keep <- findOverlaps(newdf, newdf, select='first')
 ##                                         #df <- df[unique(keep),]
-df <-  df[,c(2,4,5,3,1)]
+df <-  df[,c(2,4,5,3,6)]
 colnames(df) <- c('chrom', 'start', 'end', 'strand', 'ID')
 
 
 plusstrand <- df$strand == '+'
 minusstrand <- df$strand == '-'
 
-plusdf <- with(df, data.frame(chrom=chrom[plusstrand], start=start[plusstrand]-500,
+plusdf <- with(df, data.frame(chrom=chrom[plusstrand], start=start[plusstrand]-400,
                               end=start[plusstrand]+1000, GEBObegin=start[plusstrand]+1000,
                               GEBOend=end[plusstrand], strand=strand[plusstrand], ID=ID[plusstrand]))
 
 minusdf <- with(df, data.frame(chrom=chrom[minusstrand], start=end[minusstrand]-1000,
-                               end=end[minusstrand]+500, GEBObegin=start[minusstrand],
+                               end=end[minusstrand]+400, GEBObegin=start[minusstrand],
                                GEBOend=end[minusstrand]-1000,
                                strand=strand[minusstrand],
                                ID=ID[minusstrand]))
@@ -40,8 +47,9 @@ df <- rbind(plusdf, minusdf)
 df$PROMREG=sprintf('%s_%s_%s',df[,1], df[,2], df[,3])
 df$GEBOREG=sprintf('%s_%s_%s',df[,1], df[,4], df[,5])
 print(table(keep <- !duplicated(df$PROMREG)))
-df = df[keep,]
-df <- df[with(df, (GEBObegin-GEBOend)<0),]
+df <- df[keep,]
+print(table(keep <- with(df, (GEBObegin-GEBOend)<0)))
+df <- df[keep,]
 
 write.table(df[,c(1,2,3,6,7)], file='PROM_autosom_wochr.bed',
             row.names=F,col.names=F,quote=F,sep='\t')

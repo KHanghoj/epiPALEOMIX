@@ -5,8 +5,12 @@ FMT = '{c}\t{s}\t{e}\t{cov}\t{methyl}\n'.format
 # takes only chromosomes without "chr"
 
 def sum_dfs(df1, df2):
-    df1['cov'] = (df1['cov']+df2['cov'])/2.0
-    df1['methyl'] = (df1['methyl']+df2['methyl'])/2.0
+    methreads = (df1['cov']*float(df1['methyl']))+(df2['cov']*float(df2['methyl']))
+    totreads = (df1['cov']+df2['cov'])
+    df1['cov'] = totreads
+    df1['methyl'] = methreads/totreads
+    # df1['cov'] = (df1['cov']+df2['cov'])/2.0
+    # df1['methyl'] = (df1['methyl']+df2['methyl'])/2.0
     return df1
 
 def unpack(chrom, start, end, cov, methyl, *rest):
