@@ -9,7 +9,7 @@ import gzip
 HEADERS = {
     'MethylMap': '#chrom\tgenomicpos\tdeaminated\ttotal\tbedcoord\n',
     'NucleoMap': '#chrom\tstart\tend\tdepth\tscore\tbedcoord\n',
-    'WriteDepth': '#chrom\tgenomicpos\tdepth\tbedcoord\n',
+    'WriteDepth': '#chrom\tgenomicpos\tdepth\tscore\tbedcoord\n',
     'Phasogram': '#Length\tCount\n'
 }
 

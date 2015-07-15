@@ -140,7 +140,6 @@ def main_anal_to_run(opts):
         if analysis in ANALYSES and options['Enabled']:
             yield analysis
 
-
 def makegcnodes(d_bam, rang, subn=()):
     return [GccorrectNode(d_bam, rl, subnodes=subn) for rl in rang]
 
