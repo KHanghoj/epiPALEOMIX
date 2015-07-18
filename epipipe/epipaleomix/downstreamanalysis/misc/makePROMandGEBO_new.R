@@ -14,7 +14,7 @@ print(table(keep <- !duplicated(sprintf('%s_%s',as.character(df[,2]), as.numeric
 df <- df[keep,]
 
 
-## keep <- print(table(!duplicated(sprintf('%s_%s_%s',as.character(df[,2]), as.numeric(df[,4]),as.numeric(df[,5])))))
+## print(table(keep <- !duplicated(sprintf('%s_%s_%s',as.character(df[,2]), as.numeric(df[,4]),as.numeric(df[,5])))))
 ## df <- df[keep,]
 
 ## library(GenomicRanges, quietly = TRUE)  # remove overlapping transcripts
@@ -26,7 +26,8 @@ df <- df[keep,]
 ## df <- as.data.frame(newdf)[,c(1,2,3,5,4)] #newdf[(disjointBins(newdf)==1),])
 ##                                         #keep <- findOverlaps(newdf, newdf, select='first')
 ##                                         #df <- df[unique(keep),]
-df <-  df[,c(2,4,5,3,6)]
+cat('\ncheck the 8th column is correct in inputfile\n')
+df <-  df[,c(2,4,5,3,8)]
 colnames(df) <- c('chrom', 'start', 'end', 'strand', 'ID')
 
 
@@ -34,14 +35,24 @@ plusstrand <- df$strand == '+'
 minusstrand <- df$strand == '-'
 
 plusdf <- with(df, data.frame(chrom=chrom[plusstrand], start=start[plusstrand]-400,
-                              end=start[plusstrand]+1000, GEBObegin=start[plusstrand]+1000,
+                              end=start[plusstrand]+1000, GEBObegin=start[plusstrand]+2000,
                               GEBOend=end[plusstrand], strand=strand[plusstrand], ID=ID[plusstrand]))
 
 minusdf <- with(df, data.frame(chrom=chrom[minusstrand], start=end[minusstrand]-1000,
                                end=end[minusstrand]+400, GEBObegin=start[minusstrand],
-                               GEBOend=end[minusstrand]-1000,
+                               GEBOend=end[minusstrand]-2000,
                                strand=strand[minusstrand],
                                ID=ID[minusstrand]))
+
+## plusdf <- with(df, data.frame(chrom=chrom[plusstrand], start=start[plusstrand]-400,
+##                               end=start[plusstrand]+1000, GEBObegin=start[plusstrand]+1000,
+##                               GEBOend=end[plusstrand], strand=strand[plusstrand], ID=ID[plusstrand]))
+
+## minusdf <- with(df, data.frame(chrom=chrom[minusstrand], start=end[minusstrand]-1000,
+##                                end=end[minusstrand]+400, GEBObegin=start[minusstrand],
+##                                GEBOend=end[minusstrand]-1000,
+##                                strand=strand[minusstrand],
+##                                ID=ID[minusstrand]))
 
 df <- rbind(plusdf, minusdf)
 df$PROMREG=sprintf('%s_%s_%s',df[,1], df[,2], df[,3])
@@ -52,12 +63,10 @@ print(table(keep <- with(df, (GEBObegin-GEBOend)<0)))
 df <- df[keep,]
 
 write.table(df[,c(1,2,3,6,7)], file='PROM_autosom_wochr.bed',
-            row.names=F,col.names=F,quote=F,sep='\t')
+             row.names=F,col.names=F,quote=F,sep='\t')
 write.table(df[,c(1,4,5,6,7)], file='GEBO_autosom_wochr.bed',
-            row.names=F,col.names=F,quote=F,sep='\t')
+             row.names=F,col.names=F,quote=F,sep='\t')
 
-#df$PROMREG=sprintf('%s_%s_%s',df[,1], df[,2], df[,3])
-#df$GEBOREG=sprintf('%s_%s_%s',df[,1], df[,4], df[,5])
 write.table(df, file='GEBOPROMTOGETHER.INFOFILE',
             row.names=F,col.names=T,quote=F,sep='\t')
 
