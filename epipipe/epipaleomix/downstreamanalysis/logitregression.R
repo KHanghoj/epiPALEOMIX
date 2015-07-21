@@ -14,6 +14,29 @@ mdfkeep = mdf[mdf$coverage>100,]
 mdfkeep$moderndeaminated = round(with(mdfkeep, V4*V5),0)
 mdfkeep$V5bin= with(mdfkeep, cut(V5, breaks=c(-1,seq(0.1,1,0.1)),labels=1:10))
 
+fmodern <- function(bin,mdf){
+    mean(mdf$V5[mdf$V5bin==bin])
+}
+par <- 1:10
+m = unlist(lapply(par,fmodern, mdf=mdfkeep))
+
+fown <- function(bin,mdf){
+    mean(mdf$methylprop[mdf$V5bin==bin])
+}
+o = unlist(lapply(par,fown, mdf=mdfkeep)) ## this is what we need for rescaling
+plot(m,o)
+dev.off()
+mdfkeep$methylpropbin = cut(mdfkeep$methylprop, breaks= c(-1, seq(0.0007,0.007,0.007/10)), labels=1:10)
+unlist(lapply(par,f, mdfkeep=mdfkeep))
+
+val <- mean(mdfkeep$V5[mdfkeep$V5bin==1])
+mdfkeep$methylprop[mdfkeep$V5<val] <- val
+val <- mean(mdfkeep$V5[mdfkeep$V5bin==10])
+mdfkeep$methylprop[mdfkeep$V5>val] <- val
+
+
+mdfkeep$methylprop[mdfkeep$methylprop>0.02] <- 0.02
+
 val <- mean(mdfkeep$methylprop[mdfkeep$V5bin==1])
 mdfkeep$methylprop[mdfkeep$methylprop<val] <- val
 val <- mean(mdfkeep$methylprop[mdfkeep$V5bin==10])
