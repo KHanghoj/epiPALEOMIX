@@ -10,9 +10,22 @@ tissue <- fread('../methylation/RRBS/onlyRRBSoverlappingPROM.bed', data.table=F)
 tissue$nampos <- sprintf('%s_%s',tissue[,1],tissue[,2])
 
 mdf <- merge(df, tissue, by='nampos')
-mdfkeep = mdf[mdf$coverage>1000,]
+mdfkeep = mdf[mdf$coverage>100,]
 mdfkeep$moderndeaminated = round(with(mdfkeep, V4*V5),0)
 mdfkeep$V5bin= with(mdfkeep, cut(V5, breaks=c(-1,seq(0.1,1,0.1)),labels=1:10))
+
+val <- mean(mdfkeep$methylprop[mdfkeep$V5bin==1])
+mdfkeep$methylprop[mdfkeep$methylprop<val] <- val
+val <- mean(mdfkeep$methylprop[mdfkeep$V5bin==10])
+mdfkeep$methylprop[mdfkeep$methylprop>val] <- val
+
+
+with(mdfkeep[1:10000,], plot(methylprop, sort(V5$bin),col='green'))
+dev.off()
+
+
+
+
 
 
 
