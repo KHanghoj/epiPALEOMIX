@@ -1,3 +1,7 @@
+## REMEMBER:: Redo the ctrl + v ; TAB every time join command is copied to terminal
+join -t ' ' -1 2 -2 25 <(sort -k 2,2 HK_genes.txt) <(sort -k 25,25 Rsscorefortest.txt) > HKjoinedwithRs.txt
+cut -f 1,2,26,27 HKjoinedwithRs.txt > HKgenes_samples_Rsscore.txt
+
 Rscript rescalemodel_compute.R 750 /disk/ginzburg/data/krishang/methyl_rawdata/bedcoord_MANYBASES_SNPsextra/AltaiNeanderthal_MethylMap_RRBSk1500_bedcoord.txt.gz /disk/ginzburg/data/krishang/methylation/RRBS/ucscdownfiltered_collapsed_new/Osteobl.bed Altaimodel.Rdata
 
 Rscript rescalemodel_compute.R 1000 /disk/ginzburg/data/krishang/methyl_rawdata/bedcoord_MANYBASES_SNPsextra/Saqqaq_MethylMap_methyl450k2000_bedcoord.txt.gz /disk/ginzburg/data/krishang/methylation/methyl450data/metdataDF/hairsample_GSM1179543_forrescalemodel.bed saqqaq.Rdata
