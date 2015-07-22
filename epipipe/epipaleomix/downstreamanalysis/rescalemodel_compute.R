@@ -1,6 +1,6 @@
 args <- commandArgs(trailingOnly = TRUE)
 ## df <- fread('zcat /disk/ginzburg/data/krishang/methyl_rawdata/bedcoord_MANYBASES_SNPsextra/AltaiNeanderthal_MethylMap_RRBSk1500_bedcoord.txt.gz',data.table=F)
-print(c(args, 'sizetocenter: 750 or 1500', 'inbedcoord', 'intissue', 'outputmodel'))
+print(c(args, 'sizetocenter: 750 or 1000', 'inbedcoord', 'intissue', 'outputmodel'))
 if(length(args)==0){stop()}
 
 library(data.table)

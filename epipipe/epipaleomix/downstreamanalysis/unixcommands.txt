@@ -1,5 +1,7 @@
 Rscript rescalemodel_compute.R 750 /disk/ginzburg/data/krishang/methyl_rawdata/bedcoord_MANYBASES_SNPsextra/AltaiNeanderthal_MethylMap_RRBSk1500_bedcoord.txt.gz /disk/ginzburg/data/krishang/methylation/RRBS/ucscdownfiltered_collapsed_new/Osteobl.bed Altaimodel.Rdata
 
+Rscript rescalemodel_compute.R 1000 /disk/ginzburg/data/krishang/methyl_rawdata/bedcoord_MANYBASES_SNPsextra/Saqqaq_MethylMap_methyl450k2000_bedcoord.txt.gz /disk/ginzburg/data/krishang/methylation/methyl450data/metdataDF/hairsample_GSM1179543_forrescalemodel.bed saqqaq.Rdata
+
 take the mean of all Ms values in bin 1 and set all ms values in that bin equal to that value
 take the mean of all Ms values in bin 10 and set all ms values in that bin equal to that value
 
@@ -312,6 +314,7 @@ require(ggplot2)
 require(reshape2)
 df = read.table('BIGDF_RRBSlinearmodel_MERGEDRRBSDATA.txt')
 df = read.table('ALTAIONLY_COMPLEX_RRBSlinearmodel_MANYBASES_MERGEDRRBSDATA_ALLTISSUES.txt')
+df = df[df$V5!='AltaiNeanderthalnew',]
 df$col='other'
 df$col[df$V6=='Osteobl']='Osteobl'
 ggplot(df,aes(V4,V2,col=col,group=V6))+geom_line()+facet_wrap(~V5,ncol=5)+labs(x='coverage cutoff', y='R-squared', title='RRBS datasites. Osteoblast vs other tissues')
