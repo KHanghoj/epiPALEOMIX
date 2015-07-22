@@ -1,3 +1,5 @@
+Rscript rescalemodel_compute.R 750 /disk/ginzburg/data/krishang/methyl_rawdata/bedcoord_MANYBASES_SNPsextra/AltaiNeanderthal_MethylMap_RRBSk1500_bedcoord.txt.gz /disk/ginzburg/data/krishang/methylation/RRBS/ucscdownfiltered_collapsed_new/Osteobl.bed Altaimodel.Rdata
+
 take the mean of all Ms values in bin 1 and set all ms values in that bin equal to that value
 take the mean of all Ms values in bin 10 and set all ms values in that bin equal to that value
 
