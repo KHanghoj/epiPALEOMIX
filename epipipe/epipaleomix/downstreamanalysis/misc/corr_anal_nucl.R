@@ -46,7 +46,6 @@ rcorr(as.matrix(mdf[2:ncol(mdf)]))
 
 
 
-
 ## correlation and convolution:
 ## http://www.cs.umd.edu/~djacobs/CMSC426/Convolution.pdf
 ## https://en.wikipedia.org/wiki/Convolution

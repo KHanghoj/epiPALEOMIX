@@ -1,3 +1,17 @@
+#### super cool pdftotext stuff:
+awk '/^Upper Marker$/,/© Copyright 2003 - 2009 Agilent Technologies, Inc./' BA_E011-E012_020514_OK.txt >test  ## this one keeps stuff between Upper Marker and © Copyright 2003 - 2009 Agilent Technologies, Inc.
+sed '/^$/ d; /Upper Marker/ d;/Average Size/ d; /Size distri/ d' test  |less  ## this one remove lines with several different names
+sed -rn '/cycles/p; /^[0-9]+/ p' test | less  ## another cool
+
+
+Do canonical factoring analyses with this R package:
+   https://cran.r-project.org/web/packages/CCA/CCA.pdf
+   http://stat.ethz.ch/R-manual/R-devel/library/stats/html/cancor.html
+   https://cran.r-project.org/web/packages/FactoMineR/FactoMineR.pdf
+
+###  /home/krishang/data/methylation/geneidentification
+python filterfile_based_on_another.py ../Rsscores2000.txt.gz
+
 ## REMEMBER:: Redo the ctrl + v ; TAB every time join command is copied to terminal
 join -t ' ' -1 2 -2 25 <(sort -k 2,2 HK_genes.txt) <(zcat Rsscores.txt.gz| sort -k 25,25) > HKjoinedwithRs.txt
 cut -f 1,2,26,27 HKjoinedwithRs.txt > HKgenes_samples_Rsscore.txt
