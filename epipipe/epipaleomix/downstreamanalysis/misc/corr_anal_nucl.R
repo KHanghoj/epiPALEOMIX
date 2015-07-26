@@ -135,3 +135,55 @@ valabo = convolve(mdfnaomit[,c('Denisova')],window,type='filter')
 plot(valsaq[1:500])
 plot(valabo[1:500])
 dev.off()
+
+
+
+######## TSS analysis of BAM files
+df=fread('zcat Saqqaq_WriteDepth_TSS2kb.txt.gz',data.table=F)
+dfs = split(df,df[,5]) ## this takes super long
+## keep = lapply(dfs,nrow)>1999
+ds = df[df$bedcoord=='1_713068_715068',]
+ds = cbind(ds, do.call(rbind, strsplit(ds$bedcoord,'_')))
+
+## this part is for regions with less than 1999 bases. so incomplete regions
+d=data.frame(genomicpos=713068:715068)
+ds = merge(d,ds,by='genomicpos',all=T, fill=T)
+ds[is.na(ds)]=0
+s = spectrum(ds$score,plot=FALSE)
+peaklength = 1/s$freq[which(s$spec==max(s$spec))]
+plot(ds$score)
+plot(1/s$freq,s$spec, main=peaklength)
+dev.off()
+##### 
+
+## convolutions of TSS analysis
+window <- (c(seq(1,73),74,seq(73,1))) ## weighted filtering window weighing the same in the center
+##dsconvolve = convolve(ds$score,window,type='filter')  ## here you remove the first 
+dsconvolve = filter(ds$score,window)
+dsconvolve[is.na(dsconvolve)] = 0
+plot(dsconvolve)
+s = spectrum(dsconvolve,plot=FALSE)
+peaklength = 1/s$freq[which(s$spec==max(s$spec))]  ## returns the basesize peak
+plot(1/s$freq,s$spec, main=peaklength)
+dev.off()
+
+
+### on the read depth
+s = spectrum(ds$depth,plot=FALSE)
+peaklength = 1/s$freq[which(s$spec==max(s$spec))]
+plot(ds$depth)
+plot(1/s$freq,s$spec, main=peaklength)
+dev.off()
+
+### on the read depth convolved
+dsconvolve = filter(ds$depth,window)
+dsconvolve[is.na(dsconvolve)] = 0
+plot(dsconvolve)
+s = spectrum(dsconvolve,plot=FALSE)
+peaklength = 1/s$freq[which(s$spec==max(s$spec))]
+plot(1/s$freq,s$spec, main=peaklength)
+dev.off()
+
+
+
+
