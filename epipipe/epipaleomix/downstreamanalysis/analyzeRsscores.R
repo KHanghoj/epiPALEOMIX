@@ -20,6 +20,7 @@ library(gtools)
 IDXES <- combinations(length(names(dfs)),2)
 
 ### df <- df[,c(1,24,26)]
+##### CORRELATION STUDIES
 ## this is housekeeping
 df <- fread('HKjoinedwithRs_withoutABO.txt',data.table=FALSE)
 dfs <- split(df[,c(15,28)],df[,14])  ## Normalized data # normalized is better
@@ -47,6 +48,7 @@ na.to.mean <- function(n){
   M[is.na(M[,n]),n] = colm[n]
   M[,n]
 }
+
 M = as.matrix(data[,-1])
 colm <- colMeans(M,na.rm=T)
 M.new<-do.call(cbind, parallel::mclapply(names(colm),na.to.mean,mc.cores=4))
@@ -80,17 +82,35 @@ require(CCA)
 canon.correlation <- function(l, df=M){
   df.left <- df[,l$left]
   df.right <- df[,l$right]
-  cc(df.left,df.right) 
+  # display the canonical correlations in out1
+  out1 <- cc(df.left,df.right)
+  # compute canonical loadings
+  list('cccor'=out1, 'ccload'=comput(df.left, df.right, out1))
 }
+canon.correlation <- function(l, df=M){
+  df.left <- df[,l$left]
+  df.right <- df[,l$right]
+  # display the canonical correlations in out1
+  cc(df.left,df.right)
+}
+
+
+canon.matrix.correlation <- function(l, df=M){
+  df.left <- df[,l$left]
+  df.right <- df[,l$right]
+  matcor(df.left,df.right) 
+}
+
+
 canon.correlation(list('left'=c('AltaiNeanderthal', 'Denisova'), 'right'=c('Kostenki','Loschbour', 'Motala', 'Saqqaq', 'Stuttgart', 'UstIshim')))
-list('left'=c('AltaiNeanderthal', 'Denisova'), 'right'=c('Kostenki','Loschbour', 'Saqqaq', 'Stuttgart', 'UstIshim'))
-list('left'=c('AltaiNeanderthal', 'Denisova'), 'right'=c('Loschbour', 'Saqqaq', 'Stuttgart', 'UstIshim'))
-list('left'=c('Kostenki','UstIshim'), 'right'=c('Loschbour'))
-list('left'=c('Kostenki','UstIshim'), 'right'=c('Stuttgart'))
-list('left'=c('Kostenki','UstIshim'), 'right'=c('Stuttgart','Loschbour'))
-list('left'=c('Kostenki','UstIshim','Loschbour'), 'right'=c('Stuttgart'))
+canon.correlation(list('left'=c('AltaiNeanderthal', 'Denisova'), 'right'=c('Kostenki','Loschbour', 'Saqqaq', 'Stuttgart', 'UstIshim')))
+canon.correlation(list('left'=c('AltaiNeanderthal', 'Denisova'), 'right'=c('Loschbour', 'Saqqaq', 'Stuttgart', 'UstIshim')))
+canon.correlation(list('left'=c('Kostenki','UstIshim'), 'right'=c('Loschbour')))
+canon.correlation(list('left'=c('Kostenki','UstIshim'), 'right'=c('Stuttgart')))
+canon.correlation(list('left'=c('Kostenki','UstIshim'), 'right'=c('Stuttgart','Loschbour')))
+canon.correlation(list('left'=c('Kostenki','UstIshim','Loschbour'), 'right'=c('Stuttgart')))
 ## list('left'=c('Kostenki','UstIshim'), 'right'=c('Stuttgart','Loschbour')) can i compare three???
-list('left'=c('Saqqaq'), 'right'=c('AltaiNeanderthal', 'Denisova', 'Kostenki','Loschbour', 'Motala', 'Stuttgart', 'UstIshim'))
+canon.correlation(list('left'=c('Saqqaq'), 'right'=c('AltaiNeanderthal', 'Denisova', 'Kostenki','Loschbour', 'Motala', 'Stuttgart', 'UstIshim')))
 
 M = as.matrix(data[,-1])
 colm <- colMeans(M,na.rm=T)
