@@ -1,3 +1,7 @@
+
+## just some converting
+awk '{if($4=="+"){print $1"\t"$2+3000"\t"$3+3000"\t"$4"\t"$5} else {print $1"\t"$2-3000"\t"$3-3000"\t"$4"\t"$5} }' TSS2kb_autosome_wochr.bed > GEBO2kb_autosome_wochr.bed
+
 #### super cool pdftotext stuff:
 awk '/^Upper Marker$/,/© Copyright 2003 - 2009 Agilent Technologies, Inc./' BA_E011-E012_020514_OK.txt >test  ## this one keeps stuff between Upper Marker and © Copyright 2003 - 2009 Agilent Technologies, Inc.
 sed '/^$/ d; /Upper Marker/ d;/Average Size/ d; /Size distri/ d' test  |less  ## this one remove lines with several different names
