@@ -18,7 +18,7 @@ readsampledf <- function(f){
     df$pos = df$genomicpos
     newnam <- sprintf("%s;  dea: %s;  totreads: %s;  CpGsites:%s",
                       nam, totdea, totreads, CpGsites)
-    methylprop = filter(df[,3]/df[,4], WINDOW)
+    methylprop = filter(df[,3]/df[,4], WINDOW)/sum(WINDOW)
     pos = df[!is.na(methylprop),2]
     data.frame('pos'=pos,
                'methylprop'=methylprop[!is.na(methylprop)],
@@ -29,8 +29,8 @@ readsampledf <- function(f){
 
 
 WINSIZE <- 60
-WINDOW <- c(seq(0,(WINSIZE/2)-5),rep(WINSIZE/2, 10), seq((WINSIZE/2)-5,0))
-WINDOW <- rep(1,WINSIZE)
+WINDOW <- c(seq(1,(WINSIZE/2)-5),rep(WINSIZE/2, 10), seq((WINSIZE/2)-5,1))
+#WINDOW <- rep(1,WINSIZE)
 files = list.files(pattern='HOXD10',recursive=T,full.names=T)
 print(files)
 

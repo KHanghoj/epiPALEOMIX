@@ -14,9 +14,11 @@ rdf <- function(f, col){
     df <- fread(sprintf('zcat %s',f),data.table=F)
     df$nampos <- sprintf('%s_%s',df[,1],df[,2])
     df <- df[,c(col,'nampos')]
+    ## df[,col] <- scale(df[,col])  ### might not a good idea to do before PCA. as looking at variance. might just center by mean
     colnames(df) <- c(getnames(f), 'nampos')
     df
 }
+
 spectrumwrapper <- function(score){
     ## takes a vector of scores as input
     d <- spectrum(scores,method='pgram',plot=F)
@@ -33,15 +35,48 @@ getnames <- function(f){
     unlist(strsplit(nam[length(nam)], '_'))[1]
 }
 
+WINDOW <- (c(seq(1,73),74,seq(73,1))) ## weighted filtering window weighing the same in the center
+filter.convolution <- function(col, wind=WINDOW, df=mdf){
+    filter(col,wind)/sum(wind)
+}
+
 files <- list.files(pattern='txt.gz',recursive=T)
 
 files <- files[grepl('_WriteDepth_CONSERVEDARRAY',files)]
 files <- files[!grepl('RISE',files)]
+
 dfs <- lapply(files,readdf)
 mdf = Reduce(function(x, y) merge(x, y, by=c("nampos"), all=TRUE), lapply(files,rdf, col='depth'),accumulate=F)
 rcorr(as.matrix(mdf[2:ncol(mdf)]))
 mdf = Reduce(function(x, y) merge(x, y, by=c("nampos"), all=TRUE), lapply(files,rdf, col='score'),accumulate=F)
 rcorr(as.matrix(mdf[2:ncol(mdf)]))
+
+mdf <- data.frame(pos=mdf[,1], apply(mdf[,2:ncol(mdf)], 2, filter.convolution))
+
+### PCA & HEATMAP
+na.to.mean <- function(n){
+  M[is.na(M[,n]),n] = colm[n]
+  M[,n]
+}
+
+M = as.matrix(mdf[,-1])
+colm <- colMeans(M,na.rm=T)
+M.new<-do.call(cbind, parallel::mclapply(names(colm),na.to.mean,mc.cores=4))
+colnames(M.new) = names(colm)
+M=M.new
+rm(M.new)
+X<-t(M)%*%M
+sites=nrow(M)
+X<-X/(sum(diag(X))/(sites-1))
+E<-eigen(X)
+PC.12 = round(as.numeric(E$values/sum(E$values))[1:2],3)
+require(ggplot2)
+plotdf = data.frame(E$vectors)
+plotdf$nam = colnames(M)
+#ggplot(plotdf, aes(X1,X2,col=nam,label=nam))+geom_point()+geom_text()+labs(x=sprintf('PC1 %s %s',PC.12[1]*100, '%'),y=sprintf('PC2 %s %s',PC.12[2]*100,'%'));dev.off()
+ggplot(plotdf, aes(X1,X2,col=nam,label=nam))+geom_text()+labs(x=sprintf('PC1 %s %s',PC.12[1]*100, '%'),y=sprintf('PC2 %s %s',PC.12[2]*100,'%'));dev.off()
+
+heatmap(M,  cexCol=0.7, labRow=NA);dev.off()
 
 
 
@@ -64,6 +99,7 @@ centeredabo <- (mdfnaomit[,c('Aborigin')]-mean(mdfnaomit[,c('Aborigin')]))/sd(md
 
 
 window <- (c(seq(1,73),74,seq(73,1))) ## weighted filtering window weighing the same in the center
+
 windowones=rep(1,147)  ## this is not good. just for testing
 
 ### Filter:
@@ -160,6 +196,7 @@ dev.off()
 window <- (c(seq(1,73),74,seq(73,1))) ## weighted filtering window weighing the same in the center
 ##dsconvolve = convolve(ds$score,window,type='filter')  ## here you remove the first 
 dsconvolve = filter(ds$score,window)
+## dsconvolve = filter(ds$score,window)/sum(window)  Make the data comparable
 dsconvolve[is.na(dsconvolve)] = 0
 plot(dsconvolve)
 s = spectrum(dsconvolve,plot=FALSE)

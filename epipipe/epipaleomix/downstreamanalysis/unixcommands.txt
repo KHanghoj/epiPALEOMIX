@@ -1,3 +1,8 @@
+The biological function of gene body methylation is yet to be elucidated but there is an interesting relationship between gene body methylation and gene expression, with moderately expressed genes more likely to be methylated than those that have very low or high levels of expression:
+ - Feng S, Cokus SJ, Zhang X, et al. (2010) Conservation and divergence of methylation patterning in plants and animals
+ - Zemach A, McDaniel IE, Silva P, et al. (2010) Genome-wide evolutionary analysis of eukaryotic DNA methylation
+ - Zilberman D, Gehring M, Tran RK, et al. (2007) Genome-wide analysis of Arabidopsis thaliana DNA methylation uncovers an interdependence between methylation and transcription
+
 
 ## just some converting
 awk '{if($4=="+"){print $1"\t"$2+3000"\t"$3+3000"\t"$4"\t"$5} else {print $1"\t"$2-3000"\t"$3-3000"\t"$4"\t"$5} }' TSS2kb_autosome_wochr.bed > GEBO2kb_autosome_wochr.bed
