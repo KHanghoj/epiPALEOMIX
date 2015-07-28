@@ -7,7 +7,7 @@ from epipaleomix.tools import merge_datafiles
 
 prefix = os.path.dirname(splitbedfiles.__file__)
 
-class CleanFilesNode(CommandNode):
+class _CleanFilesNode_oldnode(CommandNode):
     def __init__(self, config, inbedfile, mappa, unique, dependencies=()):
         outbedfile = os.path.join(config.temp_root, os.path.basename(inbedfile))
         call1 = ["python", "./tools/filtermappa.py",
@@ -31,7 +31,7 @@ class CleanFilesNode(CommandNode):
                              command=paral_cmd,
                              dependencies=dependencies)
 
-class _CleanFilesNodenew(CommandNode):
+class CleanFilesNode(CommandNode):
     def __init__(self, config, inbedfile, mappa, unique, dependencies=()):
         outbedfile = os.path.join(config.temp_root, os.path.basename(inbedfile))
         call1 = ["python", os.path.join(prefix, 'filtermappa.py'),
@@ -51,7 +51,7 @@ class _CleanFilesNodenew(CommandNode):
                          IN_STDIN=cmd2,
                          OUT_STDOUT=AtomicCmd.PIPE)
         cmd4 = AtomicCmd(call4,
-                         IN_STDIN=cmd2,
+                         IN_STDIN=cmd3,
                          OUT_STDOUT=outbedfile)
 
         paral_cmd = ParallelCmds([cmd1, cmd2, cmd3, cmd4])
