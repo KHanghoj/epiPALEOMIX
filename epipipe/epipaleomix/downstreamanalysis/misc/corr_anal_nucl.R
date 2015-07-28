@@ -15,6 +15,7 @@ rdf <- function(f, col){
     df$nampos <- sprintf('%s_%s',df[,1],df[,2])
     df <- df[,c(col,'nampos')]
     ## df[,col] <- scale(df[,col])  ### might not a good idea to do before PCA. as looking at variance. might just center by mean
+    df[,col] <- df[,col]-mean(df[,col])
     colnames(df) <- c(getnames(f), 'nampos')
     df
 }
@@ -51,7 +52,7 @@ rcorr(as.matrix(mdf[2:ncol(mdf)]))
 mdf = Reduce(function(x, y) merge(x, y, by=c("nampos"), all=TRUE), lapply(files,rdf, col='score'),accumulate=F)
 rcorr(as.matrix(mdf[2:ncol(mdf)]))
 
-mdf <- data.frame(pos=mdf[,1], apply(mdf[,2:ncol(mdf)], 2, filter.convolution))
+mdfnew <- data.frame(pos=mdf[,1], apply(mdf[,2:ncol(mdf)], 2, filter.convolution))
 
 ### PCA & HEATMAP
 na.to.mean <- function(n){
@@ -59,7 +60,7 @@ na.to.mean <- function(n){
   M[,n]
 }
 
-M = as.matrix(mdf[,-1])
+M = as.matrix(mdfnew[,-1])
 colm <- colMeans(M,na.rm=T)
 M.new<-do.call(cbind, parallel::mclapply(names(colm),na.to.mean,mc.cores=4))
 colnames(M.new) = names(colm)

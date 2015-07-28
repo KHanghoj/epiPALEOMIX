@@ -1,3 +1,22 @@
+intersect  -wb -wa -a ../reference_human/mappability_31/GENOME_31_50.40000-20000.mappability  -b conservednucleosomearray_HG19_wochr_withname.bed | awk  'BEGIN {OFS="'\\t'"} {if($5>0.9){print $1,$2,$3,$9}}'
+
+intersect   -a ../reference_human/mappability_31/GENOME_31_50.40000-20000.mappability  -b conservednucleosomearray_HG19_wochr_withname.bed | awk  'BEGIN {OFS="'\\t'"} {if($5>0.9){print $1,$2,$3,$9}}'
+
+Had some problems with collapsed quality scores so had to avoid trimming of the already trimmed reads:
+first add Single: after Lane: to the make file
+#create the folders:
+mkdir -p SimuProject/reads/Simureads/Onlyreads/Lane_2/
+mkdir -p SimuProject/reads/Simureads/Onlyreads/Lane_1/
+#finally add to files:
+touch SimuProject/reads/Simureads/Onlyreads/Lane_2/reads.pretrimmed.validated
+touch SimuProject/reads/Simureads/Onlyreads/Lane_1/reads.pretrimmed.validated
+## as im using the same simulated reads twice (the bases are of course different)
+# i get an duplication error. therefore need to add these lines:
+mkdir -p SimuProject/000_prefixes/Simureads
+touch SimuProject/000_prefixes.duplications_checked
+touch SimuProject/000_prefixes/Simureads/Onlyreads.duplications_checked
+
+
 The biological function of gene body methylation is yet to be elucidated but there is an interesting relationship between gene body methylation and gene expression, with moderately expressed genes more likely to be methylated than those that have very low or high levels of expression:
  - Feng S, Cokus SJ, Zhang X, et al. (2010) Conservation and divergence of methylation patterning in plants and animals
  - Zemach A, McDaniel IE, Silva P, et al. (2010) Genome-wide evolutionary analysis of eukaryotic DNA methylation

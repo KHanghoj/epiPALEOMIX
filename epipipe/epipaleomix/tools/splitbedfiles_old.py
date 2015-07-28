@@ -3,7 +3,7 @@ import argparse
 import sys
 import re
 _SIZE = int(1e6)
-BEDCOORD = '{}_{}_{}'.format
+
 
 def p_args(argv):
     parser = argparse.ArgumentParser(prog='split bedfiles')
@@ -13,22 +13,20 @@ def p_args(argv):
 
 
 def unpack(c, s, e, *rest):
-    if rest and re.search('^\S+_\d+_\d+$', rest[0]):
-        bedcoord = rest[0]  ## it is highly likely to be a bedcoord
-    else:
-        bedcoord = BEDCOORD(c, s, e)
-    return c, int(s), int(e), bedcoord
+    return c, int(s), int(e)
 
 
 def splitbycoord(args):
     ''' Splits chromosome coordinates in for every _SIZE bp
     to speed up bed split then multiprocessing'''
+    bedcoord = '{}_{}_{}'.format
     fmt = '{}\t{}\t{}\t{}\n'.format
     lst = []
     lstapp = lst.append
     with open(args.infile, 'r') as infile:
         for line in infile:
-            chrom, start, end, currbedcoord = unpack(*re.split(r'\s+', line.rstrip()))
+            chrom, start, end = unpack(*re.split(r'\s+', line.rstrip()))
+            currbedcoord = bedcoord(chrom, start, end)
             while end - start >= _SIZE:
                 lstapp(fmt(chrom, start, start + _SIZE - 1,
                            currbedcoord))

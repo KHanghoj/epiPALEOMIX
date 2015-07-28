@@ -16,7 +16,8 @@ def main(argv):
         for line in infile:
             inputline = line.rstrip('\n').split('\t')
             if float(inputline[-1]) >= args.mappauniqueness:
-                sys.stdout.write("\t".join(inputline)+'\n')
+                sys.stdout.write("\t".join(inputline[:3])+'\n') ## write coordinates only
+                ## sys.stdout.write("\t".join(inputline)+'\n')
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

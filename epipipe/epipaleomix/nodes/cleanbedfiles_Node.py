@@ -5,6 +5,7 @@ import os
 from epipaleomix.tools import splitbedfiles
 from epipaleomix.tools import merge_datafiles
 
+prefix = os.path.dirname(splitbedfiles.__file__)
 
 class CleanFilesNode(CommandNode):
     def __init__(self, config, inbedfile, mappa, unique, dependencies=()):
@@ -30,6 +31,38 @@ class CleanFilesNode(CommandNode):
                              command=paral_cmd,
                              dependencies=dependencies)
 
+class _CleanFilesNodenew(CommandNode):
+    def __init__(self, config, inbedfile, mappa, unique, dependencies=()):
+        outbedfile = os.path.join(config.temp_root, os.path.basename(inbedfile))
+        call1 = ["python", os.path.join(prefix, 'filtermappa.py'),
+                 "%(IN_MAPPA)s", str(unique)]
+        call2 = ["bedtools", "intersect", "-wb", "-a", "stdin", "-b" ,"%(IN_BED)s"]
+        call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
+        call4 = ["python", os.path.join(prefix, "updatebedcoord.py")]
+
+        cmd1 = AtomicCmd(call1,
+                         IN_MAPPA=mappa,
+                         OUT_STDOUT=AtomicCmd.PIPE)
+        cmd2 = AtomicCmd(call2,
+                         IN_STDIN=cmd1,
+                         IN_BED=inbedfile,
+                         OUT_STDOUT=AtomicCmd.PIPE)
+        cmd3 = AtomicCmd(call3,
+                         IN_STDIN=cmd2,
+                         OUT_STDOUT=AtomicCmd.PIPE)
+        cmd4 = AtomicCmd(call4,
+                         IN_STDIN=cmd2,
+                         OUT_STDOUT=outbedfile)
+
+        paral_cmd = ParallelCmds([cmd1, cmd2, cmd3, cmd4])
+        description = "<CLEANBEDFILES: '%s' -> '%s', Uniqueness: '%s'" % \
+                      (inbedfile, outbedfile, unique)
+        CommandNode.__init__(self,
+                             description=description,
+                             command=paral_cmd,
+                             dependencies=dependencies)
+
+        
 
 
 class SplitBedFile(Node):
