@@ -1,3 +1,8 @@
+indent marked lines:
+if left -4 or -8 ...
+if right 4 or 8 ...
+What works for me is: select region and then C-u <number of spaces> C-x TAB
+
 intersect  -wb -wa -a ../reference_human/mappability_31/GENOME_31_50.40000-20000.mappability  -b conservednucleosomearray_HG19_wochr_withname.bed | awk  'BEGIN {OFS="'\\t'"} {if($5>0.9){print $1,$2,$3,$9}}'
 
 intersect   -a ../reference_human/mappability_31/GENOME_31_50.40000-20000.mappability  -b conservednucleosomearray_HG19_wochr_withname.bed | awk  'BEGIN {OFS="'\\t'"} {if($5>0.9){print $1,$2,$3,$9}}'
