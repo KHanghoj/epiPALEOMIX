@@ -137,6 +137,7 @@ def run(args):
     for chrom, start, end, bedcoord in read_bed(args):
         Corr_Depth.reset_deques(chrom, start, end, bedcoord)
         start = 0 if start-flanks < 0 else start-flanks
+        end += flanks
         for record in samfile.fetch(chrom, start, end):
             if record.mapq < args.MinMappingQuality:
                 continue  # do not analyze low quality records

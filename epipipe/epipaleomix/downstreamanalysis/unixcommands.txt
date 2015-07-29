@@ -1,3 +1,24 @@
+## python analyzeWriteDepthMerge.py Denisova/Denisova_WriteDepth_CTCF.txt.gz > denisovactcf.txt
+files=list.files(pattern='TSS.')
+files=files[!grepl('pdf',files)]
+files=files[grepl('.txt',files)]
+func <- function(f){
+print(f)
+df=read.table(f,h=T)
+# df[,1] = df[,1]-(max(df[,1])/2)  # check that it is correct
+pdf(paste0(strsplit(f[1], '\\.')[[1]][1], '.pdf'))
+plot(df[,c(1,2)],main='depth')
+plot(df[,c(1,3)],main='score')
+dev.off()
+}
+lapply(files,func)
+
+awk 'BEGIN {OFS="'_'"} {print $1,$2,$3"\t"$4"\t"$5}' TSS2kb_autosome_wochr.bed > TSS_join_to_epipaleomix.txt
+
+python /home/krishang/install/epipipe/epipaleomix/tools/filtermappa.py /home/krishang/data/reference_human/mappability_51/GENOME_51_50.40000-20000.mappability 0.9 | bedtools intersect -wb -a stdin -b  /home/krishang/data/bedfiles/chromosome22_wochr.bed |
+       sort -V -k 4,4 -k 5,5 -k 2,2 | python /home/krishang/install/epipipe/epipaleomix/tools/updatebedcoord.py
+
+
 indent marked lines:
 if left -4 or -8 ...
 if right 4 or 8 ...
