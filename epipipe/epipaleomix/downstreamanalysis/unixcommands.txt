@@ -1,3 +1,15 @@
+## down bedformat intron only then exon only form ucsc table browser. then apply theses scripts.
+zcat intron_raw.txt.gz | cut -f 1,2,3,6| sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' | sort -V -k 1,1 -k 2,2|  bedtools merge  > INTRONS_autosom_wochr.bed
+zcat exon_raw.txt.gz | cut -f 1,2,3,6| sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' |sort -V -k 1,1 -k 2,2 |  bedtools merge  > EXONS_autosom_wochr.bed
+
+## to create exon intron
+awk 'BEGIN {OFS="'\\t'"} {print $1,$3-100,$3+100,$4}' INTRONS_autosom_wochr.bed  > INTRONtoEXON_autosom_wochr.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1,$2-100,$2+100,$4}' INTRONS_autosom_wochr.bed > EXONtoINTRON_autosom_wochr.bed 
+
+
+plot(df[which(df$bedcoord=='1_3668564_3669964'),c(2,4)]);dev.off()
+
+
 files=list.files(pattern='Depth_CONSERVEDARRAY.txt.gz')
 require(ggplot2)
 func <- function(f){
@@ -17,16 +29,26 @@ df=read.table('Saqqaq_WriteDepth_CONSERVEDARRAY.txt.gz')
 
 
 ## python analyzeWriteDepthMerge.py Denisova/Denisova_WriteDepth_CTCF.txt.gz > denisovactcf.txt
-files=list.files(pattern='TSS.')
+require(ggplot2)
+require(gridExtra)
+files=list.files(pattern='ctcf_new')
+#files=list.files(pattern='TSS.')
 files=files[!grepl('pdf',files)]
 files=files[grepl('.txt',files)]
 func <- function(f){
 print(f)
 df=read.table(f,h=T)
-df[,1] = df[,1]-(max(df[,1])/2)  # check that it is correct
+if(max(df[,1]>1500)){
+  df[,1] = df[,1]-(max(df[,1])/2)  # check that it is correct
+  } else {
+  df[,1] = df[,1]-400
+  } 
 pdf(paste0(strsplit(f[1], '\\.')[[1]][1], '.pdf'))
-plot(df[,c(1,2)],main='depth')
-plot(df[,c(1,3)],main='score')
+p1 = ggplot(df, aes(relapos,depth))+geom_point()+labs(title='depth')
+p2 = ggplot(df, aes(relapos,score))+geom_point()+labs(title='score')
+grid.arrange(p1,p2,nrow=2, ncol=1)
+# plot(df[,c(1,2)],main='depth')
+# plot(df[,c(1,3)],main='score')
 dev.off()
 }
 lapply(files,func)
