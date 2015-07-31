@@ -197,7 +197,7 @@ def run(args):
         nucl_pred_cls.reset_deques(chrom, start, end, bedcoord)
         start = 0 if start-flanks < 0 else start-flanks
         for record in samfile.fetch(chrom, start, end+flanks):
-            if record.mapq < args.MinMappingQuality:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped:
                 continue  # do not analyze low quality records
             nucl_pred_cls.update_depth(record)
         nucl_pred_cls.call_final_window()

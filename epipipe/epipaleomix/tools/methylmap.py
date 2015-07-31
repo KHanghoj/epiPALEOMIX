@@ -193,7 +193,7 @@ def run(args):
     for chrom, start, end, bedcoord in read_bed(args):
         Met_Score.reset_dict(chrom, start, end, bedcoord)
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped:
                 continue  # do not analyze low quality records
             Met_Score.update(record)
         Met_Score.call_final_ms()

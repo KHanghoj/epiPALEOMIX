@@ -139,7 +139,7 @@ def run(args):
         start = 0 if start-flanks < 0 else start-flanks
         end += flanks
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped:
                 continue  # do not analyze low quality records
             Corr_Depth.update_depth(record)
         Corr_Depth.call_final_depth_scores()

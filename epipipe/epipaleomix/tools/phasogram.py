@@ -95,7 +95,7 @@ def run(args):
     for chrom, start, end, bedcoord in read_bed(args):
         Phaso.reset(chrom, start)
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped:
                 continue  # do not analyze low quality records
             Phaso.update(record)
         Phaso.call()
