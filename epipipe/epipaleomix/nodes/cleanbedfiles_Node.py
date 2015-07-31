@@ -33,7 +33,10 @@ class _CleanFilesNode_oldnode(CommandNode):
 
 class CleanFilesNode(CommandNode):
     def __init__(self, config, inbedfile, mappa, unique, dependencies=()):
-        outbedfile = os.path.join(config.temp_root, os.path.basename(inbedfile))
+        basename,extension = os.path.splitext(os.path.basename(inbedfile))
+        bname = "{}_MappaOnly{}".format(basename, extension)
+        outbedfile = os.path.join(config.temp_root, bname)
+        ### outbedfile = os.path.join(config.temp_root, os.path.basename(inbedfile))
         call1 = ["python", os.path.join(prefix, 'filtermappa.py'),
                  "%(IN_MAPPA)s", str(unique)]
         call2 = ["bedtools", "intersect", "-wb", "-a", "stdin", "-b" ,"%(IN_BED)s"]

@@ -47,8 +47,11 @@ class make_collect(object):
     def _splitbedopts(self):
         ''' Split bedfiles options between bedname path and plot boolean '''
         bedf, bedp = {}, {}
+        mappacorr = True if self.beddata['EnabledFilter'] else False
         for bedn, bedopts in self.beddata.iteritems():
             if isinstance(bedopts, dict):
+                if mappacorr:  ## this is for the outputname
+                    bedn += 'MappaOnly'
                 bedf[bedn] = bedopts["Path"]
                 bedp[bedn] = bedopts["MakeMergePlot"]
             else:  # just options to the specific bedfile
