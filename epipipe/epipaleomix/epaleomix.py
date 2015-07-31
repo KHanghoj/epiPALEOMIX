@@ -165,7 +165,9 @@ def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
     bedn, bed_paths = bedinfo
     nodes = []
     for idx, bed_p in enumerate(bed_paths):
-        nodes.append(GeneralExecuteNode(anal, d_bam, bedn+str(idx), bed_p, dependencies=m_node))
+        bedn_temp = '{}_0{}'.format(bedn, str(idx))
+        ## nodes.append(GeneralExecuteNode(anal, d_bam, bedn+str(idx), bed_p, dependencies=m_node))
+        nodes.append(GeneralExecuteNode(anal, d_bam, bedn_temp, bed_p, dependencies=m_node))
     mergenode = MergeDataFiles(d_bam, anal, bedn, subnodes=nodes)
     if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is false -> no plot
         return mergenode

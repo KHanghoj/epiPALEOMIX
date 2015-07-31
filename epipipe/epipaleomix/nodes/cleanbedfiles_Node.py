@@ -104,8 +104,15 @@ class MergeDataFiles(Node):
         self.anal = anal
         self.out = os.path.join(d_bam.o_path,
                                 d_bam.fmt.format(d_bam.bam_name, anal, bedn))
-        description = "<MergeDataFiles: '%s' to OUTPUT '%s'" % \
-                      (self.infiles, self.out)
+        assert self.infiles, "No temporary files to merge"
+        if len(self.infiles) > 1:
+            description = "<MergeDataFiles: '%s' ... '%s' ->  '%s'" % \
+                          (os.path.basename(self.infiles[0]),
+                           os.path.basename(self.infiles[-1]),
+                           self.out)
+        else:
+            description = "<MergeDataFiles: '%s' -> '%s'" % \
+                          (os.path.basename(self.infiles[0]), self.out)
         Node.__init__(self,
                       description=description,
                       input_files=self.infiles,
