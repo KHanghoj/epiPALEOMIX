@@ -1,3 +1,43 @@
+# read file
+a = subprocess.Popen(('zcat', 'cpgrelatedSNP.txt.gz'), stdout=subprocess.PIPE)
+a.stdout.write()
+# writefile
+a = subprocess.Popen(('zcat', 'cpgrelatedSNP.txt.gz'), stdin=subprocess.PIPE)
+a.stdout.write()
+
+Minor Groove  Major Groove:
+Hey,
+
+I read some of them during my phd. For example:
+http://www.nature.com/nature/journal/v461/n7268/pdf/nature08473.pdf
+http://www.ncbi.nlm.nih.gov/pubmed/21967305
+http://rohslab.cmb.usc.edu/Papers/2015_GBshape.pdf
+http://nar.oxfordjournals.org/content/41/W1/W56
+...
+and mucho more
+
+
+but I remember those while reading the news in genome research:
+http://rohslab.cmb.usc.edu/Papers/2015_Levo_GR.pdf
+
+In general you have to look the publications of Thomas Tullius (hydroxyl radical cleavage pattern), Rohs lab (DNA shape/topology),  Eran Segal (nucleosome positioning in general). Their theories apply to all protein-DNA interactions beyond nucleosomes.
+
+See you now!!
+
+PAblo  
+
+
+tmux list-sessions
+0: 4 windows (created Thu Jul 30 17:24:14 2015) [208x55]
+## opened a franklin tmux in franklin
+tmux new -s franklintmux
+tmux list-sessions
+0: 4 windows (created Thu Jul 30 17:24:14 2015) [208x55]
+## attach to a specific name
+ta -t 0
+
+
+
 ## down bedformat intron only then exon only form ucsc table browser. then apply theses scripts.
 zcat intron_raw.txt.gz | cut -f 1,2,3,6| sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' | sort -V -k 1,1 -k 2,2|  bedtools merge  > INTRONS_autosom_wochr.bed
 zcat exon_raw.txt.gz | cut -f 1,2,3,6| sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' |sort -V -k 1,1 -k 2,2 |  bedtools merge  > EXONS_autosom_wochr.bed
