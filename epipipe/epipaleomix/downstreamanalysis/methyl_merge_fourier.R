@@ -42,6 +42,8 @@ plotting <- function(df){
     p
 }
 
+
+
 files <- list.files(IN_path, pattern='MethylMap',recursive=T,full.names=T)
 files <- files[grepl(BEDTYPE, files)]
 print(files)

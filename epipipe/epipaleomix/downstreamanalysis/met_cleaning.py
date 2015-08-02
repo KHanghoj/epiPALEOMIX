@@ -73,7 +73,11 @@ def methylepipal(args):
                     print('checked {} methylated sites'.format(checked), file=sys.stderr)
                 chrom, start, dea, TplusC, bedc = unpackepipal(*re.split(r'\s+', line.rstrip()))
                 if lastchrom != chrom:
-                    SNPset = fetchSNP.send(int(chrom.replace('chr','')))   # works only on autosome chromo
+                    if chrom.replace('chr','').upper() == 'MT':
+                        SNPset=set()
+                    else:
+                        SNPset = fetchSNP.send(int(chrom.replace('chr','')))   # works only on autosome chromo
+                    lastchrom = chrom
                 if start in SNPset or (dea > 3 and (float(dea)/TplusC) >= 0.33): # remove potential SNP's C>T. Does not represent methylatio
                     continue
                 f_out.write(FMT(chrom,start,dea, TplusC,bedc))

@@ -96,8 +96,11 @@ def methylepipal(args):
                     if tot:
                         writetofile(f_out, ds, cs, tot, lastbedc)
                     if lastchrom != chrom:
-                        SNPset = fetchSNP.send(int(chrom.replace('chr','')))   # works only on autosome chromo
-                        ##print(lastchrom, chrom, len(SNPset), lastbedc, bedc, file=sys.stderr)  # just for testing
+                        if chrom.replace('chr','').upper() == 'MT':
+                            SNPset=set()
+                        else:
+                            SNPset = fetchSNP.send(int(chrom.replace('chr','')))   # works only on autosome chromo
+                        lastchrom = chrom
                     lastbedc  = bedc
                     ds, cs, tot = [], [], []
                 if start in SNPset or (dea > 3 and (float(dea)/TplusC) >= 0.33): # remove potential SNP's C>T. Does not represent methylatio

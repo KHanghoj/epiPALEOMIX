@@ -1,3 +1,25 @@
+
+#for f in `find ./ -iname "*.fastq" -type f`; do echo $f; tail -n 4 $f; echo -e '\n'; done
+tail -n 1 altaiNea/000_data/simureads_1.fastq | wc -c
+truncate --size=-166 altaiNea/000_data/simureads_1.fastq
+
+
+# hair joining:
+join -t '       ' -1 2 -2 3 <(zcat Rsscores_GEBO2000.txt.gz| cut -f 12,25,26,27,28 | sort -k 2) <(sort -k 3 ensembletorefseq.txt) | sed -n '/Aborigin\|Saqqaq/ p' > expressionanalyses_hair/RSvalues.txt
+
+join -t '       ' -1 3 -2 6 <(cut -f 1,2,4,6,9,10,11 ~/data/expressiondata/hair_affymetrix_GSE3419.tsv | sed -n '/high quality/ p'| sed -n '/GSM77091/ p' |
+sort -k 3) <(sort -k 6 RSvalues.txt) > combineddata.txt
+
+# bone joining:
+join -t '      ' -1 2 -2 3 <(zcat Rsscores_GEBO2000.txt.gz| cut -f 12,25,26,27,28 | sort -k 2) <(sort -k 3 ensembletorefseq.txt) | sed '/Aborigin\|Saqqaq/ d' > expressionanalyses_bones/RSvalues.txt
+
+join -t '      ' -1 3 -2 6 <(sed -n '/high quality/ p' /home/krishang/data/expressiondata/bone_affy_tsv |
+sed -n '/Ost33/ p' |sort -k 3) <(sort -k 6 RSvalues.txt) > combineddata.txt
+
+# run this in the paper folder. get out all the scripts used for the paper
+find ./  -type f| grep '.sh$\|.py$\|.R$'
+
+
 # read file
 a = subprocess.Popen(('zcat', 'cpgrelatedSNP.txt.gz'), stdout=subprocess.PIPE)
 a.stdout.write()

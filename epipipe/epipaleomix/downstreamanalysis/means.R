@@ -39,6 +39,8 @@ plotting <- function(df){
     p
 }
 
+
+
 f <- function(df){
     #c(mean(df$V3/df$V4), nrow(df), sum(df$V4))
     c(sum(df$V3)/sum(df$V4), nrow(df), sum(df$V4))
