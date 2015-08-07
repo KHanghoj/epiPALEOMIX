@@ -9,6 +9,7 @@ import pypeline.logger
 import optparse
 from epipaleomix.epi_mkfile import epi_mkfile
 from epipaleomix.tools import checkchromprefix
+from epipaleomix.tools import checkmappabilitychrom
 from epipaleomix.set_procname import set_procname
 from epipaleomix.epi_mkfile.epi_makefile import read_epiomix_makefile
 from epipaleomix.nodes.gccorrect_Node import \
@@ -137,22 +138,23 @@ def checkbed_list(bedfiles):
             all([bedp.endswith('.bed') for bedp in bedpaths])):
             yield bedname, bedpaths
 
-
 def main_anal_to_run(opts):
     for analysis, options in opts.iteritems():
         if analysis in ANALYSES and options['Enabled']:
             yield analysis
 
-def makegcnodes(d_bam, rang, subn=()):
-    return [GccorrectNode(d_bam, rl, subnodes=subn) for rl in rang]
+def makegcnodes(d_bam, gcwindows, subn=()):
+    return [GccorrectNode(d_bam, rl, subnodes=subn) for rl in gcwindows]
 
 
 def concat_gcsubnodes(nodecls, bam, ran, subn=()):
     return [nodecls(bam, subnodes=makegcnodes(bam, ran, subn))]
 
 
-def calc_gcmodel(d_bam):
+def calc_gcmodel(d_bam, d_make):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
+        checkmappabilitychrom.main([d_make.prefix.get('--MappabilityPath', MakefileError),
+                                    d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', MakefileError)
         return concat_gcsubnodes(CreateGCModelNode, d_bam, FINETUNERANGE,
@@ -203,7 +205,7 @@ def run(config, makefiles):
         splitbednode = split_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
             d_bam = bam_collect(config, bam_name, opts, d_make)
-            gcnode = calc_gcmodel(d_bam)
+            gcnode = calc_gcmodel(d_bam, d_make)
             m_node = make_metanode(gcnode+splitbednode, d_bam.bam_name)
             for bedinfo in checkbed_list(d_make.bedfiles):
                 for anal in main_anal_to_run(opts):

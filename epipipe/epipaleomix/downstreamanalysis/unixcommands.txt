@@ -1,8 +1,28 @@
 
+THE ORDER OF ALL PLOTS
+'Aborigine', 'Saqqaq', 'Neand.Altai', 'Denisova', 'Ust.Ishim', 'K14', 'Clovis','Motala','Loschbour','Stuttgart','NE1','Labrana', 'BR2'
+awk '{print > $6".bed"}' PROM_autosom_wochr.promcat.joined
+
+sampleorder <- c('Aborigine', 'Saqqaq',Neand.Altai', 'Denisova', 'Ust.Ishim', 'K14', 'Clovis', 'Loschbour', 'Stuttgart', 'Motala', 'NE1', 'BR2', 'LaBrana')
+df$x <- factor(df$x, levels=sampleorder)  ## this is for facet_grid
+## this is the order of the bar plot facet
+barplotorder <- c(Shelves.5', Shores.5', CGI, Shores.3', Shelves.3','High', 'Intermediate', Low', 'Exon.Splice.5', Intron.Splice.5', Intron.Splice.3', Exon.Splice.3')
+df$x <- factor(df$x, levels=sampleorder)
+
+cut -f 1,2,3  cpgislandsentiregenome.bed | sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' | sort -V -k 1,1 -k 2,2 > CPGISL.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $2-4000,$2-2000}'  CPGISL.bed > SHELF5_autosom_wochr.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $2-2000,$2}'  CPGISL.bed > SHORE5_autosom_wochr.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $3,$3+2000}'  CPGISL.bed > SHORE3_autosom_wochr.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $3+2000,$3+4000}'  CPGISL.bed > SHELF3_autosom_wochr.bed
+
+/home/krishang/data/bedfiles/SHELF5_autosom_wochr.bed
+/home/krishang/data/bedfiles/SHORE5_autosom_wochr.bed
+/home/krishang/data/bedfiles/SHORE3_autosom_wochr.bed
+/home/krishang/data/bedfiles/SHELF3_autosom_wochr.bed
+
 #for f in `find ./ -iname "*.fastq" -type f`; do echo $f; tail -n 4 $f; echo -e '\n'; done
 tail -n 1 altaiNea/000_data/simureads_1.fastq | wc -c
 truncate --size=-166 altaiNea/000_data/simureads_1.fastq
-
 
 # hair joining:
 join -t '       ' -1 2 -2 3 <(zcat Rsscores_GEBO2000.txt.gz| cut -f 12,25,26,27,28 | sort -k 2) <(sort -k 3 ensembletorefseq.txt) | sed -n '/Aborigin\|Saqqaq/ p' > expressionanalyses_hair/RSvalues.txt
@@ -16,16 +36,26 @@ join -t '      ' -1 2 -2 3 <(zcat Rsscores_GEBO2000.txt.gz| cut -f 12,25,26,27,2
 join -t '      ' -1 3 -2 6 <(sed -n '/high quality/ p' /home/krishang/data/expressiondata/bone_affy_tsv |
 sed -n '/Ost33/ p' |sort -k 3) <(sort -k 6 RSvalues.txt) > combineddata.txt
 
+
+
 # run this in the paper folder. get out all the scripts used for the paper
 find ./  -type f| grep '.sh$\|.py$\|.R$'
 
 
+# writefile
+fout = open('here.txt.gz', 'wb')
+f=subprocess.Popen(('gzip','-c'), stdout=fout, stdin=subprocess.PIPE)
+f.stdin.write('1231231231231231231312')
+f.stdin.write('1231231231231231231312')
+f.stdin.write('asdf')
+f.stdin.close()
+
 # read file
 a = subprocess.Popen(('zcat', 'cpgrelatedSNP.txt.gz'), stdout=subprocess.PIPE)
-a.stdout.write()
+a.stdout.next()
+## or line in a.stdout:
 # writefile
-a = subprocess.Popen(('zcat', 'cpgrelatedSNP.txt.gz'), stdin=subprocess.PIPE)
-a.stdout.write()
+
 
 Minor Groove  Major Groove:
 Hey,
@@ -58,15 +88,14 @@ tmux list-sessions
 ## attach to a specific name
 ta -t 0
 
+for f in `find ./ -type f| grep -v CTCF`; do  echo $f; zcat $f|awk '{d+=$3;t+=$4} END {print d,t,d/t}';done
 
+zcat intron_raw.txt.gz | sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' | sort -V -k 1,1 -k 2,2|  bedtools merge -s | sort -V -k 1,1 -k 2,2  > INTRONS_autosom_wochr_new.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $2,$2+100,$4}' INTRONS_autosom_wochr_new.bed > INTRONFIVE_autosom_wochr.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $3-100,$3,$4}' INTRONS_autosom_wochr_new.bed > INTRONTHREE_autosom_wochr.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $3,$3+100,$4}' INTRONS_autosom_wochr_new.bed > EXONTHREE_autosom_wochr.bed
+awk 'BEGIN {OFS="'\\t'"} {print $1, $2-100,$2,$4}' INTRONS_autosom_wochr_new.bed > EXONFIVE_autosom_wochr.bed
 
-## down bedformat intron only then exon only form ucsc table browser. then apply theses scripts.
-zcat intron_raw.txt.gz | cut -f 1,2,3,6| sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' | sort -V -k 1,1 -k 2,2|  bedtools merge  > INTRONS_autosom_wochr.bed
-zcat exon_raw.txt.gz | cut -f 1,2,3,6| sed 's/chr//g' | sed -rn '/^[1-9]+\t/ p' |sort -V -k 1,1 -k 2,2 |  bedtools merge  > EXONS_autosom_wochr.bed
-
-## to create exon intron
-awk 'BEGIN {OFS="'\\t'"} {print $1,$3-100,$3+100,$4}' INTRONS_autosom_wochr.bed  > INTRONtoEXON_autosom_wochr.bed
-awk 'BEGIN {OFS="'\\t'"} {print $1,$2-100,$2+100,$4}' INTRONS_autosom_wochr.bed > EXONtoINTRON_autosom_wochr.bed 
 
 
 plot(df[which(df$bedcoord=='1_3668564_3669964'),c(2,4)]);dev.off()

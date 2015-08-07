@@ -24,7 +24,8 @@ class GCcorrect(object):
         records = self.samfile.fetch(chrom, start, end)
         # they need to be 0-based for fetching fasta seq:
         self.chrom = chrom
-        self.start, self.end = start-1, end-1
+        ## self.start, self.end = start-1, end-1
+        self.start, self.end = start-1, end
         for record in records:
             if record.mapq < self.arg.MinMappingQuality or record.is_unmapped:
                 continue  # do not analyze low quality records
@@ -56,7 +57,7 @@ class GCcorrect(object):
         ''' seq_fasta, length of read, return seq'''
         region_size, region_seq = self._retrieve_fastaseq()
         for idx in xrange(region_size - (rl - 1)):
-            seq = region_seq[idx+_BUFFER: idx+rl-_BUFFER]
+            seq = region_seq[(idx+_BUFFER): (idx+rl-_BUFFER)]
             yield (idx+_BUFFER, (seq.count('C')+seq.count('G')))
 
     def writetofile(self):
@@ -78,11 +79,11 @@ def parse_args(argv):
     parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
+    parser.add_argument('--ChromUsed', help="...", type=str, default='22')
     parser.add_argument('--OffSet', type=str,
                         help='the offsetfile found by the midnode')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     return parser.parse_known_args(argv)
-
 
 def run(args):
     if args.OffSet:
@@ -91,10 +92,8 @@ def run(args):
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1
     for chrom, start, end, score in read_mappa(args):
-        if score >= mappability and '22' in chrom:
-            # chrom 22 then chrom 1 should be arguments. for testing fixed to 22
-            # because chunks can overlap with 50%
-            if start-last_end < 0 and last_chrom == chrom:
+        if score >= mappability and args.ChromUsed == chrom:
+            if start-last_end < 0 and last_chrom == chrom:            # because chunks can overlap with 50%
                 start += (end-start)/2
             last_chrom, last_end = chrom, end
             GC.getreads(chrom, start, end)

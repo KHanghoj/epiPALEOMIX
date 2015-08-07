@@ -28,6 +28,8 @@ def calc(f):
     sumfasta = sum(fasta)
     grandmean = sum(read)/sumfasta
     scores = []
+    if not grandmean:
+        return 0, 0
     for f, r in izip(fasta, read):
         scores.append(abs((r / f) - grandmean) * (f / sumfasta))
     return 0.5*sum(scores)/grandmean, readlength
@@ -41,6 +43,7 @@ def main(argv):
         val, length = calc(fname)
         if val > valmax:
             valmax, optlength = val, length
+    assert optlength > 0, "It seems there is no data available to find the optimal GCcorrection window length"
     with open(args.out, 'w') as f:
         f.write(fmt(optlength))
 

@@ -11,10 +11,14 @@ class GccorrectNode(Node):
         self.defrozen_out = os.path.join(d_bam.i_path,
                                          d_bam.bam_name+GC_NAME+'_'+str(rl))
         self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
-        if self.subns:
+        firstchrom, secondchrom = self.d_bam.opts['GCcorrect']['ChromUsed']
+        if self.subns:  ## finetune step run if subnodes
             self.defrozen_out += '_finescale'
-        description = ("<Gccorrect: '%s' window length: '%s'>" %
-                       (self.defrozen_out, rl))
+            self.chromtobeanalyzed = secondchrom
+        else:
+            self.chromtobeanalyzed = firstchrom
+        description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
+                       (self.defrozen_out, rl, self.chromtobeanalyzed))
 
         Node.__init__(self,
                       description=description,
@@ -25,10 +29,13 @@ class GccorrectNode(Node):
         assert len(self.output_files) == 1, self.output_files
 
     def _run(self, _config, _temp):
+
         self.inputs = [self.d_bam.baminfo["BamPath"], self.defrozen_out]
-        if self.subns:
+        if self.subns:  ## finetune step run if subnodes
             offsetfile = (''.join(node.output_files) for node in self.subns)
             self.inputs.extend(("--OffSet", str(offsetfile.next())))
+
+        self.inputs.extend(("--ChromUsed", self.chromtobeanalyzed))
         self._add_options('GCcorrect')
         self.inputs.extend(("--ReadLength", str(self.rl)))
         gccorrect.main(self.inputs)
@@ -40,7 +47,7 @@ class GccorrectNode(Node):
                 if not isinstance(argument, str):
                     argument = str(argument)
                 self.inputs.extend((option, argument))
-
+        
 
 class CreateGCModelNode(CommandNode):
     def __init__(self, d_bam, subnodes=()):

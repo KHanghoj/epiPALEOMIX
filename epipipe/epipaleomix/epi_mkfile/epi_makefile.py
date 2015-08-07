@@ -33,26 +33,27 @@ _VALIDATION_OPTIONS = {
     "--LibraryConstruction": IsStr
 }
 _VALIDATION_GCCORRECT = {
-    "Enabled": IsBoolean(default=True),
+    "Enabled": IsBoolean(default=False),
     "MapMinMaxReadLength": IsListOf(IsUnsignedInt),
+    "ChromUsed": IsListOf(IsStr, default=['22','22']),   ## the is new
     "--MappaUniqueness": IsFloat(default=0.9)
 }
 _VALIDATION_NUCLEO = {
-    "Enabled": IsBoolean(default=True),
+    "Enabled": IsBoolean(default=False),
     "Apply_GC_Correction": IsBoolean(default=True),
     "--NucleosomeFlanks": IsUnsignedInt(default=25),
     "--NucleosomeSize": IsUnsignedInt(default=147),
     "--NucleosomeOffset": IsUnsignedInt(default=12)
 }
 _VALIDATION_METHYL = {
-    "Enabled": IsBoolean(default=True),
+    "Enabled": IsBoolean(default=False),
     "--ReadBases": IsUnsignedInt(default=6),
     "--SkipThreePrime": IsUnsignedInt(default=0),
     "--SkipFivePrime": IsUnsignedInt(default=0),
     "--Primes": IsStr
 }
 _VALIDATION_PHASO = {
-    "Enabled": IsBoolean(default=True),
+    "Enabled": IsBoolean(default=False),
     "Apply_GC_Correction": IsBoolean(default=False),
     "--SubsetPileup": IsUnsignedInt(default=3),
     "--MaxRange": IsUnsignedInt(default=3000)
