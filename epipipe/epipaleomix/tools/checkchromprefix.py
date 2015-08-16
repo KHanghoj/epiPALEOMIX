@@ -24,11 +24,11 @@ def get_fasta_chrom(args):
     return fastachroms
     
 
-def checkasserts(checked, bed_bam_chroms, args):
+def checkasserts(checked, bed_bam_chroms, bedp, bam_fasta):
     assert all(checked), \
         ('chromosome: "%s" in "%s" is/are not present in "%s"' %
          (', '.join(bed_bam_chroms[idx] for idx, c in enumerate(checked) if not c),
-          os.path.basename(args.BedPath), os.path.basename(args.BamPath)))
+          os.path.basename(bedp), os.path.basename(bam_fasta)))
 
 
 
@@ -44,10 +44,10 @@ def run(args):
                 bed_bam_chroms.append(chrom)
                 chromlast = chrom
         checked = [(c in bamchrom) for c in bed_bam_chroms]
-        checkasserts(checked, bed_bam_chroms, args)
+        checkasserts(checked, bed_bam_chroms, args.BedPath, args.BamPath)
         referencechrom = get_fasta_chrom(args)
         checked = [(c in referencechrom) for c in bed_bam_chroms]
-        checkasserts(checked, bed_bam_chroms, args)
+        checkasserts(checked, bed_bam_chroms, args.BedPath, args.FastaPath)
 
 
 def main(argv):
