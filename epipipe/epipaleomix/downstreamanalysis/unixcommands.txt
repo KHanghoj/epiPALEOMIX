@@ -1,11 +1,26 @@
 
-THE ORDER OF ALL PLOTS
+wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/pilot2_high_cov_GRCh37_bams/data/NA12878/alignment/
+grep -Po '(?<=href=")[^"]*' index.html |grep 'bam$\|bam.bai$' | grep .bwa. | grep -v 'chrom[A-Z]\|unmapped\|nonchrom' > autosomefiles.txt
+
+wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/pilot2_high_cov_GRCh37_bams/data/NA12878/alignment/
+
+
+http://online-metrics.com/regular-expressions/
+dot-asterisk matches everything:
+    .*
+
+#sed get stuff between href=" and ">::
+sed -n 's/.*<a href="\(.*\)">.*/\1/ p' index.html
+SAME HERE: but with unknown piping
+sed -n 's|.*<a href="\(.*\)">.*|\1|p' index.html
+http://www.grymoire.com/Unix/Sed.html#uh-4
+
+
+grep -Po '(?<=<url>).*(?=</url>)' file.txt
+
 'Aborigine', 'Saqqaq', 'Neand.Altai', 'Denisova', 'Ust.Ishim', 'K14', 'Clovis','Motala','Loschbour','Stuttgart','NE1','Labrana', 'BR2'
 awk '{print > $6".bed"}' PROM_autosom_wochr.promcat.joined
 
-sampleorder <- c('Aborigine', 'Saqqaq',Neand.Altai', 'Denisova', 'Ust.Ishim', 'K14', 'Clovis', 'Loschbour', 'Stuttgart', 'Motala', 'NE1', 'BR2', 'LaBrana')
-df$x <- factor(df$x, levels=sampleorder)  ## this is for facet_grid
-## this is the order of the bar plot facet
 barplotorder <- c(Shelves.5', Shores.5', CGI, Shores.3', Shelves.3','High', 'Intermediate', Low', 'Exon.Splice.5', Intron.Splice.5', Intron.Splice.3', Exon.Splice.3')
 df$x <- factor(df$x, levels=sampleorder)
 
