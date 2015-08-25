@@ -88,20 +88,14 @@ class Nucleosome_Prediction(GC_correction):
                                                   self._POSITION_OFFSET +
                                                   self._SIZE])
             if dep_posses:
-                spacerL = (sum(win_depth[:self._NEIGHBOR]) /
-                           float(self._NEIGHBOR))
-                spacerR = (sum(win_depth[-self._NEIGHBOR:]) /
-                           float(self._NEIGHBOR))
+                spacerL = sum(win_depth[:self._NEIGHBOR])
+                spacerR = sum(win_depth[-self._NEIGHBOR:]) 
                 # both cannot be 0
-                if spacerL or spacerR:
+                ###if spacerL or spacerR:
+                if spacerL and spacerR: ## non can be zero
                     center_depth, min_idx, max_idx = dep_posses
                     sizeofwindow = (max_idx-min_idx)
-                    mean_spacer = (0.5 * (spacerL + spacerR))
-                    # if mean_spacer < 1: # when GCcorrection, we see very low flanks. gives unrealistic high score
-                    #     mean_spacer = 1
-                    # divide peak by mean of flanks then by width of nucleosome
-                    # score = ((float(center_depth) / mean_spacer) /
-                    #          (sizeofwindow+1.0))
+                    mean_spacer = (spacerL + spacerR)/float(self._NEIGHBOR+self._NEIGHBOR)
                     score = ((float(center_depth)-mean_spacer) /
                              (sizeofwindow+1.0))
 

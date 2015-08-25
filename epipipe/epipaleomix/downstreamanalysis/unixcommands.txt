@@ -1,4 +1,6 @@
 
+sed -rn '/RISE[0-9]+\:/ p' mk_RISE.yaml | sed 's/\:  # SET TO A MEANINGFUL BAMNAME//g' | sed 's/    //g' > RISESAMPlES
+
 wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/pilot2_high_cov_GRCh37_bams/data/NA12878/alignment/
 grep -Po '(?<=href=")[^"]*' index.html |grep 'bam$\|bam.bai$' | grep .bwa. | grep -v 'chrom[A-Z]\|unmapped\|nonchrom' > autosomefiles.txt
 
