@@ -3,109 +3,26 @@ README for installation, setup and running Epipaleomix.
 put unzip epipipe.zip into a folder:
     .i.e ~/install
 update .profile/.bashrc by write following in terminal:
-       echo "export PYTHONPATH=\$PYTHONPATH:~/install/epipipe/" >> ~/.profile
-    #or copy this into the dot file in ~/.??:
-        export PYTHONPATH=$PYTHONPATH:~/install/epipipe/
+	echo "export PYTHONPATH=$PYTHONPATH:/home/krishang/install/epipipe/ >> ~/.profile"
 
 CREATE MAKE FILE TEMPLATE
     # prints to std.out (standard out)
     ~/install/epipipe/epipaleomix/epaleomix.py makefile >  000_makefile.yaml
 
-    # I've added some paths for bam, bed, reference, and mappability files to play around with (see buttom). Feel free to use your own, though
-
 EXECUTE:
-        # ~/install/epipipe/epipaleomix/epaleomix.py mkfile > 003_mkfile.yaml
+        ~/install/epipipe/epipaleomix/epaleomix.py mkfile > 003_mkfile.yaml
         # Fill in the paths/options in 003_mkfile.yaml
-        #  ~/install/epipipe/epipaleomix/epaleomix.py dryrun 003_mkfile.yaml
+        ~/install/epipipe/epipaleomix/epaleomix.py dryrun 003_mkfile.yaml
         # simple version with 4 cores (default)
-        # ~/install/epipipe/pypeline/epipaleomix.py run 003_mkfile.yaml
+        ~/install/epipipe/epipaleomix/epipaleomix.py run 003_mkfile.yaml
         # defining destination paths and temporary folders:
-        # ~/install/epipipe/pypeline/epipaleomix.py run 003_mkfile.yaml --max-threads 8 --destination OUTPUT1 --temp-root temp1
-        # ~/install/epipipe/pypeline/epipaleomix.py -h  # for help
-          --max-threads "default 4 integer"
-          --destination "default ./OUTPUT"
-          --temp-root   "default ./temp"
+        ~/install/epipipe/epipaleomix/epipaleomix.py -h  # for help
 
 TOOLS/PACKAGES required:
 -- Bedtools
 -- Python 2.7:
-        -- Numpy
         -- Pysam
 -- R:
         -- ggplot2
         -- reshape2
-        -- TSA
-        -- GridExtra
-
-
-MISSING/TODO:
--- summaryNode
--- make global PATH executables with .bin like PALEOMIX (not super important)
--- Doc/Module strings
--- Make wiki
--- make setup.py # may not be necessary
---
-
-
-############
-####PATHS TO SOME OF THE STUFF THAT I'VE BEEN WORKING ON. JUST ADDED THEM IF YOU NEEDED SOMETHING TO START OUT WITH
-############
-# The paths are all on the Ginzburg server
-BedFiles:
-    /home/krishang/data/nucleosomes/bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed
-    /home/krishang/data/nucleosomes/bedfiles/housekeeping_genes_plusstrand_200bp_TSS.bed
-    /home/krishang/data/nucleosomes/bedfiles/mito.bed
-    /home/krishang/data/nucleosomes/bedfiles/splicesites_ExonToIntron_NoOverlap.bed
-    /home/krishang/data/nucleosomes/bedfiles/splicesites_IntronToExon_NoOverlap.bed
-    /home/krishang/data/nucleosomes/bedfiles/CTCF_human_2kb_rmoverlap.bed
-    # Horse CTCF: works very well
-    /home/krishang/data/nucleosomes/bedfiles/CTCF_horse_2kb.bed
-    # Elephant: Does not work properly yet
-    /home/krishang/data/nucleosomes/bedfiles/CTCF_elephant_2kb.bed  # because of the scaffolded reference genome this does not work properly
-    /home/krishang/data/nucleosomes/bedfiles/CTCF_elephant_2kb_chrom1_27.bed   # because of the scaffolded reference genome this does not work properly
-    # Pig: doesn't work yet. sparsely tested
-    /home/krishang/data/nucleosomes/bedfiles/CTCF_pig_2kb.bed
-
-ReferencePaths:
-    /home/krishang/data/nucleosomes/reference/hs.build37.1.fa.fai
-    /home/krishang/data/nucleosomes/HORSES/ref/Equus_cab_nucl_wChrUn.fasta
-
-GENOME-WIDE Mappability
-    # Human:
-    # read length 31:
-    /home/krishang/data/nucleosomes/reference/mappability_31/GENOME_31_50.40000-20000.mappability
-    # read length 51:
-    /home/krishang/data/nucleosomes/reference/mappability_51/GENOME_51_50.40000-20000.mappability
-
-    # i'll make mappability map (51 read length) of the horse genome in the
-    # weekend when the servers are up and running properly
-
-Human/Neanderthal/Denisova BAM:
-    /home/krishang/data/nucleosomes/yakut_crubezy/Yakut_Crubezy.Homo_sapiens_hg19.realigned.bam
-    /home/krishang/data/nucleosomes/labrana/LaBrana.Hg19.realigned.bam
-    /home/krishang/data/nucleosomes/saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
-    /home/krishang/data/nucleosomes/saqqaq/subsamples/*  # path to the down-sampled Saqqaq ranging from 0.1 to 0.8
-    /home/krishang/data/nucleosomes/k14/LO4KH.8libs.Kostenski_K14.Homo_sapiens_hg19.realigned_sorted.bam
-    /home/krishang/data/nucleosomes/clovis/Clovis.flt.sort.rmdup.realign.md.bam
-    /home/krishang/data/nucleosomes/gamba_nat_comm_2014/10.3_finalBam_rmdup_30bp.bam
-    /home/krishang/data/nucleosomes/gamba_nat_comm_2014/8.4_1st_2nd_merged_cutadapt_raw_F4_sort_rmdup_30bp.bam
-    /home/krishang/data/nucleosomes/laziridis/LBK.hg19_1000g.bam
-    /home/krishang/data/nucleosomes/ust_ishim/Ust_Ishim.hg19_1000g.rmdup.bam
-    /home/krishang/data/nucleosomes/aborigine/AusAboriginal.hg19.flt.sort.rmdup.realign.md.bam
-    /home/krishang/data/nucleosomes/denisova/T_hg19_1000g.bam
-    /home/krishang/data/nucleosomes/altaiNea/AltaiNea_hg19_1000g_entire.bam
-
-
-HORSE BAM:
-    /home/krishang/data/nucleosomes/HORSES/yakutia_18th_cent/CGG10397.Equus_cab_nucl_wChrUn.bam
-    /home/krishang/data/nucleosomes/HORSES/yakutia_4_kyBP/Batagai.Equus_cab_nucl_wChrUn.bam
-    /home/krishang/data/nucleosomes/HORSES/taymir_peninsula_16_kyBP/CGG10023.Equus_cab_nucl_wChrUn.bam
-    /home/krishang/data/nucleosomes/HORSES/taymir_peninsula_43_kyBP/CGG10022.Equus_cab_nucl_wChrUn.bam
-    /home/krishang/data/nucleosomes/HORSES/CGG_1_011850/CGG_1_011850.Equus_cab_nucl_wChrUn.realigned.bam
-
-OTHER BAM:
-    /home/krishang/data/nucleosomes/mammoth/AM.Nuclear_loxAfr4.realigned.bam  # Geo-Genetic mammoth
-    /home/krishang/data/nucleosomes/newmammoth/oimyakon.bam  # Palkopoulou et al., 2015
-    /home/krishang/data/nucleosomes/newmammoth/P964.bam  # Palkopoulou et al., 2015
-    /home/krishang/data/nucleosomes/pig_16th/pig_16th.bam # Ramirez et al., 2015
-
+        -- gridExtra
