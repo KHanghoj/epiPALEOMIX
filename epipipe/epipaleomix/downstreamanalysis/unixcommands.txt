@@ -1,3 +1,5 @@
+scp -P 24222 krishang@newton.dna.ku.dk:/home/krishang/data/PAPER_epigenome/partC/figure_3_ONLYPROM_entirregion_PROM_both_TSS.pdf .
+
 [[[[
 sed -i 's/chr//g' biomartgenes.txt
 sed -rn '/^[0-9]+/ p' biomartgenes.txt > autosome.txt
