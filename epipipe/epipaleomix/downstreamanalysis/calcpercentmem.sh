@@ -1,1 +1,0 @@
-ps ef -o %mem|sed '1d'| awk '{t+=$1}END {print t}'
