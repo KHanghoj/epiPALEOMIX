@@ -1,0 +1,72 @@
+# -*- mode: Yaml; -*-
+Prefixes:
+    "--FastaPath": reference/hs.build37.1.fa
+    "--MappabilityPath": saqqaq/chr22_31_50.40000-20000.mappability
+BedFiles:
+    EnabledFilter: False
+    UniquenessFilter: 0.9  # filtering bed regions with low uniqueness
+    CTCFbed: 
+        Path: bedfiles/CTCF_human_2kb_rmoverlap.bed
+        MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
+    TSSHousekeeping: 
+        Path: bedfiles/housekeeping_genes_plusstrand_4kb_TSS.bed
+        MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
+BamInputs:
+    BAM1:
+        BamInfo:
+            "BamPath": saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+            "--MinMappingQuality": 30
+            "--LibraryConstruction": DS  # {SS,DS} DS if double strand, SS if single strand
+        GCcorrect:
+            "Enabled": True
+            "MapMinMaxReadLength": [30, 75]  # the range of readlength
+            "--MappaUniqueness": 0.9  # The reference uniqueness minimum
+        NucleoMap:
+            "Enabled": True
+            "Apply_GC_Correction": True
+            "--NucleosomeSize": 147
+            "--NucleosomeFlanks": 25
+            "--NucleosomeOffset": 12
+        MethylMap:
+            "Enabled": True
+            "--ReadBases": 6
+            "--Primes": five  # choose from {both, five, three}. Normally 5' for DS and both for SS
+            "--SkipThreePrime": 0
+            "--SkipFivePrime": 0
+        Phasogram:
+            "Enabled": True
+            "Apply_GC_Correction": False
+            "--SubsetPileup": 3
+            "--MaxRange": 1000
+        WriteDepth:
+            "Enabled": False
+            "Apply_GC_Correction": True
+            "--DequeLength": 500    
+    # BAM2:
+    #     BamInfo:
+    #         "BamPath": saqqaq/Saqqaq.hg19.flt.sort.rmdup.realign.md.bam
+    #         "--MinMappingQuality": 30
+    #         "--LibraryConstruction": DS  # DS if double strand, SS if single strand
+    #     GCcorrect:
+    #         "Enabled": True
+    #         "MapMinMaxReadLength": [30, 75]  # the range of readlength
+    #         "--MappaUniqueness": 0.9  # The reference uniqueness minimum
+    #     NucleoMap:
+    #         "Enabled": True
+    #         "Apply_GC_Correction": True
+    #         "--NucleosomeSize": 147
+    #         "--NucleosomeFlanks": 25
+    #         "--NucleosomeOffset": 12
+    #     MethylMap:
+    #         "Enabled": True
+    #         "--ReadBases": 6
+    #         "--SkipBases": 0
+    #     Phasogram:
+    #         "Enabled": True
+    #         "Apply_GC_Correction": False
+    #         "--SubsetPileup": 3
+    #         "--MaxRange": 1000
+    #     WriteDepth:
+    #         "Enabled": False
+    #         "Apply_GC_Correction": True
+    #         "--DequeLength": 500    

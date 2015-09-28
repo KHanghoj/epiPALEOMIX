@@ -1,0 +1,168 @@
+make.model<- function(mdf){
+    lm(methylpercent ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance*nodeaminvariance, na.action='na.exclude',data=mdf)
+}
+
+make.big.model<- function(mdf){
+    lm(methylpercent ~ methylpropPROM*cpgreadPROM*deaminatedsitesPROM*CpGsitesPROM*deaminvariancePROM*nodeaminvariancePROM*methylpropGEBO*cpgreadGEBO*deaminatedsitesGEBO*CpGsitesGEBO*deaminvarianceGEBO*nodeaminvarianceGEBO, na.action='na.exclude',data=mdf)
+}
+
+
+getnames <- function(f, col=1){
+    nam <- unlist(strsplit(f, '/'))
+    unlist(strsplit(nam[length(nam)], '_'))[col]
+}
+
+getnames.unfilt <- function(f){
+    nam <- unlist(strsplit(f, '/'))
+    unlist(strsplit(nam[length(nam)], '\\.'))[1]
+}
+
+getlengthtocenter <- function(f){
+    nam <- unlist(strsplit(f, '/'))
+    as.numeric(unlist(strsplit(unlist(strsplit(nam[length(nam)],'_'))[3],'k'))[2])/2
+}
+
+f.calc <- function(idx, dfs){
+       df = dfs[[idx]]
+       methylreads = sum(df[,4]*df[,5])
+       totalreads = sum(df[,4])
+       data.frame('m'=methylreads/totalreads, 'sites'=nrow(df),'nampos'=idx)
+}
+
+readdfRRBS <- function(f){
+       a=fread(f, data.table=F)
+       a$nampos = with(a, sprintf('%s_%s_%s',V6,V7,V8))
+       split(a,a$nampos)
+}
+
+makemodel <- function(fRRBS, fmine, cov=100,promsize=1400){
+  dfs = readdfRRBS(fRRBS)
+  df = do.call(rbind, parallel::mclapply(names(dfs),f.calc, dfs=dfs,mc.cores=5))
+  sample = fread(sprintf('zcat %s',fmine),data.table=F)
+  sample = sample[sample$coverage>=cov,]
+                                        # note:: takes the size of the window into account is it varies
+  sample$nampos = sprintf('%s_%s_%s',sample[,1],sample[,2],sample[,3])
+  sample$size = with(sample, end-pos)/promsize
+  sample$deaminatedsites = sample$deaminatedsites/sample$size
+  sample$coverage = sample$coverage/sample$size
+  sample$CpGsites = sample$CpGsites/sample$size
+  sample$cpgread = sample$cpgread/sample$size
+  mdf = merge(sample,df,by='nampos')
+
+  mod = lm(m ~ methylprop*cpgread*deaminatedsites*CpGsites*deaminvariance*nodeaminvariance, data=mdf)
+  print(c(getnames(fRRBS),nrow(mdf)))
+  print(summary(mod)$r.squared)  # R-squared on .69  # R-squared on .72 housekeeping  # 
+  mod
+}
+
+
+readbedcoorddata <- function(fmine, cov=100){
+  sample <- fread(sprintf('zcat %s',fmine),data.table=F)
+  sample <- sample[sample$coverage>=cov,]
+  sample$nampos = sprintf('%s_%s_%s',sample[,1],sample[,2],sample[,3])
+  sample
+}
+
+require(data.table);require(plyr);require(reshape2)
+#exit()
+
+
+## make two good predictors
+fmine <- '/home/krishang/data/methyl_rawdata/bedcoord_PROMGEBO_SNPsextra/AltaiNeanderthal_MethylMap_PROM_bedcoord.txt.gz'
+fRRBS <- '/disk/ginzburg/data/krishang/bedfiles/PROMRRBSOVERLAP.bed'
+prommod.lm <- makemodel(fRRBS,fmine,cov=100)  ## [1] PROMRRBSOVERLAP.bed # [1] 0.7103264
+fmine <- '/home/krishang/data/methyl_rawdata/bedcoord_PROMGEBO_SNPsextra/AltaiNeanderthal_MethylMap_GEBO_bedcoord.txt.gz'
+fRRBS <- '/disk/ginzburg/data/krishang/bedfiles/GEBORRBSOVERLAP.bed' 
+gebomod.lm <- makemodel(fRRBS,fmine,cov=100)  
+## fmine='/home/krishang/data/methyl_rawdata/bedcoord_GEBOSHORT_SNPsextra/AltaiNeanderthal_MethylMap_GEBOSHORT_bedcoord.txt.gz'
+## fRRBS = '/disk/ginzburg/data/krishang/bedfiles/GEBOSHORTRRBSOVERLAP.bed' 
+## gebomod.lm = makemodel(fRRBS,fmine,cov=100)  
+
+## now we have the predictors:
+fmine <- '/home/krishang/data/methyl_rawdata/bedcoord_PROMGEBO_SNPsextra/AltaiNeanderthal_MethylMap_PROM_bedcoord.txt.gz'
+prom <- readbedcoorddata(fmine) 
+
+prom$predicted <- predict(prommod.lm, prom)
+minpredict <- min(prom$predicted[prom$predicted>0])
+prom$predicted[prom$predicted<=0] <- minpredict
+
+quant <- quantile(prom$predicted,probs=c(0.01,0.99))
+prom$predicted[prom$predicted<quant[1]] <- quant[1]
+prom$predicted[prom$predicted>quant[2]] <- quant[2]
+
+fmine='/home/krishang/data/methyl_rawdata/bedcoord_PROMGEBO_SNPsextra/AltaiNeanderthal_MethylMap_GEBO_bedcoord.txt.gz'
+gebo = readbedcoorddata(fmine)
+## fixing the windowsize since the model is fit for a window of 1400 bp
+promoterwindow = 1400
+gebo$size = with(gebo, end-pos)/promoterwindow
+gebo$deaminatedsites = gebo$deaminatedsites/gebo$size
+gebo$coverage = gebo$coverage/gebo$size
+gebo$CpGsites = gebo$CpGsites/gebo$size
+gebo$cpgread = gebo$cpgread/gebo$size
+
+gebo$predicted = predict(gebomod.lm, gebo)
+minpredict = min(gebo$predicted[gebo$predicted>0])
+gebo$predicted[gebo$predicted<=0] = minpredict
+
+quant = quantile(gebo$predicted,probs=c(0.01,0.99))
+gebo$predicted[gebo$predicted<quant[1]] = quant[1]
+gebo$predicted[gebo$predicted>quant[2]] = quant[2]
+
+
+together = read.table('/disk/ginzburg/data/krishang/bedfiles/GEBOPROMTOGETHER.INFOFILE',h=T)
+together <- together[,7:9]
+names(prom)[names(prom)=='nampos'] = 'namposPROM'
+names(gebo)[names(gebo)=='nampos'] = 'namposGEBO'
+prommodselect <- merge(prom, together, by.x='namposPROM', by.y='PROMREG')
+bigdf <- merge(gebo, prommodselect, by.x='namposGEBO', by.y='GEBOREG', suffixes=c('GEBO','PROM'))
+
+bigdf$modelledratios = with(bigdf, predictedGEBO/predictedPROM)
+bigdf$rawratios = with(bigdf, methylpropGEBO/methylpropPROM)
+
+
+expressionsinfofile = read.table('/disk/ginzburg/data/krishang/expressiondata/ensembletorefseq.txt')
+d = merge(expressionsdata, bigdf[,c('ID','modelledratios','rawratios','coveragePROM','methylpropPROM', 'predictedPROM')], by.x='V3',by.y='ID')
+bonexpressiondata = fread('../../expressiondata/bone_affy_tsv',data.table=F)
+bone=bonexpressiondata[bonexpressiondata$V1 =='Ost1-1',]
+major = merge(d,bone,by.x='V1',by.y='V3')
+major = major[major$V6=='high quality',]
+#major = major[major$V5=='present',]
+major$logmodelledratios = log(major$modelledratios)
+major$lograwratios = log(major$rawratios)
+
+major <- major[major$coveragePROM>=1000,]
+
+## cor.test(major$V4,major$modelledratios)
+## cor.test(major$V4,major$rawratios)
+
+affy <- range(major$V4)
+minaffy = affy[1]
+maxaffy = affy[2]
+jumps = maxaffy-minaffy
+test <- cut(major$V4, breaks = c(-1,seq(minaffy, maxaffy, jumps/9)),labels=1:10)
+
+major$binned <- cut(major$V4, breaks = c(-1,seq(minaffy, maxaffy, jumps/9)),labels=1:10)
+
+
+major$binned <- cut(major$V4, breaks = c(-1,seq(minaffy, maxaffy, jumps/9)),labels=1:10)
+major$lograwratio <- log(major$rawratio)
+major$logmodelledratios <- log(major$modelledratios)
+
+
+ggplot(major,aes(x=binned,y=logmodelledratios))+geom_boxplot();dev.off()
+ggplot(major,aes(x=binned,y=lograwratio))+geom_boxplot();dev.off()
+
+
+
+## cut(major$V4, breaks = seq(2.26, 15.43,jumps/10),labels=1:10)
+#df = data.frame(GEBO=promgebotogether$predictedGEBO, PROM=promgebotogether$predictedPROM)
+#df = data.frame(ms=promgebotogether$ratioms, modelms=promgebotogether$ratio)
+#dfm <- melt(df)
+#ggplot(dfm,aes(value, col=variable,fill=variable))+geom_bar(binwidth=0.01,position='dodge');dev.off()
+#write.table(promgebotogether[promgebotogether$ratio<=qunats[1]|promgebotogether$ratio>=qunats[2],]$ID,
+#	      file='IDformaltailgebovsprom.txt',row.names=F,col.names=F,quote=F,sep='\t')
+
+## df = promgebotogether[,c(12,24)]
+## dfm = melt(df)
+## ggplot(dfm,aes(value, col=variable,fill=variable))+geom_bar(binwidth=0.01,position='dodge');dev.off()
+
