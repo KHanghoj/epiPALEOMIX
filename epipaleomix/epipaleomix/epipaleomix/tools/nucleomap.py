@@ -29,10 +29,8 @@ class Nucleosome_Prediction(GC_correction):
         self._mainlist = []
         self._last_ini = None
         self.f_output = None
-        self._GC_model_len = 0
         self._outputlist = []
         self._fmt = '{}\t{}\t{}\t{}\t{}\t{bedcoord}\n'
-        self._GCmodel_ini()
         self._makeoutputfile()
         self._calltuple = namedtuple('call', 's e depth score')
 

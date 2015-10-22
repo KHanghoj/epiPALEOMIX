@@ -17,11 +17,9 @@ class Phasogram(GC_correction):
     """docstring for Phasogram"""
     def __init__(self, arg):
         self.arg = arg
-
         self.outputdic = defaultdict(int)
         self.forward_dic, self.reverse_dic = {}, {}
         GC_correction.__init__(self)
-        self._GCmodel_ini()
 
     def _call_output(self, dic):
         pos_above_cutoff = [k for k,v in dic.iteritems() if v >= self.arg.SubsetPileup]

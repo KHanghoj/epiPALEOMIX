@@ -20,8 +20,6 @@ class Phasogram(GC_correction):
         GC_correction.__init__(self)
         self.outputdic = defaultdict(int)
         self.forward_dic, self.reverse_dic = {}, {}
-        self._GC_model_len = 0
-        self._GCmodel_ini()
 
     def _call_output(self, dic, max_range=None, max_size=None):
         if dic:
