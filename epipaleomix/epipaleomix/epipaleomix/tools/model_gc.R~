@@ -23,10 +23,10 @@ TVs <- c(TVs,TV/grandmean)  # divide by grandmean to normalize
 
 df <- b[[as.character(unique(xnames)[which.max(TVs)])]]
 maxtv <- df[1,1]
-## df$V3 <- df$V3/sum(df$V3)  # these are not needed
-## df$V4 <- df$V4/sum(df$V4)  # 
-df$V3 <- df$V3/max(df$V3)
-df$V4 <- df$V4/max(df$V4)
+#df$V3 <- df$V3/max(df$V3)
+#df$V4 <- df$V4/max(df$V4)
+df$V3 <- df$V3/sum(df$V3)
+df$V4 <- df$V4/sum(df$V4)
 df$ratio <- df$V3/df$V4
 df$ratio[is.na(df$ratio)]<-0
 df$gc_content <- df[,2]/df[1,1]

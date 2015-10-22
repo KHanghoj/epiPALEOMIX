@@ -4,14 +4,16 @@ import re
 import argparse
 import sys
 import gzip
-# python mergephasogram.py outputnucleo test.txt test1.txt test2.txt
 
-HEADERS = {
+_HEADERS = {
     'MethylMap': '#chrom\tgenomicpos\tdeaminated\ttotal\tbedcoord\n',
     'NucleoMap': '#chrom\tstart\tend\tdepth\tscore\tbedcoord\n',
     'WriteDepth': '#chrom\tgenomicpos\tdepth\tscore\tbedcoord\n',
     'Phasogram': '#Length\tCount\n'
 }
+#_BUFFERSIZE = 20  # Adjust this according to how "memory efficient" you need the program to be.
+_BUFFERSIZE = int(1e6)  # Adjust this according to how "memory efficient" you need the program to be.
+
 
 def p_args(argv):
     parser = argparse.ArgumentParser(prog='Merge_Phasogram')
@@ -22,43 +24,36 @@ def p_args(argv):
                         help='if merged output, default concatenate')
     return parser.parse_known_args(argv)
 
-
-def merge_func(d, length, count):
-    d[int(length)] += int(count)
-
-
-def run_iter(input_gen):
-    while True:
-        try:
-            input_gen.next()
-        except StopIteration:
-            break
-    
-    
-def run(args):
+def merge_func(args):
     dic = defaultdict(int)
+    for fileName in args.infiles:
+        with gzip.open(fileName, 'rb') as f_in:
+            for line in f_in:
+                length, count = re.split(r'\s+', line.rstrip())
+                dic[int(length)] += int(count)
     with gzip.open(args.output, 'wb') as f_out:
-        f_out.write(HEADERS[args.analysis])
-        for f in args.infiles:
-            with gzip.open(f, 'rb') as f_in:
-                if args.merge:
-                    # for line in f_in:
-                    #     merge_func(dic, *re.split(r'\s', line.rstrip()))
-                    gen = (merge_func(dic, *re.split(r'\s', line.rstrip()))
-                           for line in f_in)
-                else:
-                    # for line in f_in:
-                    #    f_out.write(line)
-                    gen = (f_out.write(line) for line in f_in)
-                run_iter(gen)
-        if args.merge:
-            for key, value in sorted(dic.iteritems()):
-                f_out.write('{}\t{}\n'.format(key, value))
+        f_out.write(_HEADERS[args.analysis])
+        for key, value in sorted(dic.iteritems()):
+            f_out.write('{}\t{}\n'.format(key, value))
+        
+def concat_func(args):
+    with gzip.open(args.output, 'wb') as destFile:   ## need this prior step to add the header. cool
+        destFile.write(_HEADERS[args.analysis])
 
+    with open(args.output, 'ab') as destFile:
+        for fileName in args.infiles:
+            with open(fileName, 'rb') as sourceFile:
+                chunk = True
+                while chunk:
+                    chunk = sourceFile.read(_BUFFERSIZE)
+                    destFile.write(chunk)
 
 def main(argv):
     args, unknown = p_args(argv)
-    run(args)
+    if args.merge:
+        merge_func(args)
+    else:
+        concat_func(args)
     return 0
 
 if __name__ == '__main__':
