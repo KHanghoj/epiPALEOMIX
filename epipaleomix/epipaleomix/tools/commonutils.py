@@ -78,7 +78,7 @@ class Cache(object):
 
 class GC_correction(object):
     ''' class doc '''
-    def _GCmodel_ini(self):
+    def __init__(self):
         self._GC_model_len = 0  ## this is a recent update, as it is needed for phasogram, need to check if affects the other analyses.
         if self.arg.GCmodel:
             self._fasta_dat = Cache(self.arg.FastaPath)

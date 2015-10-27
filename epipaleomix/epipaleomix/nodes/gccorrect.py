@@ -72,7 +72,7 @@ class CreateGCModelNode(CommandNode):
         d_bam.opts['BamInfo']['--GCmodel'] = dest
 
 
-class GccorrectNode_Mid(Node):
+class GccorrectMidNode(Node):
     def __init__(self, d_bam, subnodes=()):
         dest = os.path.join(d_bam.i_path,
                             d_bam.bam_name+'_MID'+GC_NAME+'.txt')

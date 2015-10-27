@@ -44,7 +44,7 @@ class CleanFilesNode(CommandNode):
         
 
 
-class SplitBedFile(Node):
+class SplitBedFileNode(Node):
     def __init__(self, config, inbedfile, bedn, subnodes=(), dependencies=()):
         self.temp_root, self.infile = config.temp_root, inbedfile[bedn]
         self.no_subbed = config.max_threads
@@ -74,7 +74,7 @@ class SplitBedFile(Node):
         return lst
 
 
-class MergeDataFiles(Node):
+class MergeDataFilesNode(Node):
     def __init__(self, d_bam, anal, bedn, subnodes=(), dependencies=()):
         self.infiles = [''.join(n.output_files) for n in subnodes]
         self.anal = anal

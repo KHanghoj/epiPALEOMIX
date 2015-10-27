@@ -12,17 +12,17 @@ from epipaleomix.tools import checkchromprefix
 from epipaleomix.tools import checkmappabilitychrom
 from epipaleomix.set_procname import set_procname
 from epipaleomix.epi_mkfile.epi_makefile import read_epiomix_makefile
-from epipaleomix.nodes.gccorrect_Node import \
+from epipaleomix.nodes.gccorrect import \
     GccorrectNode, \
     CreateGCModelNode, \
-    GccorrectNode_Mid
-from epipaleomix.nodes.execute_Node import \
+    GccorrectMidNode
+from epipaleomix.nodes.execute import \
     GeneralExecuteNode, \
-    General_Plot_Node
-from epipaleomix.nodes.cleanbedfiles_Node import \
+    GeneralPlotNode
+from epipaleomix.nodes.cleanbedfiles import \
     CleanFilesNode, \
-    SplitBedFile, \
-    MergeDataFiles
+    SplitBedFileNode, \
+    MergeDataFilesNode
 from pypeline.node import MetaNode
 from pypeline.pipeline import Pypeline
 from pypeline.common.console import \
@@ -65,15 +65,12 @@ class bam_collect(object):
         self.bam_name = bam_name
         self.i_path = os.path.join(config.temp_root, self.bam_name)
         self.o_path = os.path.join(config.destination, self.bam_name)
-        self._createpaths()
+        check_path(self.i_path)
+        check_path(self.o_path)
         self.opts = opts
         self.baminfo = self.opts['BamInfo']
         self.fmt = '{}_{}_{}.txt.gz'
         self.prefix = d_make.prefix  # comes from make_collect class
-
-    def _createpaths(self):
-        check_path(self.i_path)
-        check_path(self.o_path)
 
     def retrievedat(self, anal):
         return self._coerce_to_dic(self.opts[anal], self.baminfo,
@@ -121,10 +118,14 @@ def split_bedfiles(config, d_make):
         if enabl_filter and mappapath:
             filtnode = [CleanFilesNode(config, in_bedp, mappapath, uniqueness)]
             d_make.bedfiles[bedn] = ''.join(filtnode[0].output_files)
-        splnode = SplitBedFile(config, d_make.bedfiles, bedn, subnodes=filtnode)
+        splnode = SplitBedFileNode(config, d_make.bedfiles, bedn, subnodes=filtnode)
         nodes.append(splnode)
     return nodes
 
+
+def chromused_to_string(d_bam):
+    chromused = d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)
+    d_bam.opts['GCcorrect']['ChromUsed'] =  [str(chrom) for chrom in chromused]
 
 def checkbedfiles_ext(bedfiles):
     for bedname, bedpath in bedfiles.items():
@@ -153,29 +154,15 @@ def concat_gcsubnodes(nodecls, bam, ran, subn=()):
 
 def calc_gcmodel(d_bam, d_make):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
+        chromused_to_string(d_make)
         checkmappabilitychrom.main([d_make.prefix.get('--MappabilityPath', MakefileError),
                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
         rlmin, rlmax = \
             d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', MakefileError)
         return concat_gcsubnodes(CreateGCModelNode, d_bam, FINETUNERANGE,
-                                   subn=concat_gcsubnodes(GccorrectNode_Mid,
+                                   subn=concat_gcsubnodes(GccorrectMidNode,
                                                               d_bam, xrange(rlmin, rlmax+1, 15)))
     return []
-
-
-def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
-    bedn, bed_paths = bedinfo
-    nodes = []
-    for idx, bed_p in enumerate(bed_paths):
-        bedn_temp = '{}_0{}'.format(bedn, str(idx))
-        ## nodes.append(GeneralExecuteNode(anal, d_bam, bedn+str(idx), bed_p, dependencies=m_node))
-        nodes.append(GeneralExecuteNode(anal, d_bam, bedn_temp, bed_p, dependencies=m_node))
-    mergenode = MergeDataFiles(d_bam, anal, bedn, subnodes=nodes)
-    if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is false -> no plot
-        return mergenode
-    infile = (out for out in mergenode.output_files).next()
-    return General_Plot_Node(infile, anal, dependencies=[mergenode])
-
 
 def make_metanode(depen_nodes, bamname):
     descrip_fmt = "Metanode: '{}': GC correction and bedfile split"
@@ -190,6 +177,26 @@ def check_chrom_prefix(bedfiles, d_make):
             checkchromprefix.main([baminfo['BamPath'],
                                    d_make.prefix.get('--FastaPath'),
                                    bedpath])
+
+
+
+def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
+    bedn, bed_paths = bedinfo
+    nodes = []
+    for idx, bed_p in enumerate(bed_paths):
+        bedn_temp = '{}_0{}'.format(bedn, str(idx))
+        ## nodes.append(GeneralExecuteNode(anal, d_bam, bedn+str(idx), bed_p, dependencies=m_node))
+        nodes.append(GeneralExecuteNode(anal, d_bam, bedn_temp, bed_p, dependencies=m_node))
+    mergenode = MergeDataFilesNode(d_bam, anal, bedn, subnodes=nodes)
+    ## TODO:::: if writedepth and bedoptionmerge == TRUE:
+    ## TODO::::     apply the merger script that i just already on the mergeNode
+    ## TODO:::: if methylation cleaning True in bed file. remove all SNPs based on databased already created
+    ## TODO:::: if nucleomap and Advancednucleomap is TRUE. apply it here. 
+    if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is false -> no plot
+        return mergenode
+    infile = (out for out in mergenode.output_files).next()
+    return GeneralPlot(infile, anal, dependencies=[mergenode])
+
 
 
 def run(config, makefiles):

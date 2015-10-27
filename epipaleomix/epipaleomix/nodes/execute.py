@@ -59,7 +59,7 @@ class GeneralExecuteNode(Node):
                 self.inputs.extend((option, argument))
 
 
-class General_Plot_Node(CommandNode):
+class GeneralPlotNode(CommandNode):
     def __init__(self, infile, anal_name, dependencies=()):
         call = ['Rscript', '%(AUX_R)s', str(50), '%(IN_TXT)s', '%(OUT_FILEPATH)s']
         outfile = os.path.splitext(os.path.splitext(infile)[0])[0]+'.pdf'

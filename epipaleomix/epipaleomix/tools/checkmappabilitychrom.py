@@ -1,7 +1,7 @@
 import re, sys, os, argparse
 
 def unpack(chrom, *rest):
-    return chrom
+    return str(chrom)
 
 def pa(argv):
     ''' docstring '''
@@ -22,22 +22,25 @@ def getchromprefix(c):
 
 def checkmappabilityprefix(mappachrom, chromused):
     Mappaprefix = getchromprefix(mappachrom)
-    Chrom_tobe_analyzed = getchromprefix(chromused)
+    Chrom_tb_analyzed = getchromprefix(chromused)
     mappachrom = 'No prefix' if not Mappaprefix else Mappaprefix
-    chromused = 'No prefix' if not Chrom_tobe_analyzed else Chrom_tobe_analyzed
-    assert Mappaprefix == Chrom_tobe_analyzed, ("'--MappabilityPath' prefix: '%s' is "
+    chromused = 'No prefix' if not Chrom_tb_analyzed else Chrom_tb_analyzed
+    assert Mappaprefix == Chrom_tb_analyzed, ("'--MappabilityPath' prefix: '%s' is "
                                                 "different from 'ChromUsed'"
                                                 " prefix '%s' used for GCcorrection") % (mappachrom, chromused)
     
 def run(args):
     """ does not check if header is present in mappability file """ 
     with open(args.Mappability, 'r') as fin:
-        chrom = unpack(*re.split(r'\s+', next(fin).rstrip()))
-        for mappachrom in args.ChromUsed:
-            checkmappabilityprefix(chrom, mappachrom)
+        mappachrom = unpack(*re.split(r'\s+', next(fin).rstrip()))
+        for chromused in args.ChromUsed:
+            chromused = str(chromused)
+            checkmappabilityprefix(mappachrom, chromused)
 
 def main(argv):
+    print argv
     args, unknown = pa(argv)
+
     run(args)
     return 0
 

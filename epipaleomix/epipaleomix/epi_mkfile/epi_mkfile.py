@@ -26,11 +26,11 @@ BamInputs:
         BamInfo:
             BamPath: path/to/bamfile  # REQUIRED
             --MinMappingQuality: 30
-            --LibraryConstruction: DS  # DS if double strand, SS if single strand
         GCcorrect:
             Enabled: True
             # mininimum and maximum length of used reads (roughly)
             MapMinMaxReadLength: [30, 75] 
+            ChromUsed: [1,1]
             # The reference uniqueness minimum. It is not used if no mappability region is passed
             --MappaUniqueness: 0.9
         NucleoMap:   # The nucleosome calling tool
@@ -42,10 +42,10 @@ BamInputs:
         MethylMap:   # The Methylation mapping tool
             Enabled: True
             --ReadBases: 15
-            --Primes: five  # choose from {both, five, three}. Normally 5' (five) for DS and both for SS
+            --Primes: five  # choose from {both, five, three}. Normally 5' (five) for DS and 5' and 3' (both) for SS
             --SkipThreePrime: 0
             --SkipFivePrime: 0
-        Phasogram:   # THe phasogram analysis 
+        Phasogram:   # The phasogram analysis 
             Enabled: True
             Apply_GC_Correction: False
             --SubsetPileup: 3
@@ -57,28 +57,28 @@ BamInputs:
     # BAMName2:  # SET TO A MEANINGFUL BAMNAME 
     #     # DOT NOT CHANGES THE VARIABLE NAMES ON THIS INDENTATION LEVEL
     #     BamInfo:
-    #         # DOT NOT CHANGES THE VARIABLE NAMES ON THIS INDENTATION LEVEL
-    #         BamPath: path/to/bamfile
+    #         BamPath: path/to/bamfile  # REQUIRED
     #         --MinMappingQuality: 30
-    #         --LibraryConstruction: DS  # DS if double strand, SS if single strand
     #     GCcorrect:
     #         Enabled: True
     #         # mininimum and maximum length of used reads (roughly)
     #         MapMinMaxReadLength: [30, 75] 
-    #         --MappaUniqueness: 0.9  # The reference uniqueness minimum
+    #         ChromUsed: [1,1]
+    #         # The reference uniqueness minimum. It is not used if no mappability region is passed
+    #         --MappaUniqueness: 0.9
     #     NucleoMap:   # The nucleosome calling tool
     #         Enabled: True
-    #         Apply_GC_Correction: True
+    #         Apply_GC_Correction: True  # GCcorrect Enabled must be True
     #         --NucleosomeSize: 147
     #         --NucleosomeFlanks: 25
     #         --NucleosomeOffset: 12
-    #     MethylMap:
+    #     MethylMap:   # The Methylation mapping tool
     #         Enabled: True
-    #         --ReadBases: 6
-    #         --Primes: five  # choose from {both, five, three}. Normally 5' for DS and both for SS
+    #         --ReadBases: 15
+    #         --Primes: five  # choose from {both, five, three}. Normally 5' (five) for DS and 5' and 3' (both) for SS
     #         --SkipThreePrime: 0
     #         --SkipFivePrime: 0
-    #     Phasogram:
+    #     Phasogram:   # The phasogram analysis 
     #         Enabled: True
     #         Apply_GC_Correction: False
     #         --SubsetPileup: 3
