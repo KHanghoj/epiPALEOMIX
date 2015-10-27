@@ -1,17 +1,30 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import operator
+import re
 import sys
 import os
+import copy
 import time
 import logging
 import pypeline.yaml
 import pypeline.logger
 import optparse
-from epipaleomix.epi_mkfile import epi_mkfile
+from pypeline.node import MetaNode
+from pypeline.pipeline import Pypeline
+from pypeline.common.console import \
+    print_err, \
+    print_info
+from epipaleomix.tools.commonutils import check_path
+from epipaleomix.config import parse_config, __version__
+from epipaleomix.epimakefile import epicreatemkfile
+from epipaleomix.epimakefile.epivalidmkfile import read_epiomix_makefile
 from epipaleomix.tools import checkchromprefix
 from epipaleomix.tools import checkmappabilitychrom
 from epipaleomix.set_procname import set_procname
-from epipaleomix.epi_mkfile.epi_makefile import read_epiomix_makefile
+from epipaleomix.tools.bamdatastructure import BamCollect, \
+    MakeCollect, \
+    MakefileError
 from epipaleomix.nodes.gccorrect import \
     GccorrectNode, \
     CreateGCModelNode, \
@@ -23,90 +36,22 @@ from epipaleomix.nodes.cleanbedfiles import \
     CleanFilesNode, \
     SplitBedFileNode, \
     MergeDataFilesNode
-from pypeline.node import MetaNode
-from pypeline.pipeline import Pypeline
-from pypeline.common.console import \
-    print_err, \
-    print_info
-
 
 FINETUNERANGE = [-10, -5, 5, 10]
 ANALYSES = ['Phasogram', 'WriteDepth', 'NucleoMap', 'MethylMap']
 
 
-class MakefileError(RuntimeError):
-    """Raised if a makefile is unreadable, or does not meet specifications."""
-
-
-class make_collect(object):
-    def __init__(self, make):
-        self.makefile = make.pop('Makefile', {})
-        self.prefix = self.makefile.pop('Prefixes', {})
-        self.beddata = self.makefile.pop('BedFiles', {})
-        self.bedfiles, self.bed_plot = self._splitbedopts()
-
-    def _splitbedopts(self):
-        ''' Split bedfiles options between bedname path and plot boolean '''
-        bedf, bedp = {}, {}
-        mappacorr = True if self.beddata['EnabledFilter'] else False
-        for bedn, bedopts in self.beddata.iteritems():
-            if isinstance(bedopts, dict):
-                if mappacorr:  ## this is for the outputname
-                    bedn += 'MappaOnly'
-                bedf[bedn] = bedopts["Path"]
-                bedp[bedn] = bedopts["MakeMergePlot"]
-            else:  # just options to the specific bedfile
-                bedf[bedn] = bedopts
-        return bedf, bedp
-
-    
-class bam_collect(object):
-    def __init__(self, config, bam_name, opts, d_make):
-        self.bam_name = bam_name
-        self.i_path = os.path.join(config.temp_root, self.bam_name)
-        self.o_path = os.path.join(config.destination, self.bam_name)
-        check_path(self.i_path)
-        check_path(self.o_path)
-        self.opts = opts
-        self.baminfo = self.opts['BamInfo']
-        self.fmt = '{}_{}_{}.txt.gz'
-        self.prefix = d_make.prefix  # comes from make_collect class
-
-    def retrievedat(self, anal):
-        return self._coerce_to_dic(self.opts[anal], self.baminfo,
-                                   self.prefix)
-
-    def _coerce_to_dic(self, *args):
-        dic = {}
-        for arg in args:
-            if not isinstance(arg, dict):
-                arg = dict([arg])
-            dic.update(arg)
-        return dic
-
-
-def parse_args(argv):
-    ''' simpleparser '''
-    usage_str = "%prog <command> [options] [makefiles]"
-    version_str = "%%prog %s" % (pypeline.__version__,)
-    parser = optparse.OptionParser(usage=usage_str, version=version_str)
-    parser.add_option('--temp-root', type=str, default='./temp')
-    parser.add_option("--dry-run", action="store_true", default=False,
-                      help="If passed, only a dry-run in performed"
-                      ", the dependency ")
-    parser.add_option('--destination', type=str, default='./OUTPUT')
-    parser.add_option('--max-threads', type=int, default=4)
-    pypeline.logger.add_optiongroup(parser)
-    return parser.parse_args(argv)
-
-
-def check_path(temp_dir):
-    if not os.path.exists(temp_dir):
-        try:
-            os.makedirs(temp_dir)
-        except OSError, error:
-            print_err("ERROR: Could not create temp root:\n\t%s" % (error,))
-            return 1
+def check_bed_exist(config, infile):
+    ''' Check if bedfiles have been split already, then use them
+        As a changes in no. of threads from run to run is error prone
+        in this setup'''
+    filena, fileext = os.path.splitext(os.path.basename(infile))
+    reg = r'{}_([0-9]+).bed'.format(filena)
+    bedfiles=((f, int(re.search(reg,f).groups()[0])) for f in os.listdir(config.temp_root) if re.search(reg,f))
+    ##  this is just cool dense code::
+    ##  map(lambda x:x[0],sorted(a,key=itemgetter(1)))
+    ##  return map(operator.itemgetter(0),sorted(bedfiles,key=operator.itemgetter(1)))
+    return [os.path.join(config.temp_root, path) for path, val in sorted(bedfiles,key=operator.itemgetter(1))]
 
 
 def split_bedfiles(config, d_make):
@@ -118,14 +63,18 @@ def split_bedfiles(config, d_make):
         if enabl_filter and mappapath:
             filtnode = [CleanFilesNode(config, in_bedp, mappapath, uniqueness)]
             d_make.bedfiles[bedn] = ''.join(filtnode[0].output_files)
-        splnode = SplitBedFileNode(config, d_make.bedfiles, bedn, subnodes=filtnode)
-        nodes.append(splnode)
+        bedexists = check_bed_exist(config, d_make.bedfiles[bedn])
+        if bedexists:
+            d_make.bedfiles[bedn] = bedexists
+        else:
+            splnode = SplitBedFileNode(config, d_make.bedfiles, bedn, subnodes=filtnode)
+            nodes.append(splnode)
     return nodes
 
 
-def chromused_to_string(d_bam):
-    chromused = d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)
-    d_bam.opts['GCcorrect']['ChromUsed'] =  [str(chrom) for chrom in chromused]
+def chromused_to_string(bam):
+    chrused = bam.opts['GCcorrect'].get('ChromUsed', MakefileError)
+    bam.opts['GCcorrect']['ChromUsed'] =  [str(chrom) for chrom in chrused]
 
 def checkbedfiles_ext(bedfiles):
     for bedname, bedpath in bedfiles.items():
@@ -154,7 +103,7 @@ def concat_gcsubnodes(nodecls, bam, ran, subn=()):
 
 def calc_gcmodel(d_bam, d_make):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
-        chromused_to_string(d_make)
+        chromused_to_string(d_bam)
         checkmappabilitychrom.main([d_make.prefix.get('--MappabilityPath', MakefileError),
                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
         rlmin, rlmax = \
@@ -164,28 +113,19 @@ def calc_gcmodel(d_bam, d_make):
                                                               d_bam, xrange(rlmin, rlmax+1, 15)))
     return []
 
-def make_metanode(depen_nodes, bamname):
-    descrip_fmt = "Metanode: '{}': GC correction and bedfile split"
-    return MetaNode(description=descrip_fmt.format(bamname),
-                    dependencies=depen_nodes)
-
-
-def check_chrom_prefix(bedfiles, d_make):
+def check_chrom_prefix(d_make):
     for bam_name, opts in d_make.makefile['BamInputs'].items():
         baminfo = opts['BamInfo']
-        for bedfile, bedpath in checkbedfiles_ext(bedfiles):
+        for bedfile, bedpath in checkbedfiles_ext(d_make.bedfiles):
             checkchromprefix.main([baminfo['BamPath'],
                                    d_make.prefix.get('--FastaPath'),
                                    bedpath])
-
-
 
 def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
     bedn, bed_paths = bedinfo
     nodes = []
     for idx, bed_p in enumerate(bed_paths):
-        bedn_temp = '{}_0{}'.format(bedn, str(idx))
-        ## nodes.append(GeneralExecuteNode(anal, d_bam, bedn+str(idx), bed_p, dependencies=m_node))
+        bedn_temp = '{}_0{}'.format(bedn, idx)
         nodes.append(GeneralExecuteNode(anal, d_bam, bedn_temp, bed_p, dependencies=m_node))
     mergenode = MergeDataFilesNode(d_bam, anal, bedn, subnodes=nodes)
     ## TODO:::: if writedepth and bedoptionmerge == TRUE:
@@ -197,38 +137,55 @@ def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
     infile = (out for out in mergenode.output_files).next()
     return GeneralPlot(infile, anal, dependencies=[mergenode])
 
-
+def make_outputnames(config,make):
+    filename = make["Statistics"]["Filename"]
+    outputname = os.path.splitext(os.path.basename(filename))[0]
+    print(outputname)
+    config.temp_root = os.path.join(config.epibasedest['temp_root'], 'TEMP_' + outputname)
+    config.destination = os.path.join(config.epibasedest['dest'], 'OUT_' + outputname)
+    check_path(config.temp_root)
+    check_path(config.destination)
+    
 
 def run(config, makefiles):
-    check_path(config.temp_root)
     logfile_template = time.strftime("Epipaleomix_pipe.%Y%m%d_%H%M%S_%%02i.log")
     pypeline.logger.initialize(config, logfile_template)
     logger = logging.getLogger(__name__)
-    pipeline = Pypeline(config)
+    pipeline = Pypeline(config=config)
     topnodes = []
+    base_destination = config.destination
+    base_temp_root = config.temp_root
     for make in read_epiomix_makefile(makefiles):
-        d_make = make_collect(make)
-        check_chrom_prefix(d_make.bedfiles, d_make)
+        make_outputnames(config, make)
+        d_make = MakeCollect(make)
+        check_chrom_prefix(d_make)
         splitbednode = split_bedfiles(config, d_make)
         for bam_name, opts in d_make.makefile['BamInputs'].items():
-            d_bam = bam_collect(config, bam_name, opts, d_make)
+            d_bam = BamCollect(config, bam_name, opts, d_make)
             gcnode = calc_gcmodel(d_bam, d_make)
-            m_node = make_metanode(gcnode+splitbednode, d_bam.bam_name)
+            m_node = splitbednode+gcnode
             for bedinfo in checkbed_list(d_make.bedfiles):
                 for anal in main_anal_to_run(opts):
                     topnodes.append(run_analyses(anal, d_bam,
                                                  d_make, bedinfo, m_node))
             if not topnodes:
                 topnodes.extend(gcnode+splitbednode)
+    assert topnodes, "Pipeline found no analyses to run. Check %s" % (makefiles)
+        
     pipeline.add_nodes(topnodes)
     logger.info("Running Epipaleomix pipeline ...")
-    pipeline.run(dry_run=config.dry_run, max_running=config.max_threads)
+    if not pipeline.run(dry_run=config.dry_run,
+                        max_running=config.max_threads,
+                        progress_ui=config.progress_ui):
+        return 1
+    return 0
 
 
 def _print_usage():
     basename = os.path.basename(sys.argv[0])
     if basename == "./epipaleomix.py":
         basename = "epipaleomix"
+    print_info("METAGENOMICS Pipeline %s\n" %(__version__,))
     print_info("Epipaleomix\n")
     print_info("Usage:")
     print_info("  -- %s help           -- Display this message" % basename)
@@ -238,9 +195,9 @@ def _print_usage():
 
 
 def main(argv):
-    set_procname("epipaleomix")
+    set_procname("epiPALEOMIX")
     try:
-        config, args = parse_args(argv)
+        config, args = parse_config(argv)
         if args and args[0].startswith("dry"):
             config.dry_run = True
     except RuntimeError, error:
@@ -257,6 +214,11 @@ def main(argv):
         print_err("\nPlease specify at least one makefile!")
         return 1
     # NOTE THAT WE SPLICE OUT ANOTHER INPUT BEFORE PASSING ON TO RUN FUNC
+    config.epibasedest = {'temp_root':copy.copy(config.temp_root),
+                          'dest': copy.copy(os.path.dirname(config.destination))}
+    # else:
+    #     config.temp_root = os.path.join(config.temp_root,
+    #                                     os.path.basename(config.destination))
     return run(config, args[1:])
 
 

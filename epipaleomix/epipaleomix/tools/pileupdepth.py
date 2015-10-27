@@ -23,7 +23,7 @@ class Write_Depth(GC_correction):
         self._CENTERINDEX = (self._SIZE-1)/2
         self._SPACERMEAN = float(self._NEIGHBOR+self._NEIGHBOR)
         GC_correction.__init__(self)
-        self._f_output, self._model = None, None
+        self._f_output = None
         self._seq_len = int(self._TOTAL_WIN_LENGTH*2)  # maybe times 4 if small nucl
         self._zeros = [0]*self._seq_len
         self._last_pos = -self._seq_len

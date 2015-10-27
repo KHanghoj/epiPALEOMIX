@@ -1,6 +1,6 @@
 import pysam
 import re
-
+import os
 
 
 # def merge_dics(x, y):
@@ -9,6 +9,13 @@ import re
 #     z.update(y)
 #     return z
 
+def check_path(temp_dir):
+    if not os.path.exists(temp_dir):
+        try:
+            os.makedirs(temp_dir)
+        except OSError, error:
+            print_err("ERROR: Could not create temp root:\n\t%s" % (error,))
+            return 1
 
 
 def unpack(chrom, start, end, bedcoord, *rest):

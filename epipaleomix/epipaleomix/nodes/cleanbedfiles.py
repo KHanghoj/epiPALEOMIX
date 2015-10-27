@@ -78,8 +78,12 @@ class MergeDataFilesNode(Node):
     def __init__(self, d_bam, anal, bedn, subnodes=(), dependencies=()):
         self.infiles = [''.join(n.output_files) for n in subnodes]
         self.anal = anal
+        opt_arg = d_bam.retrievedat(anal)
+        self.analname = anal + 'GCcorr' if opt_arg.get('Apply_GC_Correction', False) else anal
         self.out = os.path.join(d_bam.o_path,
-                                d_bam.fmt.format(d_bam.bam_name, anal, bedn))
+                                d_bam.fmt.format(d_bam.bam_name,
+                                                 self.analname,
+                                                 bedn))
         assert self.infiles, "No temporary files to merge"
         if len(self.infiles) > 1:
             description = "<MergeDataFiles: '%s' ... '%s' ->  '%s'" % \

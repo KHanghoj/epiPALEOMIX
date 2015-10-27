@@ -79,12 +79,11 @@ class PerHostConfig:
         self.temp_root   = PerHostValue(os.path.join("/tmp", getpass.getuser(), pipeline_name), True)
         # At least 2 threads are required for e.g. PE BWA nodes, and generally recommended anyway
         self.max_threads = PerHostValue(max(2, multiprocessing.cpu_count()))
-
+        
         self._filenames = self._get_filenames(pipeline_name)
         self._handle    = ConfigParser.SafeConfigParser()
         self._handle.read(self._filenames)
         self._sections  = []
-
         hostname = socket.gethostname()
         if self._handle.has_section(hostname):
             self._sections.append(hostname)
