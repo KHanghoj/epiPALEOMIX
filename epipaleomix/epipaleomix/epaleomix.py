@@ -140,7 +140,6 @@ def run_analyses(anal, d_bam, d_make, bedinfo, m_node):
 def make_outputnames(config,make):
     filename = make["Statistics"]["Filename"]
     outputname = os.path.splitext(os.path.basename(filename))[0]
-    print(outputname)
     config.temp_root = os.path.join(config.epibasedest['temp_root'], 'TEMP_' + outputname)
     config.destination = os.path.join(config.epibasedest['dest'], 'OUT_' + outputname)
     check_path(config.temp_root)
@@ -185,7 +184,7 @@ def _print_usage():
     basename = os.path.basename(sys.argv[0])
     if basename == "./epipaleomix.py":
         basename = "epipaleomix"
-    print_info("METAGENOMICS Pipeline %s\n" %(__version__,))
+    print_info("epiPALEOMIX Pipeline %s\n" %(__version__,))
     print_info("Epipaleomix\n")
     print_info("Usage:")
     print_info("  -- %s help           -- Display this message" % basename)
@@ -208,7 +207,7 @@ def main(argv):
         _print_usage()
         return 1
     elif args[0] in ("mkfile", "makefile"):
-        return epi_mkfile.main(args[1:])
+        return epicreatemkfile.main(args[1:])
     elif not args[1:]:
         _print_usage()
         print_err("\nPlease specify at least one makefile!")
@@ -216,9 +215,6 @@ def main(argv):
     # NOTE THAT WE SPLICE OUT ANOTHER INPUT BEFORE PASSING ON TO RUN FUNC
     config.epibasedest = {'temp_root':copy.copy(config.temp_root),
                           'dest': copy.copy(os.path.dirname(config.destination))}
-    # else:
-    #     config.temp_root = os.path.join(config.temp_root,
-    #                                     os.path.basename(config.destination))
     return run(config, args[1:])
 
 

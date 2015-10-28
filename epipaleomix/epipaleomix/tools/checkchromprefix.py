@@ -30,9 +30,14 @@ def checkasserts(checked, bed_bam_chroms, bedp, bam_fasta):
          (', '.join(bed_bam_chroms[idx] for idx, c in enumerate(checked) if not c),
           os.path.basename(bedp), os.path.basename(bam_fasta)))
 
-
-
+def check_path_exists(args):
+    assert os.path.exists(args.BamPath), "Path to Bam file does not exists\n\t'%s'\n" % (str(args.BamPath))
+    assert os.path.exists(args.BedPath), "Path to Bed file does not exists\n\t'%s'" % (str(args.BedPath))
+    assert os.path.exists(args.FastaPath), ("Path to reference genome (.fasta/fa) "
+                                            "file does not exists\n\t'%s'") % (str(args.FastaPath))
+    
 def run(args):
+    check_path_exists(args)
     samfile = pysam.Samfile(args.BamPath, 'rb')
     bamchrom = [dic['SN'] for dic in samfile.header['SQ']]
     with open(args.BedPath, 'r') as fin:

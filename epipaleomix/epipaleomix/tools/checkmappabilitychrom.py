@@ -24,7 +24,6 @@ def getmappachroms(args):
 def run(args):
     """ does not check if header is present in mappability file """ 
     mappachroms = getmappachroms(args)
-    print(args.ChromUsed)
     for chromused in args.ChromUsed:
         assert (chromused in mappachroms) , ("'ChromUsed' chromosome: '%s' chosen for GC-correction is not"
                                            " available in the Mappability file (--MappabilityPath):"
