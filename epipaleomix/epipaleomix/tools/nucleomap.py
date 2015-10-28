@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
+import math
 from collections import deque, namedtuple
 from os.path import exists, splitext
 from shutil import move
@@ -72,47 +73,10 @@ class Nucleosome_Prediction(GC_correction):
         for idx in xrange(0, n-self._TOTAL_WIN_LENGTH+1):
             yield idx, self._mainlist[idx:(idx+self._TOTAL_WIN_LENGTH)]
     
+
     def call_final_window(self):
         self._mainlist.extend(self._deq_depth)
         self._call_window()
-        
-    def _call_window(self):
-        ''' docstring '''
-        lasttup = ()
-        for idx, win_depth in self._depthwindows():
-            if win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._mindepth:
-                continue
-            dep_posses = self._call_max(win_depth[self._POSITION_OFFSET:
-                                                  self._POSITION_OFFSET +
-                                                  self._SIZE])
-            if dep_posses:
-                spacerL = sum(win_depth[:self._NEIGHBOR])
-                spacerR = sum(win_depth[-self._NEIGHBOR:]) 
-                # both cannot be 0
-                ###if spacerL or spacerR:
-                if spacerL and spacerR: ## non can be zero
-##                if True: ## non can be zero
-                    center_depth, min_idx, max_idx = dep_posses
-                    sizeofwindow = (max_idx-min_idx)
-                    mean_spacer = (spacerL + spacerR)/float(self._NEIGHBOR+self._NEIGHBOR)
-                    score = ((float(center_depth)-mean_spacer) /
-                             (sizeofwindow+1.0))
-
-                    start_pos = idx+self._last_ini+min_idx
-                    end_pos = idx+self._last_ini+max_idx
-
-                    if start_pos >= self.start and start_pos <= self.end:
-                        if not lasttup: # initialize
-                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
-                            continue
-                        if start_pos <= lasttup.e: # the nucl dyad/center overlap
-                            if score > lasttup.score:
-                                lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
-                        else:  # they do not overlap. send lasttup to outputlist
-                            self._outputlist.append(lasttup)
-                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
-        if lasttup:
-            self._outputlist.append(lasttup)
 
     def _check_width(self, start, end, incre):
         for idx in xrange(start, end, incre):
@@ -123,17 +87,67 @@ class Nucleosome_Prediction(GC_correction):
 
     def _call_max(self, window):
         ''' docstring '''
-        self.call = list()
         self.window = window
         self.maxdepth = max(self.window)
-        if self.maxdepth >= self._mindepth:
+        if self.maxdepth > self._mindepth:
             if self.window[self._CENTERINDEX] == self.maxdepth:
+                self.call = list()
                 self.call.append(self._CENTERINDEX)
                 self._check_width(1, self._CENTERINDEX, 1)
                 self._check_width(-1, -self._CENTERINDEX, -1)
+                # not +1 as bed files are half open at the end
                 return (self.maxdepth, self._POSITION_OFFSET+min(self.call),
-                        self._POSITION_OFFSET+max(self.call))
+                        self._POSITION_OFFSET+max(self.call)+1)
+            
+        return (0, 0, 0)
+        
+    def _call_window(self):
+        ''' docstring '''
+        lasttup = ()
+        for idx, win_depth in self._depthwindows():
+            if win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._mindepth:
+                continue
+            if 0 in win_depth[self._POSITION_OFFSET:
+                              self._POSITION_OFFSET +
+                              self._SIZE]:
+                continue
+            center_depth, min_idx, max_idx = self._call_max(win_depth[self._POSITION_OFFSET:
+                                                                      self._POSITION_OFFSET +
+                                                                      self._SIZE])
 
+            if center_depth:
+                spacerL = sum(win_depth[:self._NEIGHBOR])
+                spacerR = sum(win_depth[-self._NEIGHBOR:])
+                # both cannot be 0
+                ###if spacerL or spacerR:
+                if spacerL and spacerR: ## non can be zero
+                    sizeofwindow = (max_idx-min_idx)
+                    mean_spacer = (spacerL + spacerR)/float(self._NEIGHBOR+self._NEIGHBOR)
+                    mean_spacer = mean_spacer if mean_spacer > 1 else 1
+                    ## to correct for super high from the gccorrection
+                    score = math.log(float(center_depth)/(mean_spacer*sizeofwindow))
+                       
+                    # score = ((float(center_depth)-mean_spacer) /
+                    #          (sizeofwindow+1.0))
+
+                    start_pos = idx+self._last_ini+min_idx
+                    end_pos = idx+self._last_ini+max_idx
+
+                    if start_pos >= self.start and end_pos <= self.end:
+                        if not lasttup: # initialize
+                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
+                            continue
+                        # if start_pos <= lasttup.e: # the nucl dyad/center overlap
+                        if start_pos <= (lasttup.e+self._SIZE-1): # the nucleosomes overlap. # use the one with highest score
+                            if score > lasttup.score:
+                                lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
+                        else:  # they do not overlap. send lasttup to outputlist
+                            self._outputlist.append(lasttup)
+                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
+        if lasttup:
+            self._outputlist.append(lasttup)
+
+            
     def writetofile(self):
         ''' dfs '''
         if self._outputlist:
