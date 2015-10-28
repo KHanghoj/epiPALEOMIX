@@ -1,5 +1,5 @@
 args <- commandArgs(trailingOnly = TRUE)
-args <- unlist(list(c('./gc', 'gc_GC', './model.txt', 'ding.pdf')))  # for testing
+## args <- unlist(list(c('./gc', 'gc_GC', './model.txt', 'ding.pdf')))  # for testing
 input_path <- args[1]
 pat <- args[2]
 outputpath <- args[3]
