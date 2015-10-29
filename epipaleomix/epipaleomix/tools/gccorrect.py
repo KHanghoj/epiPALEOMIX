@@ -7,7 +7,8 @@ from collections import defaultdict
 from epipaleomix.tools.commonutils import \
     Cache, \
     read_mappa
-_BUFFER = 2
+## _BUFFER = 2
+_BUFFER = 0
 
 
 class GCcorrect(object):
@@ -24,17 +25,20 @@ class GCcorrect(object):
         records = self.samfile.fetch(chrom, start, end)
         # they need to be 0-based for fetching fasta seq:
         self.chrom = chrom
-        ## self.start, self.end = start-1, end-1
+        region_size = float(end - start)
         self.start, self.end = start-1, end
+        cov = 0
         for record in records:
             if record.mapq < self.arg.MinMappingQuality or record.is_unmapped:
                 continue  # do not analyze low quality records
+            cov += record.alen
             if record.is_reverse:
                 self._update(record.aend-1, self.reads_back)
             else:
                 self._update(record.pos, self.reads_forw)
-
-        if self.reads_forw and self.reads_back:
+        
+        if cov/region_size > 2:  ## a minimum coverage of 2 in the region
+#        if self.reads_forw and self.reads_back:
             for rela_pos, gc in self._short_seq(self.rl):
                 curr_start = rela_pos+self.start
                 curr_end = curr_start+self.rl
@@ -56,7 +60,8 @@ class GCcorrect(object):
     def _short_seq(self, rl):
         ''' seq_fasta, length of read, return seq'''
         region_size, region_seq = self._retrieve_fastaseq()
-        for idx in xrange(region_size - (rl - 1)):
+#        for idx in xrange(region_size - (rl - 1)):
+        for idx in xrange(0, region_size - (rl - 1), rl):            
             seq = region_seq[(idx+_BUFFER): (idx+rl-_BUFFER)]
             yield (idx+_BUFFER, (seq.count('C')+seq.count('G')))
 
@@ -79,7 +84,8 @@ def parse_args(argv):
     parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
-    parser.add_argument('--ChromUsed', help="...", type=str, default='22')
+    ## parser.add_argument('--ChromUsed', help="...", type=str, default='22')
+    parser.add_argument('--ChromUsed', help="...", type=str)    
     parser.add_argument('--OffSet', type=str,
                         help='the offsetfile found by the midnode')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)

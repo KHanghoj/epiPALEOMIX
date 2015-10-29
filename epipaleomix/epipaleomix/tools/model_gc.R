@@ -6,6 +6,26 @@ outputpath <- args[3]
 outputplot <- args[4]
 
 
+smoothfunc <- function(idx, seq, windowsize){
+sum(seq[idx:(idx+windowsize-1)])/(windowsize)
+}
+
+extendsmooth <- function(seq, windowsize=2){
+    idx <- 1:length(seq)
+    smooth <- sapply(idx, smoothfunc, seq=seq, windowsize=windowsize)
+    keep <- !is.na(smooth)
+    smooth <- smooth[keep]
+    additions <- sum(!keep)
+    if (additions %% 2 == 0){
+        smooth <- c(rep(smooth[1],additions/2),smooth, rep(smooth[length(smooth)],additions/2))
+    } else {
+        smooth <- c(smooth, smooth[length(smooth)])
+        additions <- additions-1
+        smooth <- c(rep(smooth[1],additions/2),smooth, rep(smooth[length(smooth)],additions/2))
+    }
+    smooth
+}
+
 
 listf <- list.files(input_path, pattern=pat, full.names=TRUE)
 print(listf)
@@ -24,9 +44,15 @@ TVs <- c(TVs,TV/grandmean)  # divide by grandmean to normalize
 
 df <- b[[as.character(unique(xnames)[which.max(TVs)])]]
 maxtv <- df[1,1]
-colnames(df) = c('gc', 'gccont', 'reads', 'ref')
-df$readsdensity = with(df,reads/sum(reads))+0.01
-df$refdensity = with(df,ref/sum(ref))+0.01
+colnames(df) <- c('gc', 'gccont', 'reads', 'ref')
+df$readsdensity <- with(df,reads/sum(reads))+0.001
+df$refdensity <- with(df,ref/sum(ref))+0.001
+
+## this is new
+df$readsdensity <- extendsmooth(df$readsdensity,3)
+df$refdensity <- extendsmooth(df$refdensity,3)
+
+
 df$ratio = with(df, refdensity/readsdensity)
 df$gc_content <- df[,2]/df[1,1]
 
@@ -41,7 +67,12 @@ with(df, lines(gc_content,refdensity, col='blue'))
 legend('topright', c('ReadDensity', 'RefDensity') ,
           lty=1, col=c('red', 'blue'), bty='n', cex=.75)
 
-with(df, plot(gc_content, ratio, col='black', main='Model', ylab='correction value', xlab='% GC content'))
+upper.bound = 4 # a upper bound on the enrichment of reads
+lower.bound = 1/upper.bound
+df$ratio[df$ratio > upper.bound] = upper.bound
+df$ratio[df$ratio < lower.bound] = lower.bound
+
+with(df, plot(gc_content, ratio, col='black', main='Model', ylab='correction value', xlab='% GC content',ylim=c(0,upper.bound+0.2)))
 abline(1,0)
 invisible(dev.off())
 
@@ -50,9 +81,5 @@ dat <- data.frame(
     'GC_content'=df$gc_content,
     'pred_ratio'=1/df$ratio,
     'pred_ratio_inv'=df$ratio)
-upper.bound = 5 # a upper bound on the enrichment of reads
 
-
-
-dat$pred_ratio_inv[upper.bound<dat$pred_ratio_inv] <- upper.bound  
 write.table(dat, file=outputpath,row.names=F,col.names=T,quote=F,sep='\t')
