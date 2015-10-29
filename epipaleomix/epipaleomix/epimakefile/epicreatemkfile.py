@@ -29,7 +29,6 @@ BamInputs:
         GCcorrect:
             Enabled: True
             # mininimum and maximum length of used reads (roughly)
-            MapMinMaxReadLength: [30, 75] 
             ChromUsed: [1,1]
             # The reference uniqueness minimum. It is not used if no mappability region is passed
             --MappaUniqueness: 0.9
@@ -62,7 +61,6 @@ BamInputs:
     #     GCcorrect:
     #         Enabled: True
     #         # mininimum and maximum length of used reads (roughly)
-    #         MapMinMaxReadLength: [30, 75] 
     #         ChromUsed: [1,1]
     #         # The reference uniqueness minimum. It is not used if no mappability region is passed
     #         --MappaUniqueness: 0.9

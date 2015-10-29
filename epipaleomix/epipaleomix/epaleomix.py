@@ -19,9 +19,11 @@ from epipaleomix.tools.commonutils import check_path
 from epipaleomix.config import parse_config, __version__
 from epipaleomix.epimakefile import epicreatemkfile
 from epipaleomix.epimakefile.epivalidmkfile import read_epiomix_makefile
-from epipaleomix.tools import checkchromprefix
-from epipaleomix.tools import checkmappabilitychrom
 from epipaleomix.set_procname import set_procname
+from epipaleomix.tools import checkchromprefix, \
+    checkmappabilitychrom, \
+    getminmax
+
 from epipaleomix.tools.bamdatastructure import BamCollect, \
     MakeCollect, \
     MakefileError
@@ -106,8 +108,11 @@ def calc_gcmodel(d_bam, d_make):
         chromused_to_string(d_bam)
         checkmappabilitychrom.main([d_make.prefix.get('--MappabilityPath', MakefileError),
                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
-        rlmin, rlmax = \
-            d_bam.opts['GCcorrect'].get('MapMinMaxReadLength', MakefileError)
+
+        no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
+        rlmin, rlmax = getminmax.main(d_bam.baminfo['BamPath'], no_reads)
+        print (rlmin, rlmax)
+        exit(255)
         return concat_gcsubnodes(CreateGCModelNode, d_bam, FINETUNERANGE,
                                    subn=concat_gcsubnodes(GccorrectMidNode,
                                                               d_bam, xrange(rlmin, rlmax+1, 15)))

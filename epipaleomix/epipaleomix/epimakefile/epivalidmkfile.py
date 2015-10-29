@@ -34,7 +34,7 @@ _VALIDATION_OPTIONS = {
 }
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=False),
-    "MapMinMaxReadLength": IsListOf(IsUnsignedInt),
+    "NoReadsChecked": IsUnsignedInt(default=500000),
     "ChromUsed": IsListOf(Or(IsStr,IsUnsignedInt), default=['1','1']),   ## the is new
 #     "ChromUsed": IsListOf(IsStr, default=['1','1']),   ## the is new
     "--MappaUniqueness": IsFloat(default=0.9)

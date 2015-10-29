@@ -77,7 +77,7 @@ abline(1,0)
 invisible(dev.off())
 
 dat <- data.frame(
-    "#count"=0:maxtv,
+    "count"=0:maxtv,
     'GC_content'=df$gc_content,
     'pred_ratio'=1/df$ratio,
     'pred_ratio_inv'=df$ratio)
