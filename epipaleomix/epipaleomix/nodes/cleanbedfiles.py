@@ -1,7 +1,7 @@
+import os
 from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
-import os
 from epipaleomix.tools import splitbedfiles
 from epipaleomix.tools import merge_datafiles
 
