@@ -12,14 +12,14 @@ class MakeCollect(object):
         self.prefix = self.makefile.pop('Prefixes', {})
         self.beddata = self.makefile.pop('BedFiles', {})
         self.bedfiles, self.bed_plot = self._splitbedopts()
+        self.bednsplitformat = '{}_0{}'
         
     def _splitbedopts(self):
         ''' Split bedfiles options between bedname path and plot boolean '''
         bedf, bedp = {}, {}
-        mappacorr = True if self.beddata['EnabledFilter'] else False
         for bedn, bedopts in self.beddata.iteritems():
             if isinstance(bedopts, dict):
-                if mappacorr:  ## this is for the outputname
+                if self.beddata.get('EnabledFilter', False):  ## this is for the outputname
                     bedn += 'MappaOnly'
                 bedf[bedn] = bedopts["Path"]
                 bedp[bedn] = bedopts["MakeMergePlot"]
@@ -31,10 +31,10 @@ class MakeCollect(object):
 class BamCollect(object):
     def __init__(self, config, bam_name, opts, d_make):
         self.bam_name = bam_name
-        self.i_path = os.path.join(config.temp_root, self.bam_name)
-        self.o_path = os.path.join(config.destination, self.bam_name)
-        check_path(self.i_path)
-        check_path(self.o_path)
+        self.bam_temp_local = os.path.join(config.temp_local, self.bam_name)
+        self.bam_output = os.path.join(config.makefiledest, self.bam_name)
+        check_path(self.bam_temp_local)
+        check_path(self.bam_output)
         self.opts = opts
         self.baminfo = self.opts['BamInfo']
         self.fmt = '{}_{}_{}.txt.gz'

@@ -49,9 +49,8 @@ _VERSION_14_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
 
 VERSION_15 = "1.5+"
 _VERSION_15_CHECK = versions.Requirement(call=("AdapterRemoval", "--version"),
-                                         search=r"ver. (\d+)\.(\d+)",
-                                         checks=versions.Or(versions.EQ(1, 5),
-                                                            versions.EQ(2, 0)))
+                                         search=r"ver. (\d+)\.(\d+)\.(\d+)",
+                                         checks=versions.GE(1, 5, 0))
 
 
 class SE_AdapterRemovalNode(CommandNode):
@@ -271,7 +270,12 @@ def _build_zip_command(output_format, prefix, name, output=None):
     return compress.finalize()
 
 
+_DEPRECATION_WARNING_PRINTED = False
+
+
 def _get_common_parameters(version):
+    global _DEPRECATION_WARNING_PRINTED
+
     if version == VERSION_14:
         version_check = _VERSION_14_CHECK
     elif version == VERSION_15:
@@ -286,6 +290,19 @@ def _get_common_parameters(version):
     cmd.set_option("--trimns", fixed=False)
     # Trim low quality scores
     cmd.set_option("--trimqualities", fixed=False)
+
+    try:
+        if not _DEPRECATION_WARNING_PRINTED and version_check.version < (2, 0):
+            import pypeline.ui as ui
+            ui.print_warn("\nWARNING: AdapterRemoval v1.5.x is deprecated;")
+            ui.print_warn("         Upgrading to 2.1.x is strongly adviced!\n")
+            ui.print_warn("         Download the newest version of AdapterRemoval at ")
+            ui.print_warn("         https://github.com/MikkelSchubert/adapterremoval\n")
+
+            _DEPRECATION_WARNING_PRINTED = True
+    except versions.VersionRequirementError:
+        return True
+
 
     return cmd
 

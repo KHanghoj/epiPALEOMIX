@@ -1,0 +1,49 @@
+- get nucleosome calls from Tobias and liftover to hg19 and use these as test. Hope to see something similar - kris
+- scan genome + plus some simple peak-calling - Tobias
+- gamma and lambda - Tobias
+- get version check of pysam and numpy - kris
+- compiling cython to both mac and linux systems - Jakob might have some experience with that
+- setup.py + compiling cython if needed
+- make R-scripts for plotting for the user
+- upload example to ftp:
+ - /k/ftp-data/OrlandoGroup
+ - make a folder and add { TEST.bam, reference genome fasta, yamlfile, bedfile} 
+
+
+
+
+
+
+
+
+
+## README for installation, setup and running epiPALEOMIX.
+## The pipeline has been tested on debian servers
+## put unzip epipaleomix.zip into a folder:
+##     .i.e ~/install
+## update .profile/.bashrc by write following in terminal:
+##        echo "export PYTHONPATH=\$PYTHONPATH:~/install/epipaleomix/" >> ~/.bash_profile
+##        or:
+##        echo "export PYTHONPATH=\$PYTHONPATH:~/install/epipaleomix/" >> ~/.profile
+
+## CREATE MAKE FILE TEMPLATE
+##     # prints to std.out (standard out)
+##     ~/install/epipaleomix/epipaleomix/epaleomix.py makefile >  000_makefile.yaml
+
+## EXECUTE:
+##         ~/install/epipaleomix/epipaleomix/epaleomix.py mkfile > 003_mkfile.yaml
+##         # Fill in the paths/options in 003_mkfile.yaml
+##         ~/install/epipaleomix/epipaleomix/epaleomix.py dryrun 003_mkfile.yaml
+##         # simple version with 4 cores (default)
+##         ~/install/epipaleomix/epipaleomix/epipaleomix.py run 003_mkfile.yaml
+##         # defining destination paths and temporary folders:
+##         ~/install/epipaleomix/epipaleomix/epipaleomix.py -h  # for help
+
+## TOOLS/PACKAGES required:
+## -- Bedtools
+## -- Python 2.7:
+##         -- Pysam
+## -- R:
+##         -- ggplot2
+##         -- reshape2
+##         -- gridExtra

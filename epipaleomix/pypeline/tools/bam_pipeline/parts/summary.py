@@ -30,11 +30,12 @@ import collections
 
 import pysam
 
-from pypeline.node import Node
+from pypeline.node import Node, NodeError
 from pypeline.common.utilities import safe_coerce_to_tuple, set_in, get_in
 from pypeline.common.fileutils import move_file, reroot_path
 from pypeline.tools.bam_stats.coverage import \
     read_table as read_coverage_table
+from pypeline.common.bedtools import BEDRecord
 
 import pypeline.common.text as text
 
@@ -272,7 +273,18 @@ class SummaryTableNode(Node):
         for filename in filenames:
             subtable = {}
             read_coverage_table(subtable, filename)
-            for contigtable in get_in(subtable, key).itervalues():
+            contigtables = get_in(subtable, key)
+
+            if contigtables is None:
+                raise NodeError("Error reading table %r; row not found:"
+                                "\n   %s   ...\n\nIf files have been renamed "
+                                "during the run, then please remove this file "
+                                "in that it may be re-generated.\nHowever, "
+                                "note that read-group tags in the BAM files "
+                                "may not be correct!"
+                                % (filename, "   ".join(key)))
+
+            for contigtable in contigtables.itervalues():
                 hits += contigtable["Hits"]
                 nts += contigtable["M"]
         return hits, nts
@@ -338,7 +350,7 @@ class SummaryTableNode(Node):
 
                 return int(match.groups()[0])
 
-            if "Paired end mode" in settings:
+            if "Paired end mode" in settings or "paired-end reads" in settings:
                 return {
                     "lib_type"            : ("PE", "# SE, PE, or * (for both)"),
                     "seq_reads_pairs"     : (_re_search("number of read pairs: ([0-9]+)"),    "# Total number of pairs"),
@@ -350,7 +362,7 @@ class SummaryTableNode(Node):
                                              _re_search("of truncated collapsed pairs: ([0-9]+)", 0),
                                             "# Total number of pairs collapsed into one read"),
                     }
-            elif "Single end mode" in settings:
+            elif "Single end mode" in settings or "single-end reads" in settings:
                 return {
                     "lib_type"            : ("SE", "# SE, PE, or * (for both)"),
                     "seq_reads_se"        : (_re_search("number of (?:reads|read pairs): ([0-9]+)"),  "# Total number of single-ended reads"),
@@ -359,7 +371,7 @@ class SummaryTableNode(Node):
                     "seq_retained_reads"  : (_re_search("retained reads: ([0-9]+)"),                  "# Total number of retained reads"),
                     }
             else:
-                assert False
+                assert False, filename
 
 
     @classmethod
@@ -372,9 +384,8 @@ class SummaryTableNode(Node):
             for (roi_name, roi_filename) in prefix.get("RegionsOfInterest", {}).iteritems():
                 count, names, size = 0, set(), 0
                 with open(roi_filename) as handle:
-                    parser = pysam.asBed()
                     for line in handle:
-                        bed = parser(line, len(line))
+                        bed = BEDRecord(line)
                         names.add(bed.name if len(bed) >= 4 else (bed.contig + "*"))
                         size += (bed.end - bed.start)
                         count += 1

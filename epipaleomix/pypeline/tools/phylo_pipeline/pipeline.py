@@ -51,7 +51,7 @@ def list_orphan_files(config, makefiles, pipeline):
             for filename in filenames:
                 fpath = os.path.join(dirpath, filename)
                 files.add(os.path.abspath(fpath))
-    return files - pipeline.list_output_files()
+    return files - frozenset(pipeline.list_output_files())
 
 
 def main(argv):
@@ -83,6 +83,9 @@ def main(argv):
                   % (config.temp_root,))
         return 1
 
+    # Init worker-threads before reading in any more data
+    pipeline = Pypeline(config)
+
     try:
         makefiles = read_makefiles(config, args, commands)
     except (MakefileError, pypeline.yaml.YAMLError, IOError), error:
@@ -96,7 +99,6 @@ def main(argv):
     pypeline.logger.initialize(config, logfile_template)
     logger = logging.getLogger(__name__)
 
-    pipeline = Pypeline(config)
     for (command_key, command_func) in commands:
         logger.info("Building %s pipeline ...", command_key)
         command_func(pipeline, config, makefiles)
@@ -117,6 +119,11 @@ def main(argv):
     elif config.list_executables:
         logger.info("Printint required executables ...")
         pipeline.print_required_executables()
+        return 0
+    elif config.dot_file:
+        logger.info("Writing dependency graph to %r ...", config.dot_file)
+        if not pipeline.to_dot(config.dot_file):
+            return 1
         return 0
 
     if not pipeline.run(max_running=config.max_threads,

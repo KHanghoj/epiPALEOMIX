@@ -36,9 +36,12 @@ to contain a certain amount of padding around the regions of interest.
 """
 from __future__ import print_function
 
-import sys
-import itertools
 import argparse
+import copy
+import itertools
+import os
+import sys
+
 from collections import namedtuple
 
 import pysam
@@ -48,16 +51,13 @@ import pypeline.common.text as text
 import pypeline.common.sequences as sequences
 import pypeline.common.utilities as utilities
 
+from pypeline.common.bedtools import BEDRecord
+
 
 # Max number of positions to keep in memory / genotype at once
 _SEQUENCE_CHUNK = 1024 * 1024  # 1kbp
 # Number of columns per line in FASTA sequences
 _FASTA_COLUMNS = 60
-
-
-# Replacement class for PySam's BED class; see below.
-BEDTuple = namedtuple("BEDTuple", ("contig", "start", "end",
-                                   "name", "score", "strand"))
 
 
 ###############################################################################
@@ -86,7 +86,9 @@ def split_beds(beds, size=_SEQUENCE_CHUNK):
     for bed in beds:
         for start in xrange(bed.start, bed.end, size):
             end = min(start + size, bed.end)
-            split_bed = bed._replace(start=start, end=end)
+            split_bed = copy.copy(bed)
+            split_bed.start = start
+            split_bed.end = end
             results.append(split_bed)
     return results
 
@@ -111,6 +113,9 @@ def add_indel(options, bed, indel, sequence):
     genotype = vcfwrap.get_ml_genotype(indel)
     if genotype[0] != genotype[1]:
         # No way to represent heterozygous indels
+        return
+    elif genotype[0] == "N":
+        # No most likely genotype
         return
 
     # Note that bed.end is a past-the-end coordinate
@@ -228,25 +233,17 @@ def genotype_genes(options, intervals, genotype):
 
 def read_intervals(filename):
     with open(filename) as bed_file:
-        intervals = text.parse_lines_by_contig(bed_file, pysam.asBed())
+        intervals = text.parse_lines_by_contig(bed_file, BEDRecord)
 
         for (key, beds) in intervals.iteritems():
             bed_tuples = []
             for bed in beds:
                 if len(bed) < 6:
-                    sys.stderr.write(("ERROR: Invalid BED record '%s', must "
-                                      "have at least 6 fields ...\n") %
-                                     ("\\t".join(bed),))
+                    sys.stderr.write(("ERROR: Invalid BED record '%r', must "
+                                      "have at least 6 fields ...\n") % (bed,))
                     return None
 
-                # Transform to a named tuple, as Pysam has a tendency to
-                # segfault if you do anything wrong
-                bed = list(bed)[:6]   # BED6 only
-                bed[1] = int(bed[1])  # start
-                bed[2] = int(bed[2])  # end
-                bed[4] = int(bed[4])  # score
-
-                bed_tuples.append(BEDTuple(*bed))
+                bed_tuples.append(bed)
             intervals[key] = bed_tuples
 
     return intervals
@@ -270,10 +267,18 @@ def main(argv):
                              "sequence [%default].")
     opts = parser.parse_args(argv)
 
-    print("Running buildRegions.py", end="", file=sys.stderr)
+    print("Running vcf_to_fasta", end="", file=sys.stderr)
     if opts.whole_codon_indels_only:
         print(", assuming sequences represents CDS", end="", file=sys.stderr)
     print(" ...", file=sys.stderr)
+
+    if not os.path.exists(opts.genotype):
+        sys.stderr.write("ERROR: VCF file does not exist.\n")
+        return 1
+    elif not os.path.exists(opts.genotype + ".tbi"):
+        sys.stderr.write("ERROR: VCF file not tabix indexed.\n")
+        sys.stderr.write("       To index, run \"tabix -p vcf <filename>\".\n")
+        return 1
 
     genotype = pysam.Tabixfile(opts.genotype)
     intervals = read_intervals(opts.intervals)

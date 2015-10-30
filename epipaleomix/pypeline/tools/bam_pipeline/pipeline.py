@@ -58,7 +58,6 @@ import pypeline.tools.bam_pipeline.config as bam_config
 import pypeline.tools.bam_pipeline.mkfile as bam_mkfile
 
 
-
 def _add_extra_nodes(config, makefile, targets):
     for target in targets:
         parts.add_statistics_nodes(config, makefile, target)
@@ -233,7 +232,7 @@ def list_orphan_files(config, makefiles, pipeline):
                             files.add(os.path.abspath(fpath))
                 else:
                     files.add(os.path.abspath(root_filename))
-    return (files - mkfiles) - pipeline.list_output_files()
+    return (files - mkfiles) - frozenset(pipeline.list_output_files())
 
 
 def run(config, args):
@@ -248,6 +247,9 @@ def run(config, args):
         print_err("ERROR: Insufficient permissions for temp root: '%s'"
                   % (config.temp_root,))
         return 1
+
+    # Init worker-threads before reading in any more data
+    pipeline = Pypeline(config)
 
     try:
         print_info("Building BAM pipeline ...", file=sys.stderr)
@@ -286,7 +288,6 @@ def run(config, args):
     elif os.path.basename(sys.argv[0]) != "trim_pipeline":
         pipeline_func = build_pipeline_full
 
-    pipeline = Pypeline(config)
     for makefile in makefiles:
         # If a destination is not specified, save results in same folder as the
         # makefile
@@ -323,6 +324,11 @@ def run(config, args):
         logger.info("Printing required executables ...")
         pipeline.print_required_executables()
         return 0
+    elif config.dot_file:
+        logger.info("Writing dependency graph to %r ...", config.dot_file)
+        if not pipeline.to_dot(config.dot_file):
+            return 1
+        return 0
 
     logger.info("Running BAM pipeline ...")
     if not pipeline.run(dry_run=config.dry_run,
@@ -356,12 +362,19 @@ def main(argv):
         print_err(error)
         return 1
 
-    commands = ("makefile", "mkfile", "run", "dry_run", "dry-run", "dryrun")
+    commands = ("makefile", "mkfile", "run",
+                "dry_run", "dry-run", "dryrun",
+                "remap")
     if (len(args) == 0) or (args[0] not in commands):
         _print_usage()
         return 1
     elif args[0] in ("mkfile", "makefile"):
         return bam_mkfile.main(args[1:])
+    elif args[0] in ("remap", "remap_prefix"):
+        # Import here to avoid circular dependency issues
+        import pypeline.tools.bam_pipeline.remap as bam_remap
+
+        return bam_remap.main(args[1:])
     elif not args[1:]:
         _print_usage()
         print_err("\nPlease specify at least one makefile!")

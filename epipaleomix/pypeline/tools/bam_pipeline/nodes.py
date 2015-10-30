@@ -22,10 +22,14 @@
 #
 import os
 
+import pypeline.nodes.picard as picard
+
 from pypeline.node import \
     MetaNode
 from pypeline.atomiccmd.command import \
     AtomicCmd
+from pypeline.atomiccmd.builder import \
+    AtomicCmdBuilder
 from pypeline.atomiccmd.sets import \
     ParallelCmds
 from pypeline.atomiccmd.builder import \
@@ -42,99 +46,97 @@ from pypeline.common.fileutils import \
     describe_files
 
 
-class IndexAndValidateBAMNode(MetaNode):
-    def __init__(self, config, prefix, node, log_file=None):
-        input_file, has_index = self._get_input_file(node)
-        subnodes, dependencies = [node], node.dependencies
-        if not has_index:
-            node = BAMIndexNode(infile=input_file,
-                                dependencies=node)
-            subnodes.append(node)
+def index_and_validate_bam(config, prefix, node, log_file=None):
+    input_file, has_index = _get_input_file(node)
+    if not has_index:
+        node = BAMIndexNode(infile=input_file,
+                            dependencies=node)
 
-        validation_params = ValidateBAMNode.customize(config=config,
-                                                      input_bam=input_file,
-                                                      output_log=log_file,
-                                                      dependencies=node)
-        # Check MD tags against reference sequence
-        # FIXME: Disabled due to issues with Picard/Samtools disagreeing,
-        #   backwards compatibility. See the discussion at
-        #     http://sourceforge.net/mailarchive/message.php?msg_id=31348639
-        # validation_params.command.set_kwargs(IN_REF=prefix["Reference"])
-        # validation_params.command.add_option("R", "%(IN_REF)s", sep="=")
+    validation_params = ValidateBAMNode.customize(config=config,
+                                                  input_bam=input_file,
+                                                  output_log=log_file,
+                                                  dependencies=node)
+    # Check MD tags against reference sequence
+    # FIXME: Disabled due to issues with Picard/Samtools disagreeing,
+    #   backwards compatibility. See the discussion at
+    #     http://sourceforge.net/mailarchive/message.php?msg_id=31348639
+    # validation_params.command.set_kwargs(IN_REF=prefix["Reference"])
+    # validation_params.command.add_option("R", "%(IN_REF)s", sep="=")
 
-        # Ignored since we may filter out misses and low-quality hits during
-        # mapping, which leads to a large proportion of missing PE mates.
-        validation_params.command.add_option("IGNORE", "MATE_NOT_FOUND",
-                                             sep="=")
-        # Ignored due to high rate of false positives for lanes with few hits,
-        # where high-quality reads may cause mis-identification of qualities
-        validation_params.command.add_option("IGNORE",
-                                             "INVALID_QUALITY_FORMAT", sep="=")
-        subnodes.append(validation_params.build_node())
+    # Ignored since we may filter out misses and low-quality hits during
+    # mapping, which leads to a large proportion of missing PE mates.
+    validation_params.command.add_option("IGNORE", "MATE_NOT_FOUND",
+                                         sep="=")
+    # Ignored due to high rate of false positives for lanes with few hits,
+    # where high-quality reads may cause mis-identification of qualities
+    validation_params.command.add_option("IGNORE",
+                                         "INVALID_QUALITY_FORMAT", sep="=")
 
-        description = "<w/Validation: " + str(subnodes[0])[1:]
-        MetaNode.__init__(self,
-                          description=description,
-                          subnodes=subnodes,
-                          dependencies=dependencies)
+    node = validation_params.build_node()
+    return node
 
-    @classmethod
-    def _get_input_file(cls, node):
-        if isinstance(node, MetaNode):
-            for subnode in node.subnodes:
-                input_filename, has_index = cls._get_input_file(subnode)
-                if input_filename:
-                    return input_filename, has_index
 
-        input_filename, has_index = None, False
-        for filename in node.output_files:
-            if filename.lower().endswith(".bai"):
-                has_index = True
-            elif filename.lower().endswith(".bam"):
-                input_filename = filename
+def _get_input_file(node):
+    if isinstance(node, MetaNode):
+        for subnode in node.subnodes:
+            input_filename, has_index = _get_input_file(subnode)
+            if input_filename:
+                return input_filename, has_index
 
-        return input_filename, has_index
+    input_filename, has_index = None, False
+    for filename in node.output_files:
+        if filename.lower().endswith(".bai"):
+            has_index = True
+        elif filename.lower().endswith(".bam"):
+            input_filename = filename
+
+    return input_filename, has_index
 
 
 class CleanupBAMNode(PicardNode):
     def __init__(self, config, reference, input_bam, output_bam, tags,
                  min_mapq=0, filter_unmapped=False, dependencies=()):
-        call = ["samtools", "view", "-bu"]
-        if min_mapq > 0:
-            call.append("-q%i" % min_mapq)
+        flt_params = AtomicCmdBuilder(("samtools", "view", "-bu"),
+                                      IN_BAM=input_bam,
+                                      OUT_STDOUT=AtomicCmd.PIPE)
+
+        if min_mapq:
+            flt_params.set_option("-q", min_mapq, sep="")
         if filter_unmapped:
-            call.append("-F0x4")
-        call.append("%(IN_BAM)s")
+            flt_params.set_option("-F", "0x4", sep="")
 
-        flt = AtomicCmd(call,
-                        IN_BAM=input_bam,
-                        OUT_STDOUT=AtomicCmd.PIPE)
+        flt_params.add_value("%(IN_BAM)s")
 
-        jar_file = os.path.join(config.jar_root, "AddOrReplaceReadGroups.jar")
-        params = AtomicJavaCmdBuilder(jar=jar_file,
-                                      jre_options=config.jre_options)
-        params.set_option("INPUT", "/dev/stdin", sep="=")
-        params.set_option("OUTPUT", "%(TEMP_OUT_BAM)s", sep="=")
-        params.set_option("COMPRESSION_LEVEL", "0", sep="=")
-        params.set_option("SORT_ORDER", "coordinate", sep="=")
+        jar_params = picard.picard_command(config, "AddOrReplaceReadGroups")
+        jar_params.set_option("INPUT", "/dev/stdin", sep="=")
+        # Output is written to a named pipe, since the JVM may, in some cases,
+        # emit warning messages to stdout, resulting in a malformed BAM.
+        jar_params.set_option("OUTPUT", "%(TEMP_OUT_BAM)s", sep="=")
+        jar_params.set_option("COMPRESSION_LEVEL", "0", sep="=")
+        # Ensure that the BAM is sorted; this is required by the pipeline, and
+        # needs to be done before calling calmd (avoiding pathologic runtimes).
+        jar_params.set_option("SORT_ORDER", "coordinate", sep="=")
 
-        for tag in ("SM", "LB", "PU", "PL"):
-            params.set_option(tag, tags[tag], sep="=")
+        # All tags are overwritten; ID is set since the default (e.g. '1')
+        # causes problems with pysam due to type inference (is read as a length
+        # 1 string, but written as a character).
+        for tag in ("ID", "SM", "LB", "PU", "PL"):
+            jar_params.set_option(tag, tags[tag], sep="=")
 
-        params.set_kwargs(IN_STDIN=flt,
-                          TEMP_OUT_BAM="bam.pipe")
-        annotate = params.finalize()
+        jar_params.set_kwargs(IN_STDIN=flt_params,
+                              TEMP_OUT_BAM="bam.pipe")
 
-        calmd = AtomicCmd(["samtools", "calmd", "-b",
-                           "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
-                          IN_REF=reference,
-                          TEMP_IN_BAM="bam.pipe",
-                          OUT_STDOUT=output_bam)
+        calmd = AtomicCmdBuilder(["samtools", "calmd", "-b",
+                                 "%(TEMP_IN_BAM)s", "%(IN_REF)s"],
+                                 IN_REF=reference,
+                                 TEMP_IN_BAM="bam.pipe",
+                                 OUT_STDOUT=output_bam)
 
+        commands = [cmd.finalize() for cmd in (flt_params, jar_params, calmd)]
         description = "<Cleanup BAM: %s -> '%s'>" \
             % (input_bam, output_bam)
         PicardNode.__init__(self,
-                            command=ParallelCmds([flt, annotate, calmd]),
+                            command=ParallelCmds(commands),
                             description=description,
                             dependencies=dependencies)
 

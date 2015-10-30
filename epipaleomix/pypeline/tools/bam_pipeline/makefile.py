@@ -62,6 +62,7 @@ from pypeline.common.console import \
 
 import pypeline.nodes.bwa as bwa
 import pypeline.common.versions as versions
+import pypeline.common.sequences as sequences
 
 
 _READ_TYPES = set(("Single", "Collapsed", "CollapsedTruncated", "Paired"))
@@ -124,6 +125,8 @@ _VALIDATION_OPTIONS = {
                            default="v1.5+"),
         "--pcr1": IsStr,
         "--pcr2": IsStr,
+        "--adapter1": IsStr,
+        "--adapter2": IsStr,
         "--maxns": IsUnsignedInt,
         "--minquality": IsUnsignedInt,
         "--trimns": Or(IsNone, IsBoolean),
@@ -296,7 +299,14 @@ def _update_prefixes(makefile):
     prefixes = {}
     for (name, values) in makefile.get("Prefixes", {}).iteritems():
         filename = values["Path"]
-        if name.endswith("*"):
+        if "*" in name[:-1]:
+            raise MakefileError("The character '*' is not allowed in Prefix "
+                                "names; if you use to select .fasta files "
+                                "using a search-string, then use the prefix "
+                                "name '%s*' instead and specify the wildcards "
+                                "in the 'Path' instead."
+                                % (name.replace("*", "",)))
+        elif name.endswith("*"):
             records = []
             for fname in glob.glob(filename):
                 name = os.path.basename(fname).split(".")[0]
@@ -428,12 +438,57 @@ def _split_lanes_by_filenames(makefile):
 def _validate_makefiles(config, makefiles):
     for makefile in makefiles:
         _validate_makefile_libraries(makefile)
+        _validate_makefile_adapters(makefile)
     _validate_makefiles_duplicate_targets(config, makefiles)
     _validate_makefiles_duplicate_files(makefiles)
     _validate_makefiles_features(makefiles)
     _validate_hg_prefixes(makefiles)
 
     return makefiles
+
+
+def _validate_makefile_adapters(makefile):
+    """Checks for the default adapter sequences specified in the wrong
+    orientation for AdapterRemoval, which is a typical mistake when using
+    the --pcr2 option.
+    """
+    # The non-reverse complemented mate 2 adapter, as seen in raw FASTQ reads
+    adapter_2 = "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT"
+
+    tests = {
+        # --pcr2 expects the reverse complement of the mate 2 adapter seq.
+        "--pcr2": adapter_2,
+        # --adapter2 (AdapterRemoval v2) expects the regular sequence
+        "--adapter2": sequences.reverse_complement(adapter_2)
+    }
+
+    def check_options(options, results):
+        for key, value in tests.iteritems():
+            if options.get(key) == value:
+                results[key] = True
+
+    results = dict.fromkeys(tests, False)
+    for (_, _, _, _, record) in _iterate_over_records(makefile):
+        adapterrm_opt = record.get("Options", {}).get("AdapterRemoval", {})
+        check_options(adapterrm_opt, results)
+
+    adapterrm_opt = makefile.get("Options", {}).get("AdapterRemoval", {})
+    check_options(adapterrm_opt, results)
+
+    if any(results.itervalues()):
+        print_warn("WARNING: An adapter specified for AdapterRemoval "
+                   "corresponds to the default sequence, but is reverse "
+                   "complemented. Please make sure that this is intended! ",
+                   end="")
+
+        if results["--pcr2"]:
+            print_warn("For --pcr2, the sequence given should be the "
+                       "reverse complement of the sequence observed in the "
+                       "mate 2 FASTQ file.\n")
+
+        if results["--adapter2"]:
+            print_warn("For --adapter2 (AdapterRemoval v2, only) the value "
+                       "should be exactly as observed in the FASTQ reads.\n")
 
 
 def _validate_makefile_libraries(makefile):
@@ -544,7 +599,11 @@ def _validate_hg_prefixes(makefiles):
             if path in already_validated:
                 continue
 
-            if not os.path.exists(path + ".fai"):
+            if not os.path.exists(path):
+                print_info("    - Reference FASTA file does not exist:\n"
+                           "      %r" % (path,), file=sys.stderr)
+                continue
+            elif not os.path.exists(path + ".fai"):
                 print_info("    - Index does not exist for %r; this may "
                            "take a while ..." % (path,), file=sys.stderr)
 

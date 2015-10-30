@@ -20,14 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import collections
+import errno
 import os
 import re
-import sys
 import signal
+import subprocess
+import sys
 import types
 import weakref
-import subprocess
-import collections
 
 import pypeline.atomiccmd.pprint as atomicpp
 import pypeline.common.fileutils as fileutils
@@ -264,12 +265,20 @@ class AtomicCmd(object):
 
         temp = os.path.abspath(temp)
         filenames = self._generate_filenames(self._files, temp)
-        for (key, filename) in filenames.iteritems():
-            if isinstance(filename, types.StringTypes):
-                if key.startswith("OUT_"):
-                    fileutils.move_file(filename, self._files[key])
-                elif key.startswith("TEMP_OUT_"):
-                    fileutils.try_remove(filename)
+        committed_files = set()
+        try:
+            for (key, filename) in filenames.iteritems():
+                if isinstance(filename, types.StringTypes):
+                    if key.startswith("OUT_"):
+                        fileutils.move_file(filename, self._files[key])
+                        committed_files.add(self._files[key])
+                    elif key.startswith("TEMP_OUT_"):
+                        fileutils.try_remove(filename)
+        except:
+            # Cleanup after failed commit
+            for fpath in committed_files:
+                fileutils.try_remove(fpath)
+            raise
 
         self._proc = None
         self._temp = None
@@ -438,19 +447,28 @@ class AtomicCmd(object):
 
 # The following ensures proper cleanup of child processes, for example in the
 # case where multiprocessing.Pool.terminate() is called.
-_PROCS = set()
+_PROCS = None
 
 
 def _cleanup_children(signum, _frame):
     for proc_ref in list(_PROCS):
         proc = proc_ref()
         if proc:
-            os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except OSError, error:
+                # Ignore already closed processes
+                if error.errno != errno.ESRCH:
+                    sys.stderr.write("Warning: Failed to cleanup process %i: %s\n"
+                                     % (proc.pid, error))
     sys.exit(-signum)
 
 
 def _add_to_killlist(proc):
-    if not _PROCS:
+    global _PROCS
+
+    if _PROCS is None:
         signal.signal(signal.SIGTERM, _cleanup_children)
+        _PROCS = set()
 
     _PROCS.add(weakref.ref(proc, _PROCS.remove))

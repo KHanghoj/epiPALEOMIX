@@ -21,35 +21,39 @@
 # SOFTWARE.
 #
 """Functions relating to the CLI interface."""
-import sys
-import time
 import datetime
+import multiprocessing
 import optparse
+import os
+import select
+import sys
+import termios
+import time
+import tty
 
 import pypeline.nodegraph
 import pypeline.logger
+import pypeline.common.text as text
 from pypeline.node import MetaNode
 from pypeline.common.console import \
     print_msg, \
     print_debug, \
     print_info, \
     print_err, \
-    print_warn, \
-    print_disabled
-from pypeline.common.utilities import \
-    group_by_pred
+    print_disabled, \
+    print_warn
 
 
-def add_optiongroup(parser, ui_default="quiet", color_default="on"):
+def add_optiongroup(parser, ui_default="running", color_default="on"):
     """Adds an option-group to an OptionParser object, with options
     pertaining to logging. Note that 'initialize' expects the config
     object to have these options."""
     group = optparse.OptionGroup(parser, "Progress reporting")
     group.add_option("--progress-ui", default=ui_default, type="choice",
-                     choices=("verbose", "quiet", "progress", "summary"),
+                     choices=("running", "progress", "summary",
+                              "verbose", "quiet"),
                      help="Select method for displaying the progress of the "
-                          "pipeline: 'verbose' = Full dependency tree at "
-                          "every change; 'quiet' = Display only currently "
+                          "pipeline: 'running' = Display only currently "
                           "running nodes; 'progress' = Display changes in "
                           "state; 'summary'; oneline summary only. "
                           "[Default is '%default']")
@@ -84,6 +88,78 @@ def set_ui_colors(choice):
         raise ValueError("Unknown color setting %r" % (choice,))
 
 
+class CommandLine(object):
+    def __init__(self):
+        self._tty_settings = None
+
+    def __enter__(self):
+        assert not self._tty_settings
+        # False if the pipeline is being piped somewhere
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            # False if the process is running in the background
+            if os.getpgrp() == os.tcgetpgrp(sys.stdout.fileno()):
+                try:
+                    # Store old settings
+                    self._tty_settings = termios.tcgetattr(sys.stdin)
+                    # Disable echo
+                    tty.setcbreak(sys.stdin.fileno())
+                except tty.error:
+                    pass  # Silently ignore failures
+
+        return self
+
+    def __exit__(self, _type, _value, _traceback):
+        if self._tty_settings:
+            # Restore settings (re-enable echo)
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._tty_settings)
+
+    def process_key_presses(self, nodegraph, max_running):
+        if not self._tty_settings:
+            return max_running
+
+        help_printed = False
+        old_max_running = max_running
+        while self.poll_stdin():
+            character = sys.stdin.read(1)
+            if character == "+":
+                max_running = min(multiprocessing.cpu_count(), max_running + 1)
+            elif character == "-":
+                max_running = max(1, max_running - 1)
+            elif character in "lL":
+                pypeline.ui.print_info()
+                progress_printer = pypeline.ui.RunningUI()
+                progress_printer.refresh(nodegraph)
+                progress_printer.flush()
+            elif character in "hH":
+                if help_printed:
+                    continue
+
+                help_printed = True
+                pypeline.ui.print_info("""
+Commands:
+  Key   Function
+  h     Prints this message.
+  l     Lists the currently runnning nodes.
+  +     Increases the maximum number of threads by one.
+  -     Decreases the maximum number of threads by one; already running tasks
+        are NOT terminated if the current number of threads used exceeds the
+        resulting maximum.
+""")
+            else:
+                continue
+
+        if max_running != old_max_running:
+            pypeline.ui.print_debug("Maximum number of threads changed "
+                                    "from %i to %i."
+                                    % (old_max_running, max_running))
+
+        return max_running
+
+    @classmethod
+    def poll_stdin(cls):
+        return select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], [])
+
+
 class BaseUI(object):
     """UI base class.
 
@@ -104,33 +180,64 @@ class BaseUI(object):
         """Basic initializer; must be called in subclasses."""
         self.states = []
         self.threads = 0
+        self._start_time = None
+        self._end_time = None
+        self._updated = True
 
     def flush(self):
         """Called by the user of the UI to ensure that the UI to print
-        the current state of the pipeline / changes to pipeline / etc."""
-        pass
+        the current state of the pipeline / changes to pipeline / etc.
+
+        Returns true if node-states have changed since last update.
+        """
+        if self._updated:
+            self._updated = False
+            return True
+        return False
 
     def finalize(self):
         """Called by the pipeline at the termination of a run. By default,
         this function prints the location of the log-file if one was created
-        during the run (e.g. if there were errors)."""
-        logfile = pypeline.logger.get_logfile()
-        if logfile:
-            print_debug("Log-file located at %r" % (logfile,))
+        during the run (e.g. if there were errors), and a summary of all nodes.
+        """
+        runtime = (self._end_time or 0) - (self._start_time or 0)
 
         if self.states[self.ERROR]:
             print_err("Done; but errors were detected ...")
         else:
             print_info("Done ...")
 
+        print_info()
+        rows = [("  Number of nodes:", sum(self.states)),
+                ("  Number of done nodes:", self.states[self.DONE]),
+                ("  Number of runable nodes:", self.states[self.RUNABLE]),
+                ("  Number of queued nodes:", self.states[self.QUEUED]),
+                ("  Number of outdated nodes:", self.states[self.OUTDATED]),
+                ("  Number of failed nodes:", self.states[self.ERROR]),
+                ("  Pipeline runtime:", _fmt_runtime(round(runtime)))]
+
+        for line in text.padded_table(rows):
+            print_info(line)
+
+        print_info()
+        print_info("Use --list-output-files to view status of output files.")
+
+        logfile = pypeline.logger.get_logfile()
+        if logfile:
+            print_debug("Log-file located at %r" % (logfile,))
+
+        print_info()
+
     def refresh(self, nodegraph):
         """Called when the nodegraph has refreshed, causing state-counts
         to be recalculated."""
+        self._updated = True
         self.states, self.threads \
             = self._count_states(nodegraph, nodegraph.iterflat())
 
     def state_changed(self, node, old_state, new_state, _is_primary):
         """Observer function for NodeGraph; counts states of non-meta nodes."""
+        self._updated = True
         if not isinstance(node, MetaNode):
             self.states[old_state] -= 1
             self.states[new_state] += 1
@@ -139,8 +246,12 @@ class BaseUI(object):
             elif new_state == self.RUNNING:
                 self.threads += node.threads
 
+        if self._start_time is None:
+            self._start_time = time.time()
+        self._end_time = time.time()
+
     @classmethod
-    def _count_states(cls, nodegraph, nodes, meta=False):
+    def _count_states(cls, nodegraph, nodes):
         """Counts the number of each state observed for a set of nodes, and
         returns these as a list, as well as the estimated number of threads
         being used by running nodes.
@@ -149,23 +260,16 @@ class BaseUI(object):
         MetaNode; in that case, MetaNode(s) themselves are not counted, but
         their subnodes are counted for the first level encountered."""
         states = [0] * nodegraph.NUMBER_OF_STATES
-        threads = []
+        threads = 0
 
-        def inc_states(c_nodes, depth):
-            for node in c_nodes:
-                is_meta = isinstance(node, MetaNode)
+        for node in nodes:
+            if not isinstance(node, MetaNode):
+                state = nodegraph.get_node_state(node)
+                states[state] += 1
+                if state == nodegraph.RUNNING:
+                    threads += node.threads
 
-                if depth and is_meta:
-                    inc_states(node.subnodes, depth - 1)
-                elif meta or not is_meta:
-                    state = nodegraph.get_node_state(node)
-                    states[state] += 1
-                    if state == nodegraph.RUNNING:
-                        threads.append(node.threads)
-
-            return states
-
-        return inc_states(nodes, (1 if meta else 0)), sum(threads)
+        return states, threads
 
     @classmethod
     def _describe_states(cls, states, threads=0):
@@ -202,165 +306,48 @@ class BaseUI(object):
     ERROR = pypeline.nodegraph.NodeGraph.ERROR
 
 
-class VerboseUI(BaseUI):
-    def __init__(self):
-        BaseUI.__init__(self)
-        self._graph = None
-
-    def flush(self):
-        """See BaseUI.flush."""
-        BaseUI.flush(self)
-        self._print_header(self.states, self.threads)
-        self._print_sub_nodes(self._graph, self._graph)
-
-    def refresh(self, nodegraph):
-        """See BaseUI.refresh."""
-        BaseUI.refresh(self, nodegraph)
-        self._graph = nodegraph
-
-    @classmethod
-    def _print_header(cls, states, threads):
-        print_msg(datetime.datetime.now().strftime("%F %T"))
-        print_msg("Pipeline; %s:" % cls._describe_states(states, threads))
-        logfile = pypeline.logger.get_logfile()
-        if logfile:
-            print_debug("  Log-file located at %r" % (logfile,))
-
-    @classmethod
-    def _print_sub_nodes(cls, nodegraph, nodes, prefix="  "):
-        _grouper = lambda node: (nodegraph.get_node_state(node) != cls.DONE)
-        viable_nodes, dead_nodes = group_by_pred(_grouper, nodes)
-        viable_nodes.sort(key=str)
-
-        for node in viable_nodes:
-            runable = cls._get_runable_prefix(nodegraph, node)
-            description = "%s%s %s" % (prefix, runable, node)
-            if node.subnodes:
-                states, threads \
-                    = cls._count_states(nodegraph, node.subnodes, True)
-                description = "%s (%s)" \
-                    % (description, cls._describe_states(states, threads))
-
-            print_func = cls._get_print_function(nodegraph, node)
-            print_func(description)
-
-            is_last_node = (node == viable_nodes[-1]) and not dead_nodes
-            current_prefix = prefix + ("  " if is_last_node else "| ")
-
-            if node.dependencies:
-                if cls._collapse_node(nodegraph, node.dependencies):
-                    description = "+ %i dependencies hidden ..." \
-                        % cls._count_dependencies(node.dependencies |
-                                                  node.subnodes)
-
-                    print_disabled(current_prefix + description)
-                    print_disabled(current_prefix)
-                else:
-                    cls._print_sub_nodes(nodegraph, node.dependencies,
-                                         current_prefix + "  ")
-            else:
-                print_func(current_prefix)
-
-        if dead_nodes:
-            print_disabled(prefix + "+ %i dependencies hidden ..."
-                           % cls._count_dependencies(dead_nodes))
-            print_disabled(prefix)
-
-    @classmethod
-    def _get_runable_prefix(cls, nodegraph, node):
-        """Returns either 'R' or '+', dependening on the state of the node. If
-        the node, or any of its subnodes, are runable, then 'R' is returned,
-        otherwise '+' is returned. This is used to decorate the dependency
-        graph."""
-        if nodegraph.get_node_state(node) in (cls.RUNNING, cls.RUNABLE):
-            return "R"
-
-        for subnode in node.subnodes:
-            if nodegraph.get_node_state(subnode) in (cls.RUNNING, cls.RUNABLE):
-                return "R"
-
-        return "+"
-
-    @classmethod
-    def _count_dependencies(cls, dependencies):
-        """Recursively counts dependencies / subnodes in a subtree,
-        excluding MetaNodes from the total. Node that are depended
-        upon by multiple other nodes are only counted once."""
-        def _do_count_dependencies(dependencies, observed):
-            novel_nodes = (dependencies - observed)
-            observed.update(dependencies)
-            for node in novel_nodes:
-                _do_count_dependencies(node.dependencies | node.subnodes,
-                                       observed)
-            return observed
-
-        count = 0
-        for node in _do_count_dependencies(set(dependencies), set()):
-            if not isinstance(node, MetaNode):
-                count += 1
-        return count
-
-    @classmethod
-    def _collapse_node(cls, graph, dependencies):
-        """Returns true if a node may be collapsed in the dependency graph."""
-        if all((graph.get_node_state(node) == graph.DONE)
-               for node in dependencies):
-            return cls._count_dependencies(dependencies) > 2
-
-        return False
-
-    @classmethod
-    def _get_print_function(cls, graph, node):
-        for subnode in node.subnodes:
-            if graph.get_node_state(subnode) == graph.RUNNING:
-                return print_info
-
-        state = graph.get_node_state(node)
-        if state is graph.RUNNING:
-            return print_info
-        elif state is graph.DONE:
-            return print_disabled
-        elif state is graph.OUTDATED:
-            return print_warn
-        elif state is graph.ERROR:
-            return print_err
-        return print_msg
-
-
-class QuietUI(VerboseUI):
-    """A more quiet progress UI, relative to the Verbose UI:
-    Prints a summary, and the list of running nodes every
+class RunningUI(BaseUI):
+    """Prints a summary, and the list of running nodes every
     time 'flush' is called."""
 
     def __init__(self):
-        VerboseUI.__init__(self)
+        BaseUI.__init__(self)
         self._running_nodes = []
 
     def flush(self):
         """See BaseUI.flush."""
-        if not self._running_nodes:
-            VerboseUI.flush(self)
-            return
+        if BaseUI.flush(self) and self._running_nodes:
+            self._print_header(self.states, self.threads)
+            for node in sorted(map(str, self._running_nodes)):
+                print_info("  - %s" % (node,))
+            print_info()
 
-        BaseUI.flush(self)
-        self._print_header(self.states, self.threads)
-        for node in sorted(self._running_nodes, key=str):
-            print_info("  - %s" % node)
-        print_info()
+    def refresh(self, nodegraph):
+        """See BaseUI.refresh."""
+        BaseUI.refresh(self, nodegraph)
+        self._running_nodes = []
+        for node in nodegraph.iterflat():
+            if nodegraph.get_node_state(node) == self.RUNNING \
+                    and not isinstance(node, MetaNode):
+                self._running_nodes.append(node)
 
     def state_changed(self, node, old_state, new_state, is_primary):
         """See BaseUI.state_changed."""
         BaseUI.state_changed(self, node, old_state, new_state, is_primary)
-        if not is_primary:
-            # Avoid printing updates for nodes that changed because another
-            # node changed. E.g. don't print all the nodes that FAILED
-            # because a dependency FAILED.
-            return
+        if not isinstance(node, MetaNode):
+            if old_state == self.RUNNING:
+                self._running_nodes.remove(node)
+            elif new_state == self.RUNNING:
+                self._running_nodes.append(node)
 
-        if old_state == self.RUNNING:
-            self._running_nodes.remove(node)
-        elif new_state == self.RUNNING:
-            self._running_nodes.append(node)
+    @classmethod
+    def _print_header(cls, states, threads):
+        print_msg(datetime.datetime.now().strftime("%F %T"))
+        print_msg("Pipeline; %s (press 'h' for help):"
+                  % cls._describe_states(states, threads))
+        logfile = pypeline.logger.get_logfile()
+        if logfile:
+            print_debug("  Log-file located at %r" % (logfile,))
 
 
 class ProgressUI(BaseUI):
@@ -386,8 +373,7 @@ class ProgressUI(BaseUI):
         """See BaseUI.state_changed."""
         BaseUI.state_changed(self, node, old_state, new_state, is_primary)
         if is_primary and (new_state in self._DESCRIPTIONS):
-            if new_state in (self.RUNNING, self.DONE, self.ERROR):
-                self._print_state(node, new_state)
+            self._print_state(node, new_state)
 
             self._refresh_count -= 1
             if (self._refresh_count <= 0) or (new_state == self.ERROR):
@@ -398,7 +384,8 @@ class ProgressUI(BaseUI):
         """Prints a summary of the pipeline progress."""
         time_label = datetime.datetime.now().strftime("%T")
         description = self._describe_states(self.states, self.threads)
-        print_msg("\n%s Pipeline: %s" % (time_label, description))
+        print_msg("\n%s Pipeline: %s (press 'h' for help):"
+                  % (time_label, description))
         logfile = pypeline.logger.get_logfile()
         if logfile:
             print_debug("Log-file located at %r" % (logfile,))
@@ -437,21 +424,21 @@ class SummaryUI(BaseUI):
         self._new_error |= (new_state == self.ERROR and is_primary)
 
     def flush(self):
-        time_label = datetime.datetime.now().strftime("%T")
-        runtime = _fmt_runtime(int(time.time() - self._starting_time))
-        description = self._describe_states(self.states, self.threads)
-        message = "%s Pipeline: %s in %s " % (time_label,
-                                              description,
-                                              runtime)
+        if BaseUI.flush(self):
+            time_label = datetime.datetime.now().strftime("%T")
+            runtime = _fmt_runtime(int(time.time() - self._starting_time))
+            description = self._describe_states(self.states, self.threads)
+            message = "%s Pipeline: %s in %s (press 'h' for help)." \
+                % (time_label, description, runtime)
 
-        self._max_len = max(len(message), self._max_len)
-        print_msg("\r%s" % (message.ljust(self._max_len),), end="")
+            self._max_len = max(len(message), self._max_len)
+            print_msg("\r%s" % (message.ljust(self._max_len),), end="")
 
-        logfile = pypeline.logger.get_logfile()
-        if logfile and self._new_error:
-            print_debug("\nLog-file located at %r" % (logfile,))
-            self._new_error = False
-        sys.stdout.flush()
+            logfile = pypeline.logger.get_logfile()
+            if logfile and self._new_error:
+                print_debug("\nLog-file located at %r" % (logfile,))
+                self._new_error = False
+            sys.stdout.flush()
 
     def finalize(self):
         print_msg()
@@ -460,21 +447,26 @@ class SummaryUI(BaseUI):
 
 def _fmt_runtime(runtime):
     if runtime >= 3600:
-        fmt = "{hours}:{mins:02}:{secs:02}s"
+        fmt = "{hours}:{mins:02}:{secs:02.1f}s"
     elif runtime >= 60:
-        fmt = "{mins}:{secs:02}s"
+        fmt = "{mins}:{secs:02.1f}s"
     else:
-        fmt = "{secs}s"
+        fmt = "{secs:.1f}s"
 
-    return fmt.format(hours=runtime // 3600,
-                      mins=(runtime // 60) % 60,
-                      secs=(runtime % 60))
+    return fmt.format(hours=int(runtime) // 3600,
+                      mins=(int(runtime) // 60) % 60,
+                      secs=(runtime % 60.0))
 
+
+# No longer provided
+VerboseUI = RunningUI
+QuietUI = RunningUI
 
 # Different types of UIs
 UI_TYPES = {
     "Verbose": VerboseUI,
-    "Quiet": QuietUI,
+    "Quiet": RunningUI,
+    "Running": RunningUI,
     "Progress": ProgressUI,
     "Summary": SummaryUI,
 }

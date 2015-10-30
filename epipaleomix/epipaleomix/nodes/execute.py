@@ -15,7 +15,7 @@ RPATHS = {'Phasogram': 'phaso.R',
           'MethylMap': 'methyl_merge.R'
 }
 
-prefix = os.path.dirname(nucleomap.__file__)
+PREFIX = os.path.dirname(nucleomap.__file__)
         
 MODULES = {
     'WriteDepth': pileupdepth.main,
@@ -31,12 +31,12 @@ class GeneralExecuteNode(Node):
     def __init__(self, anal, d_bam, bed_name, bed_path, subnodes=(), dependencies=()):
         self.analysis = MODULES[anal]
         self.infile, self.d_bam = d_bam.baminfo['BamPath'], d_bam
-        # note anal name checked for GC-correction
+
+        # note anal name checked for GC-correction, and changed if  yes
         self._correct_dependencies(anal, dependencies)
-        self.dest = os.path.join(d_bam.i_path,
-                                 d_bam.fmt.format(d_bam.bam_name,
-                                                  self.analname,
-                                                  bed_name))
+
+        out_f_name = d_bam.fmt.format(d_bam.bam_name, self.analname, bed_name)
+        self.dest = os.path.join(d_bam.bam_temp_local, out_f_name)
         self.inputs = [self.infile, bed_path, self.dest]
         self._add_options(anal)
 
@@ -77,7 +77,7 @@ class GeneralPlotNode(CommandNode):
     def __init__(self, infile, anal_name, dependencies=()):
         call = ['Rscript', '%(AUX_R)s', str(50), '%(IN_TXT)s', '%(OUT_FILEPATH)s']
         outfile = os.path.splitext(os.path.splitext(infile)[0])[0]+'.pdf'
-        r_anal = os.path.join(prefix, RPATHS[anal_name])
+        r_anal = os.path.join(PREFIX, RPATHS[anal_name])
         if anal_name in EXTRAS:
             call.extend(EXTRAS[anal_name])
         cmd = AtomicCmd(call,
