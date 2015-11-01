@@ -95,7 +95,7 @@ def checkbed_list(bedfiles):
 def main_anal_to_run(bedinfo , opts):
     bedn, bed_paths = bedinfo    
     for analysis, options in opts.iteritems():
-        if analysis in ANALYSES and options['Enabled'] and (bedn not in options['ExcludeBed']):   # and check_exlude(d_bam, bedinfo, options['ExcludeBed']):
+        if analysis in ANALYSES and options['Enabled'] and (bedn not in options['ExcludeBed']):
             yield analysis
 
 
@@ -121,6 +121,7 @@ def update_excludebed(d_make, d_bam):
                     elif not opts['Excludebed']:
                         opts['Excludebed'] = []
 
+                        
 def calc_gcmodel(d_bam):
     if d_bam.opts['GCcorrect'].get('Enabled', False):
         chromused_coerce_to_string(d_bam)
@@ -129,9 +130,11 @@ def calc_gcmodel(d_bam):
 
         no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
         rlmin, rlmax = getminmax.main(d_bam.baminfo['BamPath'], no_reads)
-        return concat_gcsubnodes(CreateGCModelNode, d_bam, FINETUNERANGE,
-                                   subn=concat_gcsubnodes(GccorrectMidNode,
-                                                              d_bam, xrange(rlmin, rlmax+1, 15)))
+        return concat_gcsubnodes(CreateGCModelNode,
+                                 d_bam,
+                                 FINETUNERANGE,
+                                 subn=concat_gcsubnodes(GccorrectMidNode, d_bam,
+                                                        xrange(rlmin, rlmax+1, 15)))
     return []
 
 def check_chrom_prefix(d_make):
@@ -248,7 +251,6 @@ def main(argv):
         _print_usage()
         print_err("\nPlease specify at least one makefile!")
         return 1
-    # NOTE THAT WE SPLICE OUT ANOTHER INPUT BEFORE PASSING ON TO RUN FUNC
     return run(config, args[1:])
 
 
