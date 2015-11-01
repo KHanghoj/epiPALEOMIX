@@ -39,15 +39,18 @@ _VALIDATION_GCCORRECT = {
 #     "ChromUsed": IsListOf(IsStr, default=['1','1']),   ## the is new
     "--MappaUniqueness": IsFloat(default=0.9)
 }
+
 _VALIDATION_NUCLEO = {
     "Enabled": IsBoolean(default=False),
     "Apply_GC_Correction": IsBoolean(default=True),
+    "ExcludeBed": Or(IsListOf(IsStr), IsStr, IsNone, default=None),
     "--NucleosomeFlanks": IsUnsignedInt(default=25),
     "--NucleosomeSize": IsUnsignedInt(default=147),
     "--NucleosomeOffset": IsUnsignedInt(default=12)
 }
 _VALIDATION_METHYL = {
     "Enabled": IsBoolean(default=False),
+    "ExcludeBed": Or(IsListOf(IsStr), IsStr, IsNone, default=None),
     "--ReadBases": IsUnsignedInt(default=6),
     "--SkipThreePrime": IsUnsignedInt(default=0),
     "--SkipFivePrime": IsUnsignedInt(default=0),
@@ -55,12 +58,14 @@ _VALIDATION_METHYL = {
 }
 _VALIDATION_PHASO = {
     "Enabled": IsBoolean(default=False),
+    "ExcludeBed": Or(IsListOf(IsStr), IsStr, IsNone, default=None),
     "Apply_GC_Correction": IsBoolean(default=False),
     "--SubsetPileup": IsUnsignedInt(default=3),
     "--MaxRange": IsUnsignedInt(default=3000)
 }
 _VALIDATION_WRITEDEPTH = {
     "Enabled": IsBoolean(default=False),
+    "ExcludeBed": Or(IsListOf(IsStr), IsStr, IsNone, default=None),
     "Apply_GC_Correction": IsBoolean(default=True),
     "--DequeLength": IsUnsignedInt(default=500)
 }

@@ -13,7 +13,7 @@ BEDTOOLS_VERSION = versions.Requirement(call   = ("bedtools", "--version"),
                                         checks = versions.GE(2, 15, 0))
 PYTHON_VERSION = versions.Requirement(call   = ("python", "--version"),
                                         search = r"Python (\d+)\.(\d+)\.(\d+)",
-                                        checks = versions.GE(2, 7))
+                                        checks = versions.GE(2, 7, 4))
 
 
 prefix = os.path.dirname(splitbedfiles.__file__)
@@ -57,8 +57,6 @@ class CleanFilesNode(CommandNode):
                              description=description,
                              command=paral_cmd,
                              dependencies=dependencies)
-
-        
 
 
 class SplitBedFileNode(Node):

@@ -33,21 +33,21 @@ class GeneralExecuteNode(Node):
         self.infile, self.d_bam = d_bam.baminfo['BamPath'], d_bam
 
         # note anal name checked for GC-correction, and changed if  yes
-        self._correct_dependencies(anal, dependencies)
+        subnodes, analname = self._correct_subnodes(subnodes, anal)
 
-        out_f_name = d_bam.fmt.format(d_bam.bam_name, self.analname, bed_name)
+        out_f_name = d_bam.fmt.format(d_bam.bam_name, analname, bed_name)
         self.dest = os.path.join(d_bam.bam_temp_local, out_f_name)
         self.inputs = [self.infile, bed_path, self.dest]
         self._add_options(anal)
 
         description = "<ANALYSIS:'%s', BAM: %s, Bed:'%s'" % \
-                      (self.analname, d_bam.bam_name, bed_name)
+                      (analname, d_bam.bam_name, bed_name)
         Node.__init__(self,
                       description=description,
                       input_files=[self.infile, bed_path],
                       output_files=self.dest,
                       subnodes=subnodes,
-                      dependencies=self.dependencies)
+                      dependencies=dependencies)
 
     def _run(self, _config, _temp):
         self.analysis(self.inputs)
@@ -63,15 +63,15 @@ class GeneralExecuteNode(Node):
                     argument = str(argument)
                 self.inputs.extend((option, argument))
 
-    def _correct_dependencies(self, name, dependencies):
+    def _correct_subnodes(self, subnodes, name):
         ''' As not all analyses requires to wait for gccorrection model.
             We remove it from the tuple of dependencies'''
         opt_arg = self.d_bam.retrievedat(name)
-        self.dependencies, self.analname = dependencies, name
         if opt_arg.get('Apply_GC_Correction', False):
-            self.analname += 'GCcorr'
-        elif len(self.dependencies) > 1: ## as GC-correction is not a applied on givene analysis only splitbednode
-            self.dependencies = (self.dependencies[0],)  
+            return subnodes, name+'GCcorr'
+        else:
+            return [], name
+
 
 class GeneralPlotNode(CommandNode):
     def __init__(self, infile, anal_name, dependencies=()):
