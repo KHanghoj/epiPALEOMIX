@@ -29,7 +29,8 @@ BamInputs:
         GCcorrect:
             Enabled: True
             # mininimum and maximum length of used reads (roughly)
-            ChromUsed: [1,1]
+            # ChromUsed: 1
+            --NoRegions: 200
             # The reference uniqueness minimum. It is not used if no mappability region is passed
             --MappaUniqueness: 0.9
         NucleoMap:   # The nucleosome calling tool

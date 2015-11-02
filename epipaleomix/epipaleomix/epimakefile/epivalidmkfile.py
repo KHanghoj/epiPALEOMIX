@@ -9,6 +9,7 @@ from pypeline.common.makefile import \
     Or, \
     ValueIn, \
     IsNone, \
+    StringIn, \
     ValueGE, \
     ValuesSubsetOf, \
     IsListOf
@@ -30,13 +31,13 @@ _VALID_BED_NAME = _VALID_TARGET_NAME = \
 _VALIDATION_OPTIONS = {
     "BamPath": IsStr,
     "--MinMappingQuality": IsUnsignedInt(default=30)
-    # "--LibraryConstruction": IsStr
+
 }
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=False),
-    "NoReadsChecked": IsUnsignedInt(default=500000),
-    "ChromUsed": IsListOf(Or(IsStr,IsUnsignedInt), default=['1','1']),   ## the is new
-#     "ChromUsed": IsListOf(IsStr, default=['1','1']),   ## the is new
+    "NoReadsChecked": IsUnsignedInt(default=100000),
+    "--NoRegions": Or(IsUnsignedInt, IsStr, default=200), ## Add a key to check all 
+    "ChromUsed": Or(IsStr,IsUnsignedInt, default=1),   ## the is new
     "--MappaUniqueness": IsFloat(default=0.9)
 }
 
@@ -66,8 +67,7 @@ _VALIDATION_PHASO = {
 _VALIDATION_WRITEDEPTH = {
     "Enabled": IsBoolean(default=False),
     "ExcludeBed": Or(IsListOf(IsStr), IsStr, IsNone, default=None),
-    "Apply_GC_Correction": IsBoolean(default=True),
-    "--DequeLength": IsUnsignedInt(default=500)
+    "Apply_GC_Correction": IsBoolean(default=True)
 }
 
 _VALIDATION_TOOLS = {

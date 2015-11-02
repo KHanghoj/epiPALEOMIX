@@ -1,6 +1,6 @@
 import pysam
 
-def main(pathtobam, countdown, readswithinrange=10000):
+def main(pathtobam, readswithinrange):
     init = 1
     within_count = readswithinrange
     with pysam.AlignmentFile(pathtobam, "rb") as samfile:
@@ -23,11 +23,8 @@ def main(pathtobam, countdown, readswithinrange=10000):
                 within_count -= 1
             if not within_count:
                 break
-            countdown -= 1
-            if not countdown:
-                break
     return (lowerbound, upperbound)
 
 
 if __name__ == '__main__':
-    print main('/Users/krishang/Desktop/example/saqqaq_chrom22.bam', 500000, 50000)
+    print main('/Users/krishang/Desktop/example/saqqaq_chrom22.bam', 50000)

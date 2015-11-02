@@ -4,16 +4,28 @@
 - get version check of pysam and numpy - kris
 - compiling cython to both mac and linux systems - Jakob might have some experience with that
 - setup.py + compiling cython if needed
-- make R-scripts for plotting for the user
+- make R-scripts for plotting for the end-user
 - upload example to ftp:
  - /k/ftp-data/OrlandoGroup
  - make a folder and add { TEST.bam, reference genome fasta, yamlfile, bedfile} 
 
+- How do we handle samples we reads that a  100  or above???
+- do reservoir sampling for read length (min, max)
+- follow your guts - knight - ted talk
+
+- git fork paleomix github
+- virtual environment. use that not to cause problems with already existing versions of Paleomix.
+- write an email to Ludovic, Jakob, Tobias:
+  - an update
+  - we don't see the same pattern
+  - why do we not see this
+  - discard long reads > 100 & only use the start of reads of a 100
+    - consider using both ends for 100 reads single ends.
+    - for paired-end data, we can use both ends for collapsed reads.
+ - do auroch and send to both Ludovic and Bastien
 
 
-
-
-
+- send documentation and example to ludovic
 
 
 

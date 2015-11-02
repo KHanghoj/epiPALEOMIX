@@ -62,7 +62,6 @@ def split_bedfiles(config, d_make):
     enabl_filter = d_make.bedfiles.get('EnabledFilter', False)
     filtnode, nodes = [], []
     for bedn, in_bedp in checkbedfiles_ext(d_make.bedfiles):
-        print(d_make.bedfiles[bedn])
         if enabl_filter and mappapath:
             filtnode = [CleanFilesNode(config, d_make, bedn, mappapath, uniqueness)]
         bedexists = check_bed_exist(config, d_make.bedfiles[bedn])
@@ -76,8 +75,16 @@ def split_bedfiles(config, d_make):
 
 def chromused_coerce_to_string(bam):
     chrused = bam.opts['GCcorrect'].get('ChromUsed', MakefileError)
-    bam.opts['GCcorrect']['ChromUsed'] =  [str(chrom) for chrom in chrused]
-
+    bam.opts['GCcorrect']['ChromUsed'] =  str(chrused)
+    noregions = bam.opts['GCcorrect'].get('--NoRegions', MakefileError)
+    if isinstance(noregions, str) and noregions.lower() == 'all':
+        noregions = int(1e7)
+    elif isinstance(noregions, int):
+        noregions = int(noregions)
+    else:
+        raise MakefileError('--NoRegions: "%s" is incorrect. Must be of a string of {All, all, ALL} or an positive integer' % (noregions,))
+    bam.opts['GCcorrect']['--NoRegions'] = noregions
+    
 
 def checkbedfiles_ext(bedfiles):
     for bedname, bedpath in bedfiles.items():
@@ -112,24 +119,32 @@ def update_excludebed(d_make, d_bam):
     if enabl_filter:
         for anal, opts in d_bam.opts.iteritems():
             if anal in ANALYSES:
-                excludebed = opts.get('ExcludeBed')
-                if excludebed:
-                    if isinstance(excludebed, str):
-                        opts['ExcludeBed'] = [excludebed+"MappaOnly"]
-                    elif isinstance(excludebed, list):
-                        opts['Excludebed'] = [bed+"MappaOnly" for bed in excludebed]
-                    elif not opts['Excludebed']:
-                        opts['Excludebed'] = []
+                excl_bed = opts.get('ExcludeBed')
+                if isinstance(excl_bed, str):
+                    opts['ExcludeBed'] = [excl_bed+"MappaOnly"]
+                elif isinstance(excl_bed, list):
+                    opts['ExcludeBed'] = [bed+"MappaOnly" for bed in excl_bed]
+                elif excl_bed is None:
+                    opts['ExcludeBed'] = []
+                else:
+                    raise MakefileError('Exclude bed in %s is incorrect. Must be a str, list, or None' % (anal,))
 
-                        
+def getdequelen(d_bam):
+    no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
+    rlmin, rlmax = getminmax.main(d_bam.baminfo['BamPath'], no_reads)
+    d_bam.opts['WriteDepth']['--DequeLength'] = rlmax
+    d_bam.opts['NucleoMap']['--DequeLength'] = rlmax
+    return rlmin, rlmax
+                
 def calc_gcmodel(d_bam):
+    rlmin, rlmax = getdequelen(d_bam)
     if d_bam.opts['GCcorrect'].get('Enabled', False):
         chromused_coerce_to_string(d_bam)
         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
 
-        no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
-        rlmin, rlmax = getminmax.main(d_bam.baminfo['BamPath'], no_reads)
+        #no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
+        #rlmin, rlmax = getminmax.main(d_bam.baminfo['BamPath'], no_reads)
         return concat_gcsubnodes(CreateGCModelNode,
                                  d_bam,
                                  FINETUNERANGE,
@@ -172,6 +187,7 @@ def make_outputnames(config, make):
     check_path(config.makefiledest)
     check_path(config.temp_local)
 
+    
 def create_nodes(config, makefiles):
     topnodes = []
     for makefile in read_epiomix_makefile(makefiles):

@@ -19,9 +19,11 @@ class GCcorrect(object):
         self.samfile = pysam.Samfile(self.arg.BamPath, "rb")
         self.fasta = Cache(self.arg.FastaPath)
         self.rl = self.arg.ReadLength
+        self.noregions = self.arg.NoRegions
 
     def getreads(self, chrom, start, end):
         self.reads_forw, self.reads_back = {}, {}
+        
         records = self.samfile.fetch(chrom, start, end)
         # they need to be 0-based for fetching fasta seq:
         self.chrom = chrom
@@ -39,6 +41,7 @@ class GCcorrect(object):
         
         if cov/region_size > 2:  ## a minimum coverage of 2 in the region
 #        if self.reads_forw and self.reads_back:
+            self.noregions -= 1
             for rela_pos, gc in self._short_seq(self.rl):
                 curr_start = rela_pos+self.start
                 curr_end = curr_start+self.rl
@@ -85,7 +88,8 @@ def parse_args(argv):
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
     ## parser.add_argument('--ChromUsed', help="...", type=str, default='22')
-    parser.add_argument('--ChromUsed', help="...", type=str)    
+    parser.add_argument('--ChromUsed', help="...", type=str)
+    parser.add_argument('--NoRegions', help="...", type=int, default=200)    
     parser.add_argument('--OffSet', type=str,
                         help='the offsetfile found by the midnode')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
@@ -97,8 +101,9 @@ def run(args):
     GC = GCcorrect(args)
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1
+    
     for chrom, start, end, score in read_mappa(args):
-        if score >= mappability and args.ChromUsed == chrom:
+        if score >= mappability and args.ChromUsed == chrom and GC.noregions:
             if start-last_end < 0 and last_chrom == chrom:            # because chunks can overlap with 50%
                 start += (end-start)/2
             last_chrom, last_end = chrom, end

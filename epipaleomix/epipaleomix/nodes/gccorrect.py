@@ -17,12 +17,9 @@ class GccorrectNode(Node):
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))
         self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
-        firstchrom, secondchrom = self.d_bam.opts['GCcorrect']['ChromUsed']
+        self.chromtobeanalyzed = self.d_bam.opts['GCcorrect']['ChromUsed']
         if self.subns:  ## finetune step run if subnodes
             self.dest += '_finescale'
-            self.chromtobeanalyzed = secondchrom
-        else:
-            self.chromtobeanalyzed = firstchrom
         description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
                        (self.dest, rl, self.chromtobeanalyzed))
 
@@ -33,6 +30,7 @@ class GccorrectNode(Node):
                       subnodes=subnodes,
                       dependencies=dependencies)
         assert len(self.output_files) == 1, self.output_files
+
 
     def _run(self, _config, _temp):
         self.inputs = [self.d_bam.baminfo["BamPath"], self.dest]
@@ -96,3 +94,28 @@ class GccorrectMidNode(Node):
 
     def _run(self, _config, _temp):
         gccorrect_mid.main(self.dest+self.infiles)
+
+
+
+
+class _GccorrectNode_old(Node):
+    def __init__(self, d_bam, rl, subnodes=(), dependencies=()):
+        self.dest = os.path.join(d_bam.bam_temp_local,
+                                 d_bam.bam_name+GC_NAME+'_'+str(rl))
+        self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
+        firstchrom, secondchrom = self.d_bam.opts['GCcorrect']['ChromUsed']
+        if self.subns:  ## finetune step run if subnodes
+            self.dest += '_finescale'
+            self.chromtobeanalyzed = secondchrom
+        else:
+            self.chromtobeanalyzed = firstchrom
+        description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
+                       (self.dest, rl, self.chromtobeanalyzed))
+
+        Node.__init__(self,
+                      description=description,
+                      input_files=self.d_bam.baminfo["BamPath"],
+                      output_files=self.dest,
+                      subnodes=subnodes,
+                      dependencies=dependencies)
+        assert len(self.output_files) == 1, self.output_files
