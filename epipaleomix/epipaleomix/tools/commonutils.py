@@ -151,19 +151,3 @@ class GC_correction(object):
 #             gc_idx = fasta_str.count('G')+fasta_str.count('C')
 #             return model[gc_idx]
 
-### add this to epaleomix.py if individual readlength to be used
-
-# def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
-#     return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn) for rl in gcwindows])]
-                
-# def calc_gcmodel(d_bam):
-#     rlmin, rlmax = getdequelen(d_bam)
-#     if d_bam.opts['GCcorrect'].get('Enabled', False):
-#         chromused_coerce_to_string(d_bam)
-#         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
-#                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
-
-#         resolution = 9
-#         return concat_gcsubnodes(CreateGCModelNode, d_bam,
-#                                  xrange(rlmin, rlmax+resolution, resolution))
-#     return []
