@@ -86,7 +86,6 @@ class Cache(object):
 class GC_correction(object):
     ''' class doc '''
     def __init__(self):
-        self._GC_model_len = 0  ## this is a recent update, as it is needed for phasogram, need to check if affects the other analyses.
         if self.arg.GCmodel:
             self._fasta_dat = Cache(self.arg.FastaPath)
             with open(self.arg.GCmodel, 'r') as f:
@@ -95,11 +94,76 @@ class GC_correction(object):
                                for line in f]
                 self._GC_model_len = len(self._model)
 
-    def _get_gc_corr_dep(self, pos):
+    def _get_gc_corr_dep(self, record):
         if self.arg.GCmodel:
+            pos = record.aend-self._GC_model_len if record.is_reverse else record.pos
             fasta_str = self._fasta_dat.fetch_string(self.chrom,
                                                      pos, self._GC_model_len-1)
             gc_idx = fasta_str.count('G')+fasta_str.count('C')
             return self._model[gc_idx]
         else:
             return 1
+
+
+# class _GC_correction(object):
+#     ''' This is for individual read length '''
+#     def __init__(self):
+#         if self.arg.GCmodel:
+#             half_jump = 4  ## value comes from the 'resolution' used in epaleomix.py # resolution/2
+#             self._fasta_dat = Cache(self.arg.FastaPath)
+#             with open(self.arg.GCmodel, 'r') as f:
+#                 next(f)  # do not need the header
+#                 lst = []
+#                 self._models_dic = {}
+#                 prev_count = ''
+#                 for line in f:
+#                     curr_count, ratio = self._unpackgc(*re.split(r'\s+', line.rstrip()))
+
+#                     if curr_count != prev_count and lst:
+#                         [self._updatedic(key, lst) for key in xrange(prev_count-half_jump,
+#                                                                        prev_count+half_jump+1)]
+#                         lst=[]
+#                     lst.append(ratio)
+#                     prev_count = curr_count
+
+#             if lst:
+#                 [self._updatedic(key, lst) for key in xrange(prev_count-half_jump,
+#                                                              prev_count+half_jump+1)]
+
+#     def _unpackgc(self, curr_count, content, ratio):
+#         return int(curr_count), float(ratio)
+
+#     def _updatedic(self, key, lst):
+#         self._models_dic[key] = lst
+
+#     def _get_gc_corr_dep(self, record):
+#         if self.arg.GCmodel:
+#             try:
+#                 ## very few reads are aoutside min max length, they are given no enrichment
+#                 model = self._models_dic[record.alen]
+#             except KeyError:
+#                 return 1
+#             modellength = len(model)
+#             pos = record.aend-1-modellength if record.is_reverse else record.pos
+#             # pos = record.aend-1 if record.is_reverse else record.pos
+#             fasta_str = self._fasta_dat.fetch_string(self.chrom,
+#                                                      pos, modellength-1)
+#             gc_idx = fasta_str.count('G')+fasta_str.count('C')
+#             return model[gc_idx]
+
+### add this to epaleomix.py if individual readlength to be used
+
+# def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
+#     return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn) for rl in gcwindows])]
+                
+# def calc_gcmodel(d_bam):
+#     rlmin, rlmax = getdequelen(d_bam)
+#     if d_bam.opts['GCcorrect'].get('Enabled', False):
+#         chromused_coerce_to_string(d_bam)
+#         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
+#                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
+
+#         resolution = 9
+#         return concat_gcsubnodes(CreateGCModelNode, d_bam,
+#                                  xrange(rlmin, rlmax+resolution, resolution))
+#     return []

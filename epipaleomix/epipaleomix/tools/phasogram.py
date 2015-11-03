@@ -34,8 +34,7 @@ class Phasogram(GC_correction):
                 else:
                     self.outputdic[length] += 1
                         
-    def _finddepth(self, pos, dic, gc_pos):
-        corr = self._get_gc_corr_dep(gc_pos)
+    def _finddepth(self, pos, dic, corr):
         try:
             dic[pos] += corr
         except KeyError:
@@ -44,10 +43,12 @@ class Phasogram(GC_correction):
     def update(self, record):
         if record.is_reverse:
             if record.aend <= self.end:
-                self._finddepth(record.aend-1, self.reverse_dic, record.aend-self._GC_model_len)
+                corr = self._get_gc_corr_dep(record)
+                self._finddepth(record.aend-1, self.reverse_dic, corr)
         else:
             if record.pos >= self.start:
-                self._finddepth(record.pos, self.forward_dic, record.pos)
+                corr = self._get_gc_corr_dep(record)
+                self._finddepth(record.pos, self.forward_dic, corr)
 
     def writetofile(self):
         fmt = '{}\t{}\n'
@@ -83,8 +84,9 @@ def parse_args(argv):
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
     parser.add_argument('--MaxRange', help="...", type=int, default=1000)
-    parser.add_argument('--MinMappingQuality', help="...", type=int,
-                        default=25)
+    parser.add_argument('--MinMappingQuality', help="...", type=int, default=25)
+    parser.add_argument('--MinAlignmentLength', help="...", type=int, default=25)
+    
     return parser.parse_known_args(argv)
 
 
@@ -94,7 +96,7 @@ def run(args):
     for chrom, start, end, bedcoord in read_bed(args):
         Phaso.reset(chrom, start, end)
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality or record.is_unmapped:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped or record.alen < args.MinAlignmentLength:
                 continue  # do not analyze low quality records
             Phaso.update(record)
         Phaso.call()

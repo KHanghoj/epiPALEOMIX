@@ -31,7 +31,7 @@ class GCcorrect(object):
         self.start, self.end = start-1, end
         cov = 0
         for record in records:
-            if record.mapq < self.arg.MinMappingQuality or record.is_unmapped:
+            if record.mapq < self.arg.MinMappingQuality or record.is_unmapped or record.alen < self.arg.MinAlignmentLength:
                 continue  # do not analyze low quality records
             cov += record.alen
             if record.is_reverse:
@@ -93,6 +93,8 @@ def parse_args(argv):
     parser.add_argument('--OffSet', type=str,
                         help='the offsetfile found by the midnode')
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
+    parser.add_argument('--MinAlignmentLength', help="..", type=int, default=25)    
+
     return parser.parse_known_args(argv)
 
 def run(args):

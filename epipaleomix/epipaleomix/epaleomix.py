@@ -106,12 +106,6 @@ def main_anal_to_run(bedinfo , opts):
             yield analysis
 
 
-def makegcnodes(d_bam, gcwindows, subn=()):
-    return [GccorrectNode(d_bam, rl, subnodes=subn) for rl in gcwindows]
-
-
-def concat_gcsubnodes(nodecls, bam, ran, subn=()):
-    return [nodecls(bam, subnodes=makegcnodes(bam, ran, subn))]
 
 
 def update_excludebed(d_make, d_bam):
@@ -135,7 +129,11 @@ def getdequelen(d_bam):
     d_bam.opts['WriteDepth']['--DequeLength'] = rlmax
     d_bam.opts['NucleoMap']['--DequeLength'] = rlmax
     return rlmin, rlmax
-                
+
+def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
+    return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn) for rl in gcwindows])]
+
+
 def calc_gcmodel(d_bam):
     rlmin, rlmax = getdequelen(d_bam)
     if d_bam.opts['GCcorrect'].get('Enabled', False):
@@ -143,8 +141,6 @@ def calc_gcmodel(d_bam):
         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
 
-        #no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
-        #rlmin, rlmax = getminmax.main(d_bam.baminfo['BamPath'], no_reads)
         return concat_gcsubnodes(CreateGCModelNode,
                                  d_bam,
                                  FINETUNERANGE,

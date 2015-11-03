@@ -30,8 +30,8 @@ _VALID_BED_NAME = _VALID_TARGET_NAME = \
 
 _VALIDATION_OPTIONS = {
     "BamPath": IsStr,
-    "--MinMappingQuality": IsUnsignedInt(default=30)
-
+    "--MinMappingQuality": IsUnsignedInt(default=30),
+    "--MinAlignmentLength": IsUnsignedInt(default=25)
 }
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=False),

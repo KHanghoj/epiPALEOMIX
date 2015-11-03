@@ -57,11 +57,8 @@ class Write_Depth(GC_correction):
 
         self._last_pos = record.pos
 
-        if record.is_reverse:
-            corr_depth = self._get_gc_corr_dep(record.aend-self._GC_model_len)
-        else:
-            corr_depth = self._get_gc_corr_dep(record.pos)
-
+        corr_depth = self._get_gc_corr_dep(record)
+        
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):
                 for idx in xrange(_jump_idx, _jump_idx + count):
@@ -142,6 +139,7 @@ def parse_args(argv):
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--MinMappingQuality', help="...", type=int, default=25)
+    parser.add_argument('--MinAlignmentLength', help="...", type=int, default=25)
     parser.add_argument('--DequeLength', help="...", type=int, default=1000)
     parser.add_argument('--NucleosomeSize', dest='SIZE', help="..", type=int, default=147)
     parser.add_argument('--NucleosomeFlanks', dest='FLANKS', help="..", type=int, default=25)
@@ -158,7 +156,7 @@ def run(args):
         start = 0 if start-flanks < 0 else start-flanks
         end += flanks
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality or record.is_unmapped:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped or record.alen < args.MinAlignmentLength:
                 continue  # do not analyze low quality records
             Corr_Depth.update_depth(record)
         Corr_Depth.call_depths()

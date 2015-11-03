@@ -180,6 +180,7 @@ def parse_args(argv):
     parser.add_argument('--FastaPath', help="FastaPath", type=str)
     parser.add_argument('--ReadBases', help="..", type=int, default=2)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=20)
+    parser.add_argument('--MinAlignmentLength', help="..", type=int, default=25)
     parser.add_argument('--Primes', help="..", type=str, default='five',
                         choices=['both', 'five', 'three'])
     parser.add_argument('--SkipThreePrime', help="..", type=int, default=0)
@@ -193,7 +194,7 @@ def run(args):
     for chrom, start, end, bedcoord in read_bed(args):
         Met_Score.reset_dict(chrom, start, end, bedcoord)
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality or record.is_unmapped:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped or record.alen < args.MinAlignmentLength:
                 continue  # do not analyze low quality records
             Met_Score.update(record)
         Met_Score.call_final_ms()

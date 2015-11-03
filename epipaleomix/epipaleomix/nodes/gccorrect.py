@@ -96,19 +96,13 @@ class GccorrectMidNode(Node):
         gccorrect_mid.main(self.dest+self.infiles)
 
 
-
-
-class _GccorrectNode_old(Node):
+### this is for individual readlength gccorrection
+class _GccorrectNode(Node):
     def __init__(self, d_bam, rl, subnodes=(), dependencies=()):
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))
         self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
-        firstchrom, secondchrom = self.d_bam.opts['GCcorrect']['ChromUsed']
-        if self.subns:  ## finetune step run if subnodes
-            self.dest += '_finescale'
-            self.chromtobeanalyzed = secondchrom
-        else:
-            self.chromtobeanalyzed = firstchrom
+        self.chromtobeanalyzed = self.d_bam.opts['GCcorrect']['ChromUsed']
         description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
                        (self.dest, rl, self.chromtobeanalyzed))
 
@@ -119,3 +113,21 @@ class _GccorrectNode_old(Node):
                       subnodes=subnodes,
                       dependencies=dependencies)
         assert len(self.output_files) == 1, self.output_files
+
+
+    def _run(self, _config, _temp):
+        self.inputs = [self.d_bam.baminfo["BamPath"], self.dest]
+        self.inputs.extend(("--ChromUsed", self.chromtobeanalyzed))
+        self._add_options('GCcorrect')
+        self.inputs.extend(("--ReadLength", str(self.rl)))
+        gccorrect.main(self.inputs)
+
+    def _add_options(self, name):
+        optargs = self.d_bam.retrievedat(name)
+        for option, argument in optargs.iteritems():
+            if isinstance(option, str) and option.startswith('-'):
+                if not isinstance(argument, str):
+                    argument = str(argument)
+                self.inputs.extend((option, argument))
+
+
