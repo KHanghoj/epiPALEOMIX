@@ -150,4 +150,5 @@ class GC_correction(object):
 #                                                      pos, modellength-1)
 #             gc_idx = fasta_str.count('G')+fasta_str.count('C')
 #             return model[gc_idx]
-
+        # else:
+        #     return 1
