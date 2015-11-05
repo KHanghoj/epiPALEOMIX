@@ -1,4 +1,5 @@
 awk '{OFS="\t"} {$2=$2-100; $3=$3+100; print $0}' CTCF_human_2kb_rmoverlap_wochr.bed > CTCF_plus100.bed
+samtools view -hb Saqqaq.hg19.flt.sort.rmdup.realign.md.bam -L CTCF_plus100.bed > TUTORIAL_CTCF.bam
 
 scp -P 24222 krishang@newton.dna.ku.dk:/home/krishang/data/PAPER_epigenome/partC/figure_3_ONLYPROM_entirregion_PROM_both_TSS.pdf .
 
