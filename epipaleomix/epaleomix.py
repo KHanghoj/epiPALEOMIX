@@ -74,8 +74,8 @@ def split_bedfiles(config, d_make):
 
 
 def chromused_coerce_to_string(bam):
-    chrused = bam.opts['GCcorrect'].get('ChromUsed', MakefileError)
-    bam.opts['GCcorrect']['ChromUsed'] =  str(chrused)
+    chrused = bam.opts['GCcorrect'].get('--ChromUsed', MakefileError)
+    bam.opts['GCcorrect']['--ChromUsed'] =  str(chrused)
     noregions = bam.opts['GCcorrect'].get('--NoRegions', MakefileError)
     if isinstance(noregions, str) and noregions.lower() == 'all':
         noregions = int(1e7)
@@ -135,26 +135,15 @@ def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
 
 ### if individual readlength to be used
 ### changes nodes/gccorrect to used the nodes in the very bottom.
-### used model_gc_individualreadlength.R instead of model_gc.R 
-# def calc_gcmodel(d_bam):
-#     rlmin, rlmax = getdequelen(d_bam)
-#     if d_bam.opts['GCcorrect'].get('Enabled', False):
-#         chromused_coerce_to_string(d_bam)
-#         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
-#                                     d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
-
-#         resolution = 9
-#         return concat_gcsubnodes(CreateGCModelNode, d_bam,
-#                                  xrange(rlmin, rlmax+resolution, resolution))
-#     return []
-
+### inherit indinode insteand of nornormal in tools.commonutils
+### used model_gc_individualreadlength.R instead of model_gc.R in createmodelNode 
 
 def calc_gcmodel(d_bam):
     rlmin, rlmax = getdequelen(d_bam)
     if d_bam.opts['GCcorrect'].get('Enabled', False):
         chromused_coerce_to_string(d_bam)
         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
-                                    d_bam.opts['GCcorrect'].get('ChromUsed', MakefileError)])
+                                    d_bam.opts['GCcorrect'].get('--ChromUsed', MakefileError)])
 
         return concat_gcsubnodes(CreateGCModelNode,
                                  d_bam,
@@ -162,6 +151,10 @@ def calc_gcmodel(d_bam):
                                  subn=concat_gcsubnodes(GccorrectMidNode, d_bam,
                                                         xrange(rlmin, rlmax+1, 15)))
     return []
+    #     resolution = 9
+    #     return concat_gcsubnodes(CreateGCModelNode, d_bam,
+    #                              xrange(rlmin, rlmax+resolution, resolution))
+    # return []
 
 def check_chrom_prefix(d_make):
     for bam_name, opts in d_make.makefile['BamInputs'].items():

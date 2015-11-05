@@ -37,7 +37,7 @@ _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=False),
     "NoReadsChecked": IsUnsignedInt(default=100000),
     "--NoRegions": Or(IsUnsignedInt, IsStr, default=200), ## Add a key to check all 
-    "ChromUsed": Or(IsStr,IsUnsignedInt, default=1),   ## the is new
+    "--ChromUsed": Or(IsStr,IsUnsignedInt, default="all"),   ## the is new
     "--MappaUniqueness": IsFloat(default=0.9)
 }
 

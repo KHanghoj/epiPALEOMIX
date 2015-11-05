@@ -103,15 +103,19 @@ def run(args):
     GC = GCcorrect(args)
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1
-    
+    runallmapparegions = False
+    if args.ChromUsed.lower() == "all":
+        runallmapparegions = True
     for chrom, start, end, score in read_mappa(args):
+        if runallmapparegions:
+            ## if "all" then entire genome analyzed or until GC.noregions hits 0
+            args.ChromUsed = chrom
         if score >= mappability and args.ChromUsed == chrom and GC.noregions:
             if start-last_end < 0 and last_chrom == chrom:            # because chunks can overlap with 50%
                 start += (end-start)/2
             last_chrom, last_end = chrom, end
             GC.getreads(chrom, start, end)
     GC.writetofile()
-
 
 def main(argv):
     args, unknown = parse_args(argv)

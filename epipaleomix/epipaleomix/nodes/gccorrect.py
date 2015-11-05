@@ -17,11 +17,10 @@ class GccorrectNode(Node):
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))
         self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
-        self.chromtobeanalyzed = self.d_bam.opts['GCcorrect']['ChromUsed']
         if self.subns:  ## finetune step run if subnodes
             self.dest += '_finescale'
         description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
-                       (self.dest, rl, self.chromtobeanalyzed))
+                       (self.dest, rl, self.d_bam.opts['GCcorrect']['--ChromUsed']))
 
         Node.__init__(self,
                       description=description,
@@ -38,7 +37,6 @@ class GccorrectNode(Node):
             offsetfile = (''.join(node.output_files) for node in self.subns)
             self.inputs.extend(("--OffSet", str(offsetfile.next())))
 
-        self.inputs.extend(("--ChromUsed", self.chromtobeanalyzed))
         self._add_options('GCcorrect')
         self.inputs.extend(("--ReadLength", str(self.rl)))
         gccorrect.main(self.inputs)
@@ -56,6 +54,8 @@ class CreateGCModelNode(CommandNode):
     def __init__(self, d_bam, subnodes=()):
         aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
                              'model_gc.R')
+        # aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
+        #                      'model_gc_individualreadlength.R')
         call = ['Rscript', aux_r, '%(IN_SOURCE)s', str(d_bam.bam_name+GC_NAME),
                 '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
         dest = os.path.join(d_bam.bam_output,
@@ -102,9 +102,8 @@ class _GccorrectNode(Node):
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))
         self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
-        self.chromtobeanalyzed = self.d_bam.opts['GCcorrect']['ChromUsed']
         description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
-                       (self.dest, rl, self.chromtobeanalyzed))
+                       (self.dest, rl, self.d_bam.opts['GCcorrect']['--ChromUsed']))
 
         Node.__init__(self,
                       description=description,
@@ -117,7 +116,6 @@ class _GccorrectNode(Node):
 
     def _run(self, _config, _temp):
         self.inputs = [self.d_bam.baminfo["BamPath"], self.dest]
-        self.inputs.extend(("--ChromUsed", self.chromtobeanalyzed))
         self._add_options('GCcorrect')
         self.inputs.extend(("--ReadLength", str(self.rl)))
         gccorrect.main(self.inputs)

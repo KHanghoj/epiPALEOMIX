@@ -84,7 +84,7 @@ class Cache(object):
 
 
 class GC_correction(object):
-    ''' class doc '''
+    ''' This is the original GC_correction '''
     def __init__(self):
         if self.arg.GCmodel:
             self._fasta_dat = Cache(self.arg.FastaPath)
@@ -105,50 +105,50 @@ class GC_correction(object):
             return 1
 
 
-# class _GC_correction(object):
-#     ''' This is for individual read length '''
-#     def __init__(self):
-#         if self.arg.GCmodel:
-#             half_jump = 4  ## value comes from the 'resolution' used in epaleomix.py # resolution/2
-#             self._fasta_dat = Cache(self.arg.FastaPath)
-#             with open(self.arg.GCmodel, 'r') as f:
-#                 next(f)  # do not need the header
-#                 lst = []
-#                 self._models_dic = {}
-#                 prev_count = ''
-#                 for line in f:
-#                     curr_count, ratio = self._unpackgc(*re.split(r'\s+', line.rstrip()))
+class _GC_correction(object):
+    ''' This is for individual read length. Just Testing '''
+    def __init__(self):
+        if self.arg.GCmodel:
+            half_jump = 4  ## value comes from the 'resolution' used in epaleomix.py # resolution/2
+            self._fasta_dat = Cache(self.arg.FastaPath)
+            with open(self.arg.GCmodel, 'r') as f:
+                next(f)  # do not need the header
+                lst = []
+                self._models_dic = {}
+                prev_count = ''
+                for line in f:
+                    curr_count, ratio = self._unpackgc(*re.split(r'\s+', line.rstrip()))
 
-#                     if curr_count != prev_count and lst:
-#                         [self._updatedic(key, lst) for key in xrange(prev_count-half_jump,
-#                                                                        prev_count+half_jump+1)]
-#                         lst=[]
-#                     lst.append(ratio)
-#                     prev_count = curr_count
+                    if curr_count != prev_count and lst:
+                        [self._updatedic(key, lst) for key in xrange(prev_count-half_jump,
+                                                                       prev_count+half_jump+1)]
+                        lst=[]
+                    lst.append(ratio)
+                    prev_count = curr_count
 
-#             if lst:
-#                 [self._updatedic(key, lst) for key in xrange(prev_count-half_jump,
-#                                                              prev_count+half_jump+1)]
+            if lst:
+                [self._updatedic(key, lst) for key in xrange(prev_count-half_jump,
+                                                             prev_count+half_jump+1)]
 
-#     def _unpackgc(self, curr_count, content, ratio):
-#         return int(curr_count), float(ratio)
+    def _unpackgc(self, curr_count, content, ratio):
+        return int(curr_count), float(ratio)
 
-#     def _updatedic(self, key, lst):
-#         self._models_dic[key] = lst
+    def _updatedic(self, key, lst):
+        self._models_dic[key] = lst
 
-#     def _get_gc_corr_dep(self, record):
-#         if self.arg.GCmodel:
-#             try:
-#                 ## very few reads are aoutside min max length, they are given no enrichment
-#                 model = self._models_dic[record.alen]
-#             except KeyError:
-#                 return 1
-#             modellength = len(model)
-#             pos = record.aend-1-modellength if record.is_reverse else record.pos
-#             # pos = record.aend-1 if record.is_reverse else record.pos
-#             fasta_str = self._fasta_dat.fetch_string(self.chrom,
-#                                                      pos, modellength-1)
-#             gc_idx = fasta_str.count('G')+fasta_str.count('C')
-#             return model[gc_idx]
-        # else:
-        #     return 1
+    def _get_gc_corr_dep(self, record):
+        if self.arg.GCmodel:
+            try:
+                ## very few reads are aoutside min max length, they are given no enrichment
+                model = self._models_dic[record.alen]
+            except KeyError:
+                return 1
+            modellength = len(model)
+            pos = record.aend-1-modellength if record.is_reverse else record.pos
+            # pos = record.aend-1 if record.is_reverse else record.pos
+            fasta_str = self._fasta_dat.fetch_string(self.chrom,
+                                                     pos, modellength-1)
+            gc_idx = fasta_str.count('G')+fasta_str.count('C')
+            return model[gc_idx]
+        else:
+            return 1

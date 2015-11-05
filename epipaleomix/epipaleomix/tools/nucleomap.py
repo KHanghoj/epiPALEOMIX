@@ -192,7 +192,6 @@ def parse_args(argv):
     parser.add_argument('--DequeLength', help="..", type=int, default=1000)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--MinAlignmentLength', help="..", type=int, default=25)
-    
     parser.add_argument('--NucleosomeSize', dest='SIZE', help="..", type=int, default=147)
     parser.add_argument('--NucleosomeFlanks', dest='FLANKS', help="..", type=int, default=25)
     parser.add_argument('--NucleosomeOffset', dest='OFFSET', help="..", type=int, default=12)

@@ -22,7 +22,7 @@
   - discard long reads > 100 & only use the start of reads of a 100
     - consider using both ends for 100 reads single ends.
     - for paired-end data, we can use both ends for collapsed reads.
- - do auroch and send to both Ludovic and Bastien
+ - do auroch and send to both Ludovic and Bastien - done
 
 
 - send documentation and example to ludovic

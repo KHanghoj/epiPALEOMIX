@@ -67,7 +67,7 @@ with(df, lines(gc_content,refdensity, col='blue'))
 legend('topright', c('ReadDensity', 'RefDensity') ,
           lty=1, col=c('red', 'blue'), bty='n', cex=.75)
 
-upper.bound = 4 # a upper bound on the enrichment of reads
+upper.bound = 5 # a upper bound on the enrichment of reads
 lower.bound = 1/upper.bound
 df$ratio[df$ratio > upper.bound] = upper.bound
 df$ratio[df$ratio < lower.bound] = lower.bound

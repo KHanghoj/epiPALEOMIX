@@ -55,10 +55,8 @@ class Nucleosome_Prediction(GC_correction):
                     _jump_idx -= 1
         self._last_pos = record.pos
 
-        if record.is_reverse:
-            corr_depth = self._get_gc_corr_dep(record.aend-self._GC_model_len)
-        else:
-            corr_depth = self._get_gc_corr_dep(record.pos)
+     
+        corr_depth = self._get_gc_corr_dep(record)
 
         for (cigar, count) in record.cigar:
             if cigar in (0, 7, 8):

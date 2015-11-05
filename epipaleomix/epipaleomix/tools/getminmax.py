@@ -5,7 +5,7 @@ def main(pathtobam, readswithinrange):
     within_count = readswithinrange
     with pysam.AlignmentFile(pathtobam, "rb") as samfile:
         for rec in samfile:
-            if rec.alen< 30 or rec.mapq < 25 or rec.is_unmapped:
+            if rec.alen < 25 or rec.mapq < 25 or rec.is_unmapped:
                 continue
             current=rec.alen
             if init:

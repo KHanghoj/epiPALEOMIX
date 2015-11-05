@@ -25,10 +25,13 @@ def getmappachroms(args):
 def run(args):
     """ does not check if header is present in mappability file """ 
     mappachroms = getmappachroms(args)
+    if args.ChromUsed.lower() == "all":
+        args.ChromUsed = "all"
+        mappachroms.add("all")
     assert (args.ChromUsed in mappachroms) , ("'ChromUsed' chromosome: '%s' chosen for GC-correction is not"
                                               " available in the Mappability file (--MappabilityPath):"
                                               "\n\t'%s'\nMake sure to just same prefixes"
-                                              "in ChromUsed and Mappability file\n"
+                                              "in ChromUsed and Mappability file\nIf you want to go through all mappability regions, set ChromUsed: all\n"
                                               "ChromUsed prefixes can be changed in the makefile easily") % (args.ChromUsed, ' '.join(sorted(mappachroms)))
 
 def main(argv):
