@@ -201,7 +201,7 @@ def parse_args(argv):
 def run(args):
     samfile = pysam.Samfile(args.bam, "rb")
     nucl_pred_cls = Nucleosome_Prediction(args)
-    flanks = (nucl_pred_cls._TOTAL_WIN_LENGTH/2)+1
+    flanks = int(nucl_pred_cls._TOTAL_WIN_LENGTH/2)
     for chrom, start, end, bedcoord in read_bed(args):
         nucl_pred_cls.reset_deques(chrom, start, end, bedcoord)
         start = 0 if start-flanks < 0 else start-flanks

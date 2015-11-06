@@ -151,7 +151,7 @@ def calc_gcmodel(d_bam):
                                  subn=concat_gcsubnodes(GccorrectMidNode, d_bam,
                                                         xrange(rlmin, rlmax+1, 15)))
     return []
-    #     resolution = 9
+    #     resolution = 5
     #     return concat_gcsubnodes(CreateGCModelNode, d_bam,
     #                              xrange(rlmin, rlmax+resolution, resolution))
     # return []

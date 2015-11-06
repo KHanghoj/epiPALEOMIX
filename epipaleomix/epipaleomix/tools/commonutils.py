@@ -109,7 +109,7 @@ class _GC_correction(object):
     ''' This is for individual read length. Just Testing '''
     def __init__(self):
         if self.arg.GCmodel:
-            half_jump = 4  ## value comes from the 'resolution' used in epaleomix.py # resolution/2
+            half_jump = 2  ## value comes from the 'resolution' used in epaleomix.py # resolution/2
             self._fasta_dat = Cache(self.arg.FastaPath)
             with open(self.arg.GCmodel, 'r') as f:
                 next(f)  # do not need the header
