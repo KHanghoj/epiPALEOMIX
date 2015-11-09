@@ -87,7 +87,6 @@ def parse_args(argv):
     parser.add_argument('--MappabilityPath', type=str)
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
-    ## parser.add_argument('--ChromUsed', help="...", type=str, default='22')
     parser.add_argument('--ChromUsed', help="...", type=str)
     parser.add_argument('--NoRegions', help="...", type=int, default=200)    
     parser.add_argument('--OffSet', type=str,

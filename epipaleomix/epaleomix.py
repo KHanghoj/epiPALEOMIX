@@ -124,8 +124,7 @@ def update_excludebed(d_make, d_bam):
 
 
 def getdequelen(d_bam):
-    no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
-    rlmin, rlmax = getminmax.main(d_bam.baminfo['BamPath'], no_reads)
+    rlmin, rlmax = getminmax.main(d_bam.baminfo)
     d_bam.opts['WriteDepth']['--DequeLength'] = rlmax
     d_bam.opts['NucleoMap']['--DequeLength'] = rlmax
     return rlmin, rlmax

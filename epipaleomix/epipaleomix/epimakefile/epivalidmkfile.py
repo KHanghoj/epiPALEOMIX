@@ -31,15 +31,17 @@ _VALID_BED_NAME = _VALID_TARGET_NAME = \
 _VALIDATION_OPTIONS = {
     "BamPath": IsStr,
     "--MinMappingQuality": IsUnsignedInt(default=30),
-    "--MinAlignmentLength": IsUnsignedInt(default=25)
+    "--MinAlignmentLength": IsUnsignedInt(default=25),
+    "--NoReadsChecked": IsUnsignedInt(default=10000)
 }
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=False),
-    "NoReadsChecked": IsUnsignedInt(default=10000),
     "--NoRegions": Or(IsUnsignedInt, IsStr, default=200), ## Add a key to check all 
     "--ChromUsed": Or(IsStr,IsUnsignedInt, default="all"),   ## the is new
     "--MappaUniqueness": IsFloat(default=0.9)
 }
+
+
 
 _VALIDATION_NUCLEO = {
     "Enabled": IsBoolean(default=False),
