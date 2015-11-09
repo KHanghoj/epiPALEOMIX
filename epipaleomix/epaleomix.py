@@ -186,7 +186,8 @@ def make_outputnames(config, make):
     filename = make["Statistics"]["Filename"]
     outputname = os.path.splitext(os.path.basename(filename))[0]
     config.makefiledest = os.path.join(config.destination, 'OUT_' + outputname)
-    config.temp_local = os.path.join(config.makefiledest, 'TEMPORARYFILES_' + outputname)
+    # config.temp_local = os.path.join(config.makefiledest, 'TEMPORARYFILES_' + outputname)
+    config.temp_local = os.path.join(config.destination, 'TEMPORARYFILES_' + outputname)    
     check_path(config.makefiledest)
     check_path(config.temp_local)
 

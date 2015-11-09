@@ -35,7 +35,7 @@ _VALIDATION_OPTIONS = {
 }
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=False),
-    "NoReadsChecked": IsUnsignedInt(default=100000),
+    "NoReadsChecked": IsUnsignedInt(default=10000),
     "--NoRegions": Or(IsUnsignedInt, IsStr, default=200), ## Add a key to check all 
     "--ChromUsed": Or(IsStr,IsUnsignedInt, default="all"),   ## the is new
     "--MappaUniqueness": IsFloat(default=0.9)
@@ -52,7 +52,7 @@ _VALIDATION_NUCLEO = {
 _VALIDATION_METHYL = {
     "Enabled": IsBoolean(default=False),
     "ExcludeBed": Or(IsListOf(IsStr), IsStr, IsNone, default=None),
-    "--ReadBases": IsUnsignedInt(default=6),
+    "--ReadBases": IsUnsignedInt(default=15),
     "--SkipThreePrime": IsUnsignedInt(default=0),
     "--SkipFivePrime": IsUnsignedInt(default=0),
     "--Primes": IsStr
@@ -62,7 +62,7 @@ _VALIDATION_PHASO = {
     "ExcludeBed": Or(IsListOf(IsStr), IsStr, IsNone, default=None),
     "Apply_GC_Correction": IsBoolean(default=False),
     "--SubsetPileup": IsUnsignedInt(default=3),
-    "--MaxRange": IsUnsignedInt(default=3000)
+    "--MaxRange": IsUnsignedInt(default=1000)
 }
 _VALIDATION_WRITEDEPTH = {
     "Enabled": IsBoolean(default=False),
