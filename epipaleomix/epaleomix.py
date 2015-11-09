@@ -105,23 +105,23 @@ def main_anal_to_run(bedinfo , opts):
         if analysis in ANALYSES and options['Enabled'] and (bedn not in options['ExcludeBed']):
             yield analysis
 
-
-
-
 def update_excludebed(d_make, d_bam):
-    enabl_filter = d_make.bedfiles.get('EnabledFilter', False)
-    if enabl_filter:
-        for anal, opts in d_bam.opts.iteritems():
-            if anal in ANALYSES:
-                excl_bed = opts.get('ExcludeBed')
-                if isinstance(excl_bed, str):
-                    opts['ExcludeBed'] = [excl_bed+"MappaOnly"]
-                elif isinstance(excl_bed, list):
-                    opts['ExcludeBed'] = [bed+"MappaOnly" for bed in excl_bed]
-                elif excl_bed is None:
-                    opts['ExcludeBed'] = []
-                else:
-                    raise MakefileError('Exclude bed in %s is incorrect. Must be a str, list, or None' % (anal,))
+    fmt = "{}".format
+    if d_make.bedfiles.get('EnabledFilter', False):
+        fmt = "{}MappaOnly".format
+
+    for anal, opts in d_bam.opts.iteritems():
+        if anal in ANALYSES:
+            excl_bed = opts.get('ExcludeBed')
+            if isinstance(excl_bed, str):
+                opts['ExcludeBed'] = [fmt(excl_bed)]
+            elif isinstance(excl_bed, list):
+                opts['ExcludeBed'] = [fmt(bed) for bed in excl_bed]
+            elif excl_bed is None:
+                opts['ExcludeBed'] = []
+            else:
+                raise MakefileError('Exclude bed in %s is incorrect. Must be a str, list, or None' % (anal,))
+
 
 def getdequelen(d_bam):
     no_reads = d_bam.opts['GCcorrect'].get('NoReadsChecked', MakefileError)
@@ -144,7 +144,6 @@ def calc_gcmodel(d_bam):
         chromused_coerce_to_string(d_bam)
         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
                                     d_bam.opts['GCcorrect'].get('--ChromUsed', MakefileError)])
-
         return concat_gcsubnodes(CreateGCModelNode,
                                  d_bam,
                                  FINETUNERANGE,

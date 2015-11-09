@@ -39,8 +39,8 @@ class GCcorrect(object):
             else:
                 self._update(record.pos, self.reads_forw)
         
-        if cov/region_size > 2:  ## a minimum coverage of 2 in the region
-#        if self.reads_forw and self.reads_back:
+        # if cov/region_size > 2:  ## a minimum coverage of 2 in the region
+        if self.reads_forw and self.reads_back:
             self.noregions -= 1
             for rela_pos, gc in self._short_seq(self.rl):
                 curr_start = rela_pos+self.start
