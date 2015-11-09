@@ -150,7 +150,8 @@ def parse_args(argv):
 def run(args):
     samfile = pysam.Samfile(args.bam, "rb")
     Corr_Depth = Write_Depth(args)
-    flanks = (Corr_Depth._TOTAL_WIN_LENGTH/2)+1
+    # flanks = (Corr_Depth._TOTAL_WIN_LENGTH/2)+1
+    flanks = Corr_Depth._TOTAL_WIN_LENGTH
     for chrom, start, end, bedcoord in read_bed(args):
         Corr_Depth.reset_deques(chrom, start, end, bedcoord)
         start = 0 if start-flanks < 0 else start-flanks
