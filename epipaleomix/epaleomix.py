@@ -134,8 +134,8 @@ def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
 
 ### if individual readlength to be used
 ### changes nodes/gccorrect to used the nodes in the very bottom.
-### inherit indinode insteand of nornormal in tools.commonutils
 ### used model_gc_individualreadlength.R instead of model_gc.R in createmodelNode 
+### inherit indinode instead of nornormal in tools.commonutils
 
 def calc_gcmodel(d_bam):
     rlmin, rlmax = getdequelen(d_bam)
@@ -143,15 +143,15 @@ def calc_gcmodel(d_bam):
         chromused_coerce_to_string(d_bam)
         checkmappabilitychrom.main([d_bam.prefix.get('--MappabilityPath', MakefileError),
                                     d_bam.opts['GCcorrect'].get('--ChromUsed', MakefileError)])
-        return concat_gcsubnodes(CreateGCModelNode,
-                                 d_bam,
-                                 FINETUNERANGE,
-                                 subn=concat_gcsubnodes(GccorrectMidNode, d_bam,
-                                                        xrange(rlmin, rlmax+1, 15)))
+        resolution = 5
+        return concat_gcsubnodes(CreateGCModelNode, d_bam,
+                                 xrange(rlmin, rlmax+resolution, resolution))
     return []
-    #     resolution = 5
-    #     return concat_gcsubnodes(CreateGCModelNode, d_bam,
-    #                              xrange(rlmin, rlmax+resolution, resolution))
+    #     return concat_gcsubnodes(CreateGCModelNode,
+    #                              d_bam,
+    #                              FINETUNERANGE,
+    #                              subn=concat_gcsubnodes(GccorrectMidNode, d_bam,
+    #                                                     xrange(rlmin, rlmax+1, 15)))
     # return []
 
 def check_chrom_prefix(d_make):
@@ -172,7 +172,7 @@ def run_analyses(anal, d_bam, d_make, bedinfo, splitbednode, gcnode):
                                         subnodes=gcnode,
                                         dependencies=splitbednode))
     mergenode = MergeDataFilesNode(d_bam, anal, bedn, subnodes=nodes)
-    ## TODO:::: if writedepth and bedoptionmerge == TRUE:
+    ## TODO:::: if writedepth and bedoptionmerge == TRUE: 
     ## TODO::::     apply the merger script that i just already on the mergeNode
     ## TODO:::: if methylation cleaning True in bed file. remove all SNPs based on databased already created
     ## TODO:::: if nucleomap and Advancednucleomap is TRUE. apply it here. 

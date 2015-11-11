@@ -12,7 +12,7 @@ Rscript_VERSION = versions.Requirement(call   = ("Rscript", "--version"),
 GC_NAME = '_GCcorrect'
 
 
-class GccorrectNode(Node):
+class _GccorrectNodeOLD(Node):
     def __init__(self, d_bam, rl, subnodes=(), dependencies=()):
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))
@@ -52,10 +52,10 @@ class GccorrectNode(Node):
 
 class CreateGCModelNode(CommandNode):
     def __init__(self, d_bam, subnodes=()):
-        aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
-                             'model_gc.R')
         # aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
-        #                      'model_gc_individualreadlength.R')
+        #                      'model_gc.R')
+        aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
+                             'model_gc_individualreadlength.R')
         call = ['Rscript', aux_r, '%(IN_SOURCE)s', str(d_bam.bam_name+GC_NAME),
                 '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
         dest = os.path.join(d_bam.bam_output,
@@ -97,7 +97,7 @@ class GccorrectMidNode(Node):
 
 
 ### this is for individual readlength gccorrection
-class _GccorrectNode(Node):
+class GccorrectNode(Node):
     def __init__(self, d_bam, rl, subnodes=(), dependencies=()):
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))

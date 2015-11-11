@@ -1,3 +1,9 @@
+awk  '{if($6>200) print $9}' CTCF_human.gff | sed '/^[XYM]/ d' | sed 's/:/\t/g' | sed 's/\.[0-9]//g' | awk '{OFS="\t"} {print $1, $2-1000, $2+1000}' |sort -V | bedtools merge -c 1,2,3 -o first  | cut -f 4,5,6  > CTCF_TOP200scoresGFF_rmoverllaping.bed
+
+bedtools merge -c 1,2,3 -o first -i CTCF_ALLHUMANfromGFF.bed | cut -f 4,5,6 > CTCF_ALLHUMANfromGFF_rmoverllaping.bed
+
+cut -f 9 CTCF_human.gff | sed 's/:/\t/g' | sed "s/\.[0-9]//g" | sed '/^[XYM]/ d'|awk '{OFS="\t"} {print $1, $2-1000, $2+1000}'|sort -k 1,1n -k 2,2n >CTCF_ALLHUMAN55000.bed
+
 awk '{OFS="\t"} {$2=$2-100; $3=$3+100; print $0}' CTCF_human_2kb_rmoverlap_wochr.bed > CTCF_plus100.bed
 samtools view -hb Saqqaq.hg19.flt.sort.rmdup.realign.md.bam -L CTCF_plus100.bed > TUTORIAL_CTCF.bam
 
