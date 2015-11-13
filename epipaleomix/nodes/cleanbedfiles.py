@@ -1,12 +1,12 @@
-import os
+#!/usr/bin/env python
+from pypeline.common.fileutils import move_file, reroot_path
 from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
+import pypeline.common.versions as versions
 from epipaleomix.tools import splitbedfiles
 from epipaleomix.tools import merge_datafiles
-
-import pypeline.common.versions as versions
-
+import os, re
 
 BEDTOOLS_VERSION = versions.Requirement(call   = ("bedtools", "--version"),
                                         search = r"bedtools v?(\d+)\.(\d+)\.(\d+)",
@@ -31,7 +31,8 @@ class CleanFilesNode(CommandNode):
         call1 = ["python", os.path.join(prefix, 'filtermappa.py'),
                  "%(IN_MAPPA)s", str(unique)]
         call2 = ["bedtools", "intersect", "-wb", "-a", "stdin", "-b" ,"%(IN_BED)s"]
-        call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
+        ## call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
+        call3 = ["sort", "-k 4,4", "-k 5,5n", "-k 2,2n"]
         call4 = ["python", os.path.join(prefix, "updatebedcoord.py")]
 
         cmd1 = AtomicCmd(call1,
@@ -76,9 +77,17 @@ class SplitBedFileNode(Node):
                       dependencies=dependencies)
         assert isinstance(self.outputnames, list), "output has to be a list of strings"
 
-    def _run(self, _config, _temp):
-        inputs = [self.inbedfile]+self.outputnames
+    def _run(self, _config, temp):
+        temp_outputnames = [reroot_path(temp, dest) for dest in self.outputnames]
+        inputs = [self.inbedfile]+temp_outputnames
+        # inputs = [self.inbedfile]+self.outputnames
         splitbedfiles.main(inputs)
+
+    def _teardown(self, _config, temp):
+        for dest in self.outputnames:
+            move_file(reroot_path(temp, dest), dest)
+
+        Node._teardown(self, _config, temp)
 
     def _createbednames(self):
         ''' make each bedfile filename '''
@@ -93,11 +102,10 @@ class MergeDataFilesNode(Node):
     def __init__(self, d_bam, anal, bedn, subnodes=(), dependencies=()):
         self.infiles = [''.join(n.output_files) for n in subnodes]
         self.anal = anal
-        opt_arg = d_bam.retrievedat(anal)
-        self.analname = anal + 'GCcorr' if opt_arg.get('Apply_GC_Correction', False) else anal
+        analname = self._check_gccorr_name(anal, self.infiles[0])
         self.dest = os.path.join(d_bam.bam_output,
                                 d_bam.fmt.format(d_bam.bam_name,
-                                                 self.analname,
+                                                 analname,
                                                  bedn))
         assert self.infiles, "No temporary files to merge"
         if len(self.infiles) > 1:
@@ -115,9 +123,33 @@ class MergeDataFilesNode(Node):
                       subnodes=subnodes,
                       dependencies=dependencies)
 
-    def _run(self, _config, _temp):
-        inputs = [self.anal, self.dest] + self.infiles  # INFILES IS A LIST ALREADY
+    # def _run(self, _config, _temp):
+    #     inputs = [self.anal, self.dest] + self.infiles  # INFILES IS A LIST ALREADY
+    #     assert len(inputs) > 2, 'Need at least one output and one input'
+    #     if self.anal == 'Phasogram':
+    #         inputs.append('--merge')
+    #     merge_datafiles.main(inputs)
+
+    def _run(self, _config, temp):
+        dest = reroot_path(temp, self.dest)
+        inputs = [self.anal, dest] + self.infiles
         assert len(inputs) > 2, 'Need at least one output and one input'
         if self.anal == 'Phasogram':
             inputs.append('--merge')
         merge_datafiles.main(inputs)
+
+    def _teardown(self, _config, temp):
+        move_file(reroot_path(temp, self.dest), self.dest)
+
+        Node._teardown(self, _config, temp)
+
+
+    def _check_gccorr_name(self, anal, infile):
+        curr_bamname, curr_anal, curr_bedname, _ = os.path.basename(infile).split('_')
+
+        checkname = anal+"GCcorr"
+        if re.search(checkname, curr_anal):
+            anal += "GCcorr"
+        assert anal == curr_anal, "Trying to merge different types of analyses: %s and %s" % (anal, curr_anal)
+        return anal
+

@@ -1,6 +1,9 @@
+#!/usr/bin/env python
 from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.common.fileutils import move_file, reroot_path
 import os
+
 from epipaleomix.tools import \
     pileupdepth, \
     nucleomap, \
@@ -31,15 +34,16 @@ class GeneralExecuteNode(Node):
     def __init__(self, anal, d_bam, bed_name, bed_path, subnodes=(), dependencies=()):
         self.analysis = MODULES[anal]
         self.infile, self.d_bam = d_bam.baminfo['BamPath'], d_bam
-
+        self.bed_path, self.anal = bed_path, anal
         # note anal name checked for GC-correction, and changed if  yes
         subnodes, analname = self._correct_subnodes(subnodes, anal)
 
         out_f_name = d_bam.fmt.format(d_bam.bam_name, analname, bed_name)
         self.dest = os.path.join(d_bam.bam_temp_local, out_f_name)
-        self.inputs = [self.infile, bed_path, self.dest]
-        self._add_options(anal)
+        ## self.desttemp = os.path.join(d_bam.bam_temp_local, out_f_name)
 
+
+        
         description = "<ANALYSIS:'%s', BAM: %s, Bed:'%s'" % \
                       (analname, d_bam.bam_name, bed_name)
         Node.__init__(self,
@@ -49,8 +53,16 @@ class GeneralExecuteNode(Node):
                       subnodes=subnodes,
                       dependencies=dependencies)
 
-    def _run(self, _config, _temp):
+    def _run(self, _config, temp):
+        dest = reroot_path(temp, self.dest)
+        self.inputs = [self.infile, self.bed_path, dest]
+        self._add_options(self.anal)
         self.analysis(self.inputs)
+
+    def _teardown(self, _config, temp):
+        move_file(reroot_path(temp, self.dest), self.dest)
+
+        Node._teardown(self, _config, temp)
 
     def _add_options(self, name):
         opt_arg = self.d_bam.retrievedat(name)
@@ -61,7 +73,7 @@ class GeneralExecuteNode(Node):
                     continue
                 if not isinstance(argument, str):
                     argument = str(argument)
-                self.inputs.extend((option, argument))
+                self.inputs.extend([option, argument])
 
     def _correct_subnodes(self, subnodes, name):
         ''' As not all analyses requires to wait for gccorrection model.
