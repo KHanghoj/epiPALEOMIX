@@ -123,13 +123,6 @@ class MergeDataFilesNode(Node):
                       subnodes=subnodes,
                       dependencies=dependencies)
 
-    # def _run(self, _config, _temp):
-    #     inputs = [self.anal, self.dest] + self.infiles  # INFILES IS A LIST ALREADY
-    #     assert len(inputs) > 2, 'Need at least one output and one input'
-    #     if self.anal == 'Phasogram':
-    #         inputs.append('--merge')
-    #     merge_datafiles.main(inputs)
-
     def _run(self, _config, temp):
         dest = reroot_path(temp, self.dest)
         inputs = [self.anal, dest] + self.infiles
@@ -146,10 +139,9 @@ class MergeDataFilesNode(Node):
 
     def _check_gccorr_name(self, anal, infile):
         curr_bamname, curr_anal, curr_bedname, _ = os.path.basename(infile).split('_')
+        # if re.search("GCcorr", curr_anal):
+        #     anal += "GCcorr"
+        # assert anal == curr_anal, "Trying to merge different types of analyses: %s and %s" % (anal, curr_anal)
+        # return anal
 
-        checkname = anal+"GCcorr"
-        if re.search(checkname, curr_anal):
-            anal += "GCcorr"
-        assert anal == curr_anal, "Trying to merge different types of analyses: %s and %s" % (anal, curr_anal)
-        return anal
-
+        return curr_anal

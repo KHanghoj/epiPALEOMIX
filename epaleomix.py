@@ -19,7 +19,6 @@ from epipaleomix.tools.commonutils import check_path
 from epipaleomix.config import parse_config, __version__
 from epipaleomix.epimakefile import epicreatemkfile
 from epipaleomix.epimakefile.epivalidmkfile import read_epiomix_makefile
-from epipaleomix.set_procname import set_procname
 from epipaleomix.tools import checkchromprefix, \
     checkmappabilitychrom, \
     getminmax
@@ -124,10 +123,10 @@ def update_excludebed(d_make, d_bam):
 
 
 def getdequelen(d_bam):
-    rlmin, rlmax = getminmax.main(d_bam.baminfo)
+    rlmin, rlmax, gcmax = getminmax.main(d_bam.baminfo)
     d_bam.opts['WriteDepth']['--DequeLength'] = rlmax
     d_bam.opts['NucleoMap']['--DequeLength'] = rlmax
-    return rlmin, rlmax
+    return rlmin, gcmax
 
 def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
     return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn) for rl in gcwindows])]
@@ -252,7 +251,6 @@ def _print_usage():
 
 
 def main(argv):
-    set_procname("epiPALEOMIX")
     try:
         config, args = parse_config(argv)
         if args and args[0].startswith("dry"):

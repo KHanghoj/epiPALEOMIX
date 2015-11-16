@@ -10,8 +10,7 @@ def parse_args(argv):
     parser.add_argument('--NoReadsChecked', type=int) 
     return parser.parse_known_args(argv)
 
-def converttolist(argv):
-    
+def converttolist(argv):    
     arg = [argv.get('BamPath')]
     for key, pos in argv.items():
         if key.startswith('--'):
@@ -24,6 +23,8 @@ def main(argv):
     args, unknown = parse_args(converttolist(argv))
     init = 1
     within_count = args.NoReadsChecked
+    lst = []
+    lstapp = lst.append
     with pysam.AlignmentFile(args.BamPath, "rb") as samfile:
         for rec in samfile:
             if (rec.alen < args.MinAlignmentLength or
@@ -31,6 +32,7 @@ def main(argv):
                     rec.is_unmapped):
                 continue
             current=rec.alen
+            lstapp(current)
             if init:
                 upperbound = current
                 lowerbound = current
@@ -46,10 +48,13 @@ def main(argv):
                 within_count -= 1
             if not within_count:
                 break
-    return (lowerbound, upperbound)
+    lst.sort()
+    top_ninetyfive = lst[int(0.95*len(lst))]
+    return (lowerbound, upperbound, top_ninetyfive)
 
 
 
 
 if __name__ == '__main__':
-    print main('/Users/krishang/Desktop/example/saqqaq_chrom22.bam', 25, 27, 50000)
+    pass
+    ## print main('/Users/krishang/Desktop/example/saqqaq_chrom22.bam', 25, 27, 50000)
