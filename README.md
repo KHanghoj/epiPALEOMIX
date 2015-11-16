@@ -4,9 +4,9 @@ A Fast, Accurate, and Automatic pipeline for generating nucleosome and methylati
 
 ## Brief description
 
-*   [Overview](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-Overview)
-*   [Installation](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-Installation)
-*   [How to run epiPALEOMIX](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-How-to-run-epiPALEOMIX)
+*   [Overview](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-overview)
+*   [Installation](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-installation)
+*   [How to run epiPALEOMIX](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-how-to-run-epiPALEOMIX)
 *   [Tutorial](tutorial.html)
 
 # Overview
