@@ -5,8 +5,8 @@ A Fast, Accurate, and Automatic pipeline for generating nucleosome and methylati
 ## Brief description
 
 *   [Overview](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-Overview)
-*   [Installation](installation.html)
-*   [How to run epiPALEOMIX](how_to_run_metabit.html)
+*   [Installation](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-Installation)
+*   [How to run epiPALEOMIX](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-How-to-run-epiPALEOMIX)
 *   [Tutorial](tutorial.html)
 
 # Overview
@@ -16,9 +16,7 @@ The pipeline takes BAM-format ([Binary form of SAM format](http://bioinformatics
 
 ## What it does
 epiPALEOMIX: an open-source pipeline for ancient epigenomic analyses
-This package is written in [Python 2.7](https://www.python.org/) and builds on the implementation of the [PALEOMIX pipeline](https://github.com/MikkelSchubert/paleomix/wiki/Overview), with makefiles in yaml format (http://yaml.org/). The epiPALEOMIX package handles any type of molecular tools used to prepare aDNA data (including USER-treatment of aDNA extracts and Phusion amplification of aDNA libraries). BAM alignment files([Binary form of SAM format](http://bioinformatics.oxfordjournals.org/content/25/16/2078)), bed coordinates for genomic regions of interest and a reference genome in fasta format are taken as input files. Mappability files can be optionally supplied to restrict nucleosome calling and pileup output to uniquely mappable regions of the genome.
-
-The epiPALEOMIX pipeline produces flat tabulated output files in gzip format. Output files of methylation analyses contain genomic position, counts of deaminated reads, coverage. Nucleosome maps are provided as output files showing the genomic coordinates for each predicted nucleosome, peak read-depth, and nucleosome calling score. Phasogram output files contain the distribution of distances between successive read starts within a window of size defined by users. (4) WriteDepth contains genomic position, read depth, running nucleosome score. The package also implements a read-depth correction procedure for variation in %GC content. When the GC-correction option is enabled, the model created and used in the analyses is provided as an additional output together with the GC-corrected read depth for each genomic position.
+This package is written in [Python 2.7](https://www.python.org/) and builds on the implementation of the [PALEOMIX pipeline](https://github.com/MikkelSchubert/paleomix/wiki/Overview), with makefiles in yaml format (http://yaml.org/). The epiPALEOMIX package handles any type of molecular tools used to prepare aDNA data (including USER-treatment of aDNA extracts and Phusion amplification of aDNA libraries). BAM alignment files([Binary form of SAM format files](http://bioinformatics.oxfordjournals.org/content/25/16/2078)), bed coordinates for genomic regions of interest and a reference genome in fasta format are taken as input files. Mappability files can be optionally supplied to restrict nucleosome calling and pileup output to uniquely mappable regions of the genome.
 
 ## Citation
 
@@ -30,27 +28,29 @@ Hanghøj K., ... , Orlando L. _Title_
 
 *   Python 2.7.3-10
 *   R v2.15+
-
-Strongly Recommended tool for BAM/SAM file manipulations although not required for epiPALEOMIX:
 *   [SAMTools](http://samtools.sourceforge.net) v0.1.18+ ([Li et al 2009](http://bioinformatics.oxfordjournals.org/content/25/16/2078.long))
 
 *   Python modules:
     *   [pysam](https://github.com/pysam-developers/pysam/) v0.8+
 
+            $ easy_install pip  # Pip is a python package manager.
+            $ pip install pysam
+
+
 ## epiPALEOMIX pipeline installation
 
 *   Install all required dependencies as listed above.
 
-* Download and extract the [epiPALEOMIX archive](bitbucket). You can use the command-lines below:
+* Download and extract the [epiPALEOMIX archive](https://bitbucket.org/khanghoj/epiomix/overview). You can use the command-lines below:
 
-        $ git clone bitbucketpath
+        $ git clone https://khanghoj@bitbucket.org/khanghoj/epiomix.git
         or
-        $ wget bitbucketpath or something else
+        $ wget https://khanghoj@bitbucket.org/khanghoj/epiomix.git
 
-* You can optionally create a link to add epiPALEOMIX in your path. For example, if ~/bin is in your executable path ($PATH):
+* You can optionally create a symbolic link to add epiPALEOMIX in your executable paths to avoid writing the full path. For example, if ~/bin is in your executable path ($PATH):
 
         $ cd ~/bin
-        $ ln -s -T path/to/epipaleomix/epaleomix.py epiPALEOMIX
+        $ ln -s -T path/to/epiomix/epaleomix.py epiPALEOMIX
 
 ## Setting default optional arguments
 
@@ -58,15 +58,13 @@ Strongly Recommended tool for BAM/SAM file manipulations although not required f
 
         $ epiPALEOMIX --max-threads 20  --write-config-file
 
-* In case a default argument needs to be modified, simply overrule it in the command line (see below) or change the `~/.pypeline/epiPALEOMIX.ini` file
+* In case a default argument needs to be modified, simply overrule it in the command line, as shown below, or change the `~/.pypeline/epiPALEOMIX.ini` file
 
         $ epiPALEOMIX run makefile.yaml --max-threads 4
 
 * If a config file is created, the configuration file will be automatically parsed every time epiPALEOMIX is executed, thus the command would be:
 
         $ epiPALEOMIX run makefile.yaml
-
-
 
 
 # How to run epiPALEOMIX
@@ -95,12 +93,12 @@ For an example run, see [Tutorial](tutorial.html)
 
 ## Explaining the output of epiPALEOMIX
 
-Assuming the results have been saved in the directory "OUT_makefile", you will find the following folders:
+Two folder are generated when running the epiPALEOMIX pipeline. Assuming no `--destination` option added two folders are created in the current working directory:
 
-* One folder for each BAM-file analyzed. It contains final output files generated by epiPALEOMIX in _"BAMName\_AnalysisName\_BedName.txt.gz"_ format.
+1. "OUT__makefileName_" contains One folder for each BAM-file analyzed containing final output files generated by epiPALEOMIX in _"BAMName\_AnalysisName\_BedName.txt.gz"_ format.
+2. A "TEMP__makefile_" folder containing all temporary files generated by epiPALEOMIX. No Final results are located in this folder.
 
-* A "TEMP_makefile" folder containing all temporary files generated by epiPALEOMIX. 
-
+The epiPALEOMIX pipeline produces flat tabulated output files in gzip format. Output files of methylation analyses contain genomic position, counts of deaminated reads, coverage. Nucleosome maps are provided as output files showing the genomic coordinates for each predicted nucleosome, peak read-depth, and nucleosome calling score. Phasogram output files contain the distribution of distances between successive read starts within a window of size defined by users. (4) WriteDepth contains genomic position, read depth, running nucleosome score. The package also implements a read-depth correction procedure for variation in %GC content. When the GC-correction option is enabled, the model created and used in the analyses is provided as an additional output together with the GC-corrected read depth for each genomic position.
 
 
 
