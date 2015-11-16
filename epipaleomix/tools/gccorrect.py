@@ -63,8 +63,9 @@ class GCcorrect(object):
     def _short_seq(self, rl):
         ''' seq_fasta, length of read, return seq'''
         region_size, region_seq = self._retrieve_fastaseq()
-#        for idx in xrange(region_size - (rl - 1)):
-        for idx in xrange(0, region_size - (rl - 1), rl):            
+        #        for idx in xrange(region_size - (rl - 1)):
+        jump = int(rl/2)
+        for idx in xrange(0, region_size - (rl - 1), jump):
             seq = region_seq[(idx+_BUFFER): (idx+rl-_BUFFER)]
             yield (idx+_BUFFER, (seq.count('C')+seq.count('G')))
 
