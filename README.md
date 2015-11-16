@@ -42,11 +42,11 @@ Strongly Recommended tool for BAM/SAM file manipulations although not required f
 *   Install all required dependencies as listed above.
 
 * Download and extract the [epiPALEOMIX archive](bitbucket). You can use the command-lines below:
-``` bash
+
         $ git clone bitbucketpath
         or
         $ wget bitbucketpath or something else
-```
+
 * You can optionally create a link to add epiPALEOMIX in your path. For example, if ~/bin is in your executable path ($PATH):
 
         $ cd ~/bin
