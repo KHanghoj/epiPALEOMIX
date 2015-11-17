@@ -19,10 +19,10 @@ from epipaleomix.tools.commonutils import check_path
 from epipaleomix.config import parse_config, __version__
 from epipaleomix.epimakefile import epicreatemkfile
 from epipaleomix.epimakefile.epivalidmkfile import read_epiomix_makefile
+from epipaleomix.nodes.execute import GeneralExecuteNode
 from epipaleomix.tools import checkchromprefix, \
     checkmappabilitychrom, \
     getminmax
-
 from epipaleomix.tools.bamdatastructure import BamCollect, \
     MakeCollect, \
     MakefileError
@@ -30,15 +30,12 @@ from epipaleomix.nodes.gccorrect import \
     GccorrectNode, \
     CreateGCModelNode, \
     GccorrectMidNode
-from epipaleomix.nodes.execute import \
-    GeneralExecuteNode, \
-    GeneralPlotNode
 from epipaleomix.nodes.cleanbedfiles import \
     CleanFilesNode, \
     SplitBedFileNode, \
     MergeDataFilesNode
 
-FINETUNERANGE = [-10, -5, 5, 10]
+# FINETUNERANGE = [-10, -5, 5, 10]
 ANALYSES = ['Phasogram', 'WriteDepth', 'NucleoMap', 'MethylMap']
 
 
@@ -175,10 +172,10 @@ def run_analyses(anal, d_bam, d_make, bedinfo, splitbednode, gcnode):
     ## TODO::::     apply the merger script that i just already on the mergeNode
     ## TODO:::: if methylation cleaning True in bed file. remove all SNPs based on databased already created
     ## TODO:::: if nucleomap and Advancednucleomap is TRUE. apply it here. 
-    if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is false -> no plot
-        return mergenode
-    infile = (out for out in mergenode.output_files).next()
-    return GeneralPlot(infile, anal, dependencies=[mergenode])
+    # if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is false -> no plot
+    return mergenode
+    # infile = (out for out in mergenode.output_files).next()
+    # return GeneralPlot(infile, anal, dependencies=[mergenode])
 
 def make_outputnames(config, make):
     filename = make["Statistics"]["Filename"]

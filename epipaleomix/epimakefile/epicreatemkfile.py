@@ -6,20 +6,16 @@ import datetime
 _TEMPLATE_EPIPALEOMIX = \
 """# -*- mode: Yaml; -*-
 # Timestamp: %s
-#DOT NOT CHANGES OPTIONS UNLESS OTHERWISE NOTED
 #DOT NOT CHANGES THE NAMES ON THIS INDENTATION LEVEL
 Prefixes:
     --FastaPath: path/to/referenceFastafile  # REQUIRED
-    --MappabilityPath: path/to/Mappabilityfile # leave empty if no mappability file
+    --MappabilityPath:  # path to mappability file, leave empty if none
 BedFiles:  # AT LEAST ONE BEDFILE IS REQUIRED
     EnabledFilter: False  # if True, bed coordinates not overlapping a mappability region with at at least 0.9 in uniqueness (user definable)
     UniquenessFilter: 0.9  # filtering bed regions with low uniqueness
-    Nameofbed: # SET TO A MEANINGFUL BEDNAME
-        Path: path/to/bedfile
-        MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
+    Nameofbed: path/to/bedfile 
     # Nameofbed1: # SET TO A MEANINGFUL BEDNAME
     #     Path: path/to/bedfile
-    #     MakeMergePlot: False  # i.e. if bedfile covers chr1  cannot merge data
 BamInputs:
     BAMName1:  # SET TO A MEANINGFUL BAMNAME 
         # DOT NOT CHANGES THE VARIABLE NAMES ON THIS INDENTATION LEVEL

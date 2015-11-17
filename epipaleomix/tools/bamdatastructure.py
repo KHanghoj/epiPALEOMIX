@@ -11,21 +11,18 @@ class MakeCollect(object):
         self.makefile = make.pop('Makefile', {})
         self.prefix = self.makefile.pop('Prefixes', {})
         self.beddata = self.makefile.pop('BedFiles', {})
-        self.bedfiles, self.bed_plot = self._splitbedopts()
-        self.bednsplitformat = '{}_0{}'
+        self._add_bedname_suffix()
         
-    def _splitbedopts(self):
+    def _add_bedname_suffix(self):
         ''' Split bedfiles options between bedname path and plot boolean '''
-        bedf, bedp = {}, {}
+        self.bedfiles = {}
         for bedn, bedopts in self.beddata.iteritems():
-            if isinstance(bedopts, dict):
+            if isinstance(bedopts, str) and bedopts.endswith(".bed"):
                 if self.beddata.get('EnabledFilter', False):  ## this is for the outputname
                     bedn += 'MappaOnly'
-                bedf[bedn] = bedopts["Path"]
-                bedp[bedn] = bedopts["MakeMergePlot"]
+                self.bedfiles[bedn] = bedopts
             else:  # just options to the specific bedfile
-                bedf[bedn] = bedopts
-        return bedf, bedp
+                self.bedfiles[bedn] = bedopts
 
     
 class BamCollect(object):

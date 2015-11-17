@@ -81,10 +81,10 @@ _VALIDATION_TOOLS = {
     "WriteDepth": _VALIDATION_WRITEDEPTH
 }
 
-_VALIDATION_BED = {
-    "Path": IsStr,
-    "MakeMergePlot": IsBoolean(default=False)
-}
+# _VALIDATION_BED = {
+#     "Path": IsStr
+#     # "MakeMergePlot": IsBoolean(default=False)
+# }
 
 _VALIDATION = {
     "BamInputs": {  # BAMFILES:
@@ -97,7 +97,7 @@ _VALIDATION = {
     "BedFiles": {
         'EnabledFilter': IsBoolean(default=True),
         'UniquenessFilter': IsFloat(default=0.9),
-        _VALID_BED_NAME: _VALIDATION_BED
+        _VALID_BED_NAME: IsStr
     }
 }
 
