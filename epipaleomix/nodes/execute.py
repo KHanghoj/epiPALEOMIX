@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-from pypeline.node import CommandNode, Node
-from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.node import Node
 from pypeline.common.fileutils import move_file, reroot_path
 import os
 
@@ -10,13 +9,13 @@ from epipaleomix.tools import \
     methylmap, \
     phasogram
 
-EXTRAS = {'Phasogram': ['1000']}
+# EXTRAS = {'Phasogram': ['1000']}
 
-RPATHS = {'Phasogram': 'phaso.R',
-          'WriteDepth': '_',
-          'NucleoMap': 'nucleo_merge.R',
-          'MethylMap': 'methyl_merge.R'
-}
+# RPATHS = {'Phasogram': 'phaso.R',
+#           'WriteDepth': '_',
+#           'NucleoMap': 'nucleo_merge.R',
+#           'MethylMap': 'methyl_merge.R'
+# }
 
 PREFIX = os.path.dirname(nucleomap.__file__)
         
@@ -40,10 +39,7 @@ class GeneralExecuteNode(Node):
 
         out_f_name = d_bam.fmt.format(d_bam.bam_name, analname, bed_name)
         self.dest = os.path.join(d_bam.bam_temp_local, out_f_name)
-        ## self.desttemp = os.path.join(d_bam.bam_temp_local, out_f_name)
 
-
-        
         description = "<ANALYSIS:'%s', BAM: %s, Bed:'%s'" % \
                       (analname, d_bam.bam_name, bed_name)
         Node.__init__(self,
@@ -86,20 +82,20 @@ class GeneralExecuteNode(Node):
             return (), name
 
 
-class GeneralPlotNode(CommandNode):
-    def __init__(self, infile, anal_name, dependencies=()):
-        call = ['Rscript', '%(AUX_R)s', str(50), '%(IN_TXT)s', '%(OUT_FILEPATH)s']
-        outfile = os.path.splitext(os.path.splitext(infile)[0])[0]+'.pdf'
-        r_anal = os.path.join(PREFIX, RPATHS[anal_name])
-        if anal_name in EXTRAS:
-            call.extend(EXTRAS[anal_name])
-        cmd = AtomicCmd(call,
-                        AUX_R=r_anal,
-                        IN_TXT=infile,
-                        OUT_FILEPATH=outfile)
-        description = "<PLOT_ANALYSIS:'%s', Infile:'%s', Outfile: %s" % \
-                      (os.path.split(r_anal)[-1], infile, outfile)
-        CommandNode.__init__(self,
-                             description=description,
-                             command=cmd,
-                             dependencies=dependencies)
+# class GeneralPlotNode(CommandNode):
+#     def __init__(self, infile, anal_name, dependencies=()):
+#         call = ['Rscript', '%(AUX_R)s', str(50), '%(IN_TXT)s', '%(OUT_FILEPATH)s']
+#         outfile = os.path.splitext(os.path.splitext(infile)[0])[0]+'.pdf'
+#         r_anal = os.path.join(PREFIX, RPATHS[anal_name])
+#         if anal_name in EXTRAS:
+#             call.extend(EXTRAS[anal_name])
+#         cmd = AtomicCmd(call,
+#                         AUX_R=r_anal,
+#                         IN_TXT=infile,
+#                         OUT_FILEPATH=outfile)
+#         description = "<PLOT_ANALYSIS:'%s', Infile:'%s', Outfile: %s" % \
+#                       (os.path.split(r_anal)[-1], infile, outfile)
+#         CommandNode.__init__(self,
+#                              description=description,
+#                              command=cmd,
+#                              dependencies=dependencies)
