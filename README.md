@@ -205,6 +205,11 @@ Finally, we can plot the data by running __creatingplots.sh__
 Two PDF files are created, a phasogram plot, (_CTCF\_PHASOGRAM.pdf_) and a plot showing the out-of-phase profile between methylation marks and nucleosome positioning (_CTCF\_Nucleosome\_red\_Methylation_blue.pdf_).
 
 
+![a picture of nature](pics/CTCF_PHASOGRAM1.png)
+
+<img src="pics/CTCF_PHASOGRAM1.png" width="200">
+
+
 
 [YAML](http://www.yaml.org/ "YAML official site") is a human-readable format to store data in a hierarchical way. Subcategories are indented with one or more spaces compared to the parent category. Always use **spaces**, and **never use tabs** for indentation. [This section](http://www.yaml.org/spec/1.2/spec.html#Preview) of the documentation will give you a quick overview on YAML.
 
