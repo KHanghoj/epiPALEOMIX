@@ -7,8 +7,8 @@ A Fast, Accurate, and Automatic pipeline for generating nucleosome and methylati
 *   [Overview](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-overview)
 *   [Installation](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-installation)
 *   [How to run epiPALEOMIX](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-how-to-run-epipaleomix)
-*   [Tutorial](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-tutorial.html)
-*   [Makefile Documentation](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-documentaion-makefile.html)
+*   [Tutorial](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-tutorial)
+*   [Makefile Documentation](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-documentaion-makefile)
 
 # Overview
 The epiPALEOMIX pipeline is a free and open-source pipeline for generating two epigenetic regulators of expression data from ancient samples using high-throughput seqeuncing data by benefiting from natural _post-mortem_ degradation processes affecting the DNA. More specifically, the pipeline automates generation of genome-wide methylation marks in CpG context, nucleosome calling and phasogram analyses as shown in [_pedersen et al 2008_](http://dx.doi.org/10.1101/gr.163592.113)
@@ -74,13 +74,13 @@ Below is a brief overview of required steps to run epiPALEOMIX after installatio
 
 ## Get help
 
-    $ epiPALEOMIX -h  # Prints extensive options to standard out
+    $ epiPALEOMIX -h  # Prints extensive optional arguments to std out
     or
     $ epiPALEOMIX help # Prints simple help
 
 ## Generate and preparing a makefile
 
-A makefile, provided by the user in [YAML format](http://www.yaml.org/spec/1.2/spec.html), defines all the analyses to be performed in epiPALEOMIX. The makefile contains paths to input files and a specification of paramaters and analyses to be conducted. Full instructions describing the format and structure of epiPALEOMIX Yaml-format makefiles are given in the [Makefile Documentaion](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-documentaion-makefile.html) textfile provided as part of epiPALEOMIX.
+A makefile, provided by the user in [YAML format](http://www.yaml.org/spec/1.2/spec.html), defines all the analyses to be performed in epiPALEOMIX. The makefile contains paths to input files and a specification of paramaters and analyses to be conducted. Full instructions describing the format and structure of epiPALEOMIX Yaml-format makefiles are given in the [Makefile Documentaion](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-documentaion-makefile) textfile provided as part of epiPALEOMIX.
 epiPALEOMIX requires minimum _one positional argument_ a [yaml-format makefile](http://www.yaml.org/spec/1.2/spec.html). 
 To generate a generic makefile `$ epiPALEOMIX makefile > makefile.yaml`, the fill in input paths to a reference genome, bedfile paths, and BAM files and enabled the analyses of interest.
 
@@ -144,9 +144,9 @@ The uncompressed directory contains:
 + __plottingtools__ folder: A couple of simple R-scripts to plot the output of epiPALEOMIX
 + __creatingplots.sh__: An executable bash script to run the R-scripts in __plottingtools__.
 
-## 2\. Preparing a Yaml makefile
+## 2\. epiPALEOMIX makefile description
 
-A `example.yaml` makefile for this tutorial is already generated, however, we will go through each section of this makefile. Generic makefiles for epiPALEOMIX can be written to standard out using epipaleomix `$ epiPALEOMIX makefile > new_mkfile.yaml`. For extensive explanation of the generic makefile see [Makefile Documentaion](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-documentaion-makefile.html).
+An `example.yaml` makefile for this tutorial is already generated, however, we will go through each section of this makefile. Generic makefiles for epiPALEOMIX can be written to standard out using epipaleomix `$ epiPALEOMIX makefile > new_mkfile.yaml`. For extensive explanation of the generic makefile see [Makefile Documentaion](https://bitbucket.org/khanghoj/epiomix/overview#markdown-header-documentaion-makefile.html).
 
 The first line of _example.yaml_ specifies the file type:
 
@@ -157,6 +157,7 @@ Second line is a timestamp automatically created by epiPALEOMIX
     # Timestamp: 2015-11-10T11:31:09.819521
 
 ### prefix section
+The prefix section contains the reference genome path `--FastaPath` and the Mappability path `--MappabilityPath`. 
 
     Prefixes:
         --FastaPath: ./prefix/hs.build37.1.fa
@@ -164,6 +165,7 @@ Second line is a timestamp automatically created by epiPALEOMIX
 
 
 ### bedfile section
+
 
     BedFiles:  # AT LEAST ONE BEDFILE IS REQUIRED
         EnabledFilter: True  # True, bed coordinates not overlapping a mappability region with at at least 0.9 in 'UniquenessFilter: 0.9' (user definable)
