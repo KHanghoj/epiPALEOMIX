@@ -9,3 +9,6 @@ For a detailed description of the pipeline, please refer to [wiki](https://bitbu
 
 Hanghøj K., ... , Orlando L. _Title_ 
 
+
+***
+[Go to wiki](https://bitbucket.org/khanghoj/epiomix/wiki/Home)

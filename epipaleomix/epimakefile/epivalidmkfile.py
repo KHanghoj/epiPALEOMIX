@@ -57,7 +57,7 @@ _VALIDATION_METHYL = {
     "--ReadBases": IsUnsignedInt(default=15),
     "--SkipThreePrime": IsUnsignedInt(default=0),
     "--SkipFivePrime": IsUnsignedInt(default=0),
-    "--Primes": IsStr
+    "--Primes": StringIn(('five', 'three','both'), default='five')
 }
 _VALIDATION_PHASO = {
     "Enabled": IsBoolean(default=False),
