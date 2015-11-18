@@ -4,13 +4,10 @@ import operator
 import re
 import sys
 import os
-import copy
 import time
 import logging
 import pypeline.yaml
 import pypeline.logger
-import optparse
-from pypeline.node import MetaNode
 from pypeline.pipeline import Pypeline
 from pypeline.common.console import \
     print_err, \
@@ -28,14 +25,12 @@ from epipaleomix.tools.bamdatastructure import BamCollect, \
     MakefileError
 from epipaleomix.nodes.gccorrect import \
     GccorrectNode, \
-    CreateGCModelNode, \
-    GccorrectMidNode
+    CreateGCModelNode
 from epipaleomix.nodes.cleanbedfiles import \
     CleanFilesNode, \
     SplitBedFileNode, \
     MergeDataFilesNode
 
-# FINETUNERANGE = [-10, -5, 5, 10]
 ANALYSES = ['Phasogram', 'WriteDepth', 'NucleoMap', 'MethylMap']
 
 
@@ -46,9 +41,6 @@ def check_bed_exist(config, infile):
     filena, fileext = os.path.splitext(os.path.basename(infile))
     reg = r'{}_([0-9]+).bed'.format(filena)
     bedfiles=((f, int(re.search(reg,f).groups()[0])) for f in os.listdir(config.temp_local) if re.search(reg,f))
-    ##  this is just cool dense code::
-    ##  map(lambda x:x[0],sorted(a,key=itemgetter(1)))
-    ##  return map(operator.itemgetter(0),sorted(bedfiles,key=operator.itemgetter(1)))
     return [os.path.join(config.temp_local, path) for path, val in sorted(bedfiles,key=operator.itemgetter(1))]
 
 
@@ -128,11 +120,6 @@ def getdequelen(d_bam):
 def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
     return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn) for rl in gcwindows])]
 
-### if individual readlength to be used
-### changes nodes/gccorrect to used the nodes in the very bottom.
-### used model_gc_individualreadlength.R instead of model_gc.R in createmodelNode 
-### inherit indinode instead of nornormal in tools.commonutils
-
 def calc_gcmodel(d_bam):
     rlmin, rlmax = getdequelen(d_bam)
     if d_bam.opts['GCcorrect'].get('Enabled', False):
@@ -143,12 +130,6 @@ def calc_gcmodel(d_bam):
         return concat_gcsubnodes(CreateGCModelNode, d_bam,
                                  xrange(rlmin, rlmax+resolution, resolution))
     return []
-    #     return concat_gcsubnodes(CreateGCModelNode,
-    #                              d_bam,
-    #                              FINETUNERANGE,
-    #                              subn=concat_gcsubnodes(GccorrectMidNode, d_bam,
-    #                                                     xrange(rlmin, rlmax+1, 15)))
-    # return []
 
 def check_chrom_prefix(d_make):
     for bam_name, opts in d_make.makefile['BamInputs'].items():
@@ -174,14 +155,12 @@ def run_analyses(anal, d_bam, d_make, bedinfo, splitbednode, gcnode):
     ## TODO:::: if nucleomap and Advancednucleomap is TRUE. apply it here. 
     # if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is false -> no plot
     return mergenode
-    # infile = (out for out in mergenode.output_files).next()
-    # return GeneralPlot(infile, anal, dependencies=[mergenode])
+
 
 def make_outputnames(config, make):
     filename = make["Statistics"]["Filename"]
     outputname = os.path.splitext(os.path.basename(filename))[0]
     config.makefiledest = os.path.join(config.destination, 'OUT_' + outputname)
-    # config.temp_local = os.path.join(config.makefiledest, 'TEMPORARYFILES_' + outputname)
     config.temp_local = os.path.join(config.destination, 'TEMPORARYFILES_' + outputname)    
     check_path(config.makefiledest)
     check_path(config.temp_local)
