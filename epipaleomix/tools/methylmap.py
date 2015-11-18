@@ -171,6 +171,9 @@ class Methyl_Level(object):
         self.f_output.close()
         self._fasta.closefile()
 
+def parse_helper(s):
+    return s.lower()
+        
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -181,7 +184,7 @@ def parse_args(argv):
     parser.add_argument('--ReadBases', help="..", type=int, default=2)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=20)
     parser.add_argument('--MinAlignmentLength', help="..", type=int, default=25)
-    parser.add_argument('--Primes', help="..", type=str, default='five',
+    parser.add_argument('--Primes', help="..", type=parse_helper, default='five',
                         choices=['both', 'five', 'three'])
     parser.add_argument('--SkipThreePrime', help="..", type=int, default=0)
     parser.add_argument('--SkipFivePrime', help="..", type=int, default=0)
