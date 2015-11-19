@@ -56,8 +56,9 @@ class CreateGCModelNode(CommandNode):
         #                      'model_gc.R')
         aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
                              'model_gc_individualreadlength.R')
+        
         call = ['Rscript', aux_r, '%(IN_SOURCE)s', str(d_bam.bam_name+GC_NAME),
-                '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
+                str(len(subnodes)), '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
         dest = os.path.join(d_bam.bam_output,
                             '%s_GC_Model.txt' % (str(d_bam.bam_name)))
         plot_dest = os.path.splitext(dest)[0]+'.pdf'

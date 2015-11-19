@@ -88,19 +88,6 @@ def checkbedfiles_ext(bedfiles):
             yield bedname, bedpath
 
 
-# def checkbedfiles_ext(bedfiles):
-#     for bedname, bedpath in bedfiles.items():
-#         if isinstance(bedpath, str) and bedpath.endswith('.bed'):
-#             yield bedname, bedpath
-
-
-# def checkbed_list(bedfiles):
-#     for bedname, bedpaths in bedfiles.items():
-#         if (isinstance(bedpaths, list) and
-#                 all([bedp.endswith('.bed') for bedp in bedpaths])):
-#             yield bedname, bedpaths
-
-
 def main_anal_to_run(bedinfo, opts):
     bedn, bed_paths = bedinfo
     for analysis, options in opts.iteritems():
@@ -135,9 +122,9 @@ def getdequelen(d_bam):
     return rlmin, gcmax
 
 
-def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
-    return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn)
-                                     for rl in gcwindows])]
+# def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
+#     return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn)
+#                                      for rl in gcwindows])]
 
 
 def calc_gcmodel(d_bam):
@@ -147,12 +134,16 @@ def calc_gcmodel(d_bam):
         assert os.path.exists(d_bam.prefix.get('--MappabilityPath')), \
             ("If GCcorrection is enabled, a valid --MappabilityPath"
              " file must be provided as well")
+
         checkmappabilitychrom.main([d_bam.prefix['--MappabilityPath'],
                                     d_bam.opts['GCcorrect']['--ChromUsed']])
 
         resolution = 5
-        return concat_gcsubnodes(CreateGCModelNode, d_bam,
-                                 xrange(rlmin, rlmax+resolution, resolution))
+        subn = [GccorrectNode(d_bam, rl)
+                for rl in xrange(rlmin, rlmax+resolution, resolution)]
+        return CreateGCModelNode(d_bam, subnodes=subn)
+        #return concat_gcsubnodes(CreateGCModelNode, d_bam,
+        #                         xrange(rlmin, rlmax+resolution, resolution))
     return []
 
 

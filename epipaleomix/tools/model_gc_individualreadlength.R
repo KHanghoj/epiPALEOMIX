@@ -2,8 +2,9 @@ args <- commandArgs(trailingOnly = TRUE)
 ## args <- unlist(list(c('./OUT_mk_yaml2/TEMPORARYFILES_mk_yaml2/BAMName1/', '_GC', './model.txt', 'ding.pdf')))  # for testing
 input_path <- args[1]
 pat <- args[2]
-outputpath <- args[3]
-outputplot <- args[4]
+expectednumberoffiles <- args[3]
+outputpath <- args[4]
+outputplot <- args[5]
 
 
 smoothfunc <- function(idx, seq, windowsize){
@@ -52,6 +53,8 @@ with(df, lines(gc_content,refdensity, col='blue'))
 legend('topright', c('ReadDensity', 'RefDensity') ,
           lty=1, col=c('red', 'blue'), bty='n', cex=.75)
 
+
+
 upper.bound = 4 # a upper bound on the enrichment of reads
 lower.bound = 1/upper.bound
 df$ratio[df$ratio > upper.bound] = upper.bound
@@ -68,6 +71,7 @@ dat
 }
 
 listf <- list.files(input_path, pattern=pat, full.names=TRUE)
+if(expectednumberoffiles != length(listf)) {stop('One or more of the GCcorrection counts did not finished correctly')}
 DATA <- lapply(listf, read.table)
 names(DATA) <- 1:length(listf)
 print(listf)

@@ -63,8 +63,8 @@ class GCcorrect(object):
     def _short_seq(self, rl):
         ''' seq_fasta, length of read, return seq'''
         region_size, region_seq = self._retrieve_fastaseq()
-        #        for idx in xrange(region_size - (rl - 1)):
-        jump = int(rl/2)
+        # jump = int(rl/2)
+        jump = 1
         for idx in xrange(0, region_size - (rl - 1), jump):
             seq = region_seq[(idx+_BUFFER): (idx+rl-_BUFFER)]
             yield (idx+_BUFFER, (seq.count('C')+seq.count('G')))
@@ -72,6 +72,7 @@ class GCcorrect(object):
     def writetofile(self):
         ''' dfs '''
         gcfmt = '{}\t{}\t{}\t{}\n'.format
+        assert sum([self.reads_gc[gc] for gc in range(0, self.rl+1)]) > 2000, "Not enough reads to make the model"
         with open(self.arg.OutputFile, 'w') as f:
             for gc in range(0, self.rl+1):
                 f.write(gcfmt(str(self.rl), str(gc), str(self.reads_gc[gc]),

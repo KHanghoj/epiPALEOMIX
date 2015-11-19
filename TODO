@@ -1,3 +1,41 @@
+meeting with Ludovic 2015-19-11:
+
+- call Tobias:
+ - We are on time pressure
+ - you'll (Jakob and Tobias) be included in the paper
+ - Still want to finished the model, but we need to submit
+ - Need to find a way to make it work on many nucleosomes - and use the maximum read length.
+ - Will be included in next publication
+- Finalize WIKI and TUTORIAL then send to L
+- make methylation vs nucleosome score across top 1% called nucleosomes to see methylation drop towards dyad and nucleosome increase
+ - Do it as a profile -120;+120 of a dyad
+ or
+ - as bars if less precise
+ - do it on all samples
+- Make all samples with occupied/unonccupied CTCF plot 
+- extract lambda estimates from mapdamage (high - short overhang) (low - long overhang)
+ - Can we correlate that with
+ - make a linear model coverage ~ delta s * lambda val
+ - check if first peak in methylation is 10-bp periodicity that comes from preference of break for every 10 base pair
+ - take the downsampled bam file where the 200bp peak in methylation is still higher than the noise. 10 bp peak might not be noise so some other peak. 
+- for nucleosome calls we decided to use delta instead of log-scores
+
+- if long overhang you need less probability of getting a hit per base than for short overhang reads. long overhang samples might have clear CTCF pattern even for low delta s samples.
+- download new data from eppie and remember to include MOTA african sample from now on
+- PhD plan confirmation together with ludovic
+
+
+- ideas to later
+ - make a model of CTCF binding sites and predict the 50000 whether occupied or unoccupied
+
+
+
+
+
+
+
+
+
 - get nucleosome calls from Tobias and liftover to hg19 and use these as test. Hope to see something similar - kris
 - scan genome + plus some simple peak-calling - Tobias
 - gamma and lambda - Tobias
