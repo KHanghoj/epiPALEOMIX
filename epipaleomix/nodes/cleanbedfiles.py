@@ -1,22 +1,24 @@
 #!/usr/bin/env python
+import os
+
+import pypeline.common.versions as versions
 from pypeline.common.fileutils import move_file, reroot_path
 from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
-import pypeline.common.versions as versions
+
 from epipaleomix.tools import splitbedfiles
 from epipaleomix.tools import merge_datafiles
-import os, re
-
-BEDTOOLS_VERSION = versions.Requirement(call   = ("bedtools", "--version"),
-                                        search = r"bedtools v?(\d+)\.(\d+)\.(\d+)",
-                                        checks = versions.GE(2, 15, 0))
-PYTHON_VERSION = versions.Requirement(call   = ("python", "--version"),
-                                        search = r"Python (\d+)\.(\d+)\.(\d+)",
-                                        checks = versions.GE(2, 7, 0))
 
 
-prefix = os.path.dirname(splitbedfiles.__file__)
+BEDTOOLS_VERSION = versions.Requirement(call=("bedtools", "--version"),
+                                        search=r"bedtools v?(\d+)\.(\d+)\.(\d+)",
+                                        checks=versions.GE(2, 15, 0))
+PYTHON_VERSION = versions.Requirement(call=("python", "--version"),
+                                      search=r"Python (\d+)\.(\d+)\.(\d+)",
+                                      checks=versions.GE(2, 7, 0))
+PREFIX = os.path.dirname(splitbedfiles.__file__)
+
 
 class CleanFilesNode(CommandNode):
     def __init__(self, config, d_make, bedn, mappa, unique, dependencies=()):
@@ -25,33 +27,35 @@ class CleanFilesNode(CommandNode):
         bname = "{}_MappaOnly{}".format(basename, extension)
         outbedfile = os.path.join(config.temp_local, bname)
         d_make.bedfiles[bedn] = outbedfile
-        
-        ### outbedfile = os.path.join(config.temp_root, os.path.basename(inbedfile))
-
-        call1 = ["python", os.path.join(prefix, 'filtermappa.py'),
+        call1 = ["python", os.path.join(PREFIX, 'filtermappa.py'),
                  "%(IN_MAPPA)s", str(unique)]
-        call2 = ["bedtools", "intersect", "-wb", "-a", "stdin", "-b" ,"%(IN_BED)s"]
-        ## call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
+        call2 = ["bedtools", "intersect", "-wb",
+                 "-a", "stdin", "-b", "%(IN_BED)s"]
+        # call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
         call3 = ["sort", "-k 4,4", "-k 5,5n", "-k 2,2n"]
-        call4 = ["python", os.path.join(prefix, "updatebedcoord.py")]
+        call4 = ["python", os.path.join(PREFIX, "updatebedcoord.py")]
+        call5 = ["sort", "-k 4,4"]
 
         cmd1 = AtomicCmd(call1,
                          IN_MAPPA=mappa,
                          OUT_STDOUT=AtomicCmd.PIPE,
-                         CHECK_VERSION = PYTHON_VERSION)
+                         CHECK_VERSION=PYTHON_VERSION)
         cmd2 = AtomicCmd(call2,
                          IN_STDIN=cmd1,
                          IN_BED=inbedfile,
                          OUT_STDOUT=AtomicCmd.PIPE,
-                         CHECK_VERSION = BEDTOOLS_VERSION)
+                         CHECK_VERSION=BEDTOOLS_VERSION)
         cmd3 = AtomicCmd(call3,
                          IN_STDIN=cmd2,
                          OUT_STDOUT=AtomicCmd.PIPE)
         cmd4 = AtomicCmd(call4,
                          IN_STDIN=cmd3,
+                         OUT_STDOUT=AtomicCmd.PIPE)
+        cmd5 = AtomicCmd(call5,
+                         IN_STDIN=cmd4,
                          OUT_STDOUT=outbedfile)
 
-        paral_cmd = ParallelCmds([cmd1, cmd2, cmd3, cmd4])
+        paral_cmd = ParallelCmds([cmd1, cmd2, cmd3, cmd4, cmd5])
         description = "<CLEANBEDFILES: '%s' -> '%s', Uniqueness: '%s'" % \
                       (inbedfile, outbedfile, unique)
         CommandNode.__init__(self,
@@ -62,7 +66,8 @@ class CleanFilesNode(CommandNode):
 
 class SplitBedFileNode(Node):
     def __init__(self, config, d_make, bedn, subnodes=(), dependencies=()):
-        self.temp_local, self.inbedfile = config.temp_local, d_make.bedfiles[bedn]
+        self.temp_local = config.temp_local
+        self.inbedfile = d_make.bedfiles[bedn]
         self.no_subbed = config.max_threads
         self.outputnames = self._createbednames()
         d_make.bedfiles[bedn] = self.outputnames
@@ -75,12 +80,13 @@ class SplitBedFileNode(Node):
                       output_files=self.outputnames,
                       subnodes=subnodes,
                       dependencies=dependencies)
-        assert isinstance(self.outputnames, list), "output has to be a list of strings"
+        assert isinstance(self.outputnames, list), \
+            "output has to be a list of strings"
 
     def _run(self, _config, temp):
-        temp_outputnames = [reroot_path(temp, dest) for dest in self.outputnames]
+        temp_outputnames = [reroot_path(temp, dest)
+                            for dest in self.outputnames]
         inputs = [self.inbedfile]+temp_outputnames
-        # inputs = [self.inbedfile]+self.outputnames
         splitbedfiles.main(inputs)
 
     def _teardown(self, _config, temp):
@@ -94,7 +100,8 @@ class SplitBedFileNode(Node):
         fmt, lst = '_0{}', []
         filena, fileext = os.path.splitext(os.path.basename(self.inbedfile))
         for number in xrange(0, self.no_subbed):
-            lst.append(os.path.join(self.temp_local, filena + fmt.format(number) + fileext))
+            lst.append(os.path.join(self.temp_local,
+                                    filena + fmt.format(number) + fileext))
         return lst
 
 
@@ -104,9 +111,9 @@ class MergeDataFilesNode(Node):
         self.anal = anal
         analname = self._check_gccorr_name(anal, self.infiles[0])
         self.dest = os.path.join(d_bam.bam_output,
-                                d_bam.fmt.format(d_bam.bam_name,
-                                                 analname,
-                                                 bedn))
+                                 d_bam.fmt.format(d_bam.bam_name,
+                                                  analname,
+                                                  bedn))
         assert self.infiles, "No temporary files to merge"
         if len(self.infiles) > 1:
             description = "<MergeDataFiles: '%s' ... '%s' ->  '%s'" % \
@@ -133,15 +140,8 @@ class MergeDataFilesNode(Node):
 
     def _teardown(self, _config, temp):
         move_file(reroot_path(temp, self.dest), self.dest)
-
         Node._teardown(self, _config, temp)
 
-
     def _check_gccorr_name(self, anal, infile):
-        curr_bamname, curr_anal, curr_bedname, _ = os.path.basename(infile).split('_')
-        # if re.search("GCcorr", curr_anal):
-        #     anal += "GCcorr"
-        # assert anal == curr_anal, "Trying to merge different types of analyses: %s and %s" % (anal, curr_anal)
-        # return anal
-
-        return curr_anal
+        c_bamna, c_analname, c_bedna, _ = os.path.basename(infile).split('_')
+        return c_analname

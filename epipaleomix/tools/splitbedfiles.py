@@ -3,7 +3,8 @@ import argparse
 import sys
 import re
 _SIZE = int(1e6)
-BEDCOORD = '{}_{}_{}'.format
+# BEDCOORD = '{}_{}_{}'.format
+BEDCOORD = '{}_{}_{}_{strand}'.format
 
 def p_args(argv):
     parser = argparse.ArgumentParser(prog='split bedfiles')
@@ -13,11 +14,16 @@ def p_args(argv):
 
 
 def unpack(c, s, e, *rest):
-    if rest and re.search('^\S+_\d+_\d+$', rest[0]):
+    if rest and re.search('^\S+_\d+_\d+_[-+]$', rest[0]):
         bedcoord = rest[0]  ## it is highly likely to be a bedcoord
     else:
-        bedcoord = BEDCOORD(c, s, e)
-    return c, int(s), int(e), bedcoord
+        curr_strand = re.search(r"([+-])","".join(rest))
+        if curr_strand:
+            bedcoord = BEDCOORD(c, s, e,
+                                strand=curr_strand.group(0))
+        else:
+            bedcoord = BEDCOORD(c, s, e, strand='+')
+    return str(c), int(s), int(e), bedcoord
 
 
 def splitbycoord(args):
@@ -41,7 +47,7 @@ def splitbycoord(args):
     
 
 def run(args):
-    ''' run produces three bedfiles for each file '''
+    ''' split bedfile into subbedfiles. divmod controls the number of lines per file '''
     no_subbed = len(args.outfiles)  # noumber of sub files is based on no of outputfiles given as argument
     infiledata, nolines = splitbycoord(args)
     lineperfile, rest = divmod(nolines, no_subbed)

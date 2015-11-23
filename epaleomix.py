@@ -122,11 +122,6 @@ def getdequelen(d_bam):
     return rlmin, gcmax
 
 
-# def concat_gcsubnodes(nodecls, d_bam, gcwindows, subn=()):
-#     return [nodecls(d_bam, subnodes=[GccorrectNode(d_bam, rl, subnodes=subn)
-#                                      for rl in gcwindows])]
-
-
 def calc_gcmodel(d_bam):
     rlmin, rlmax = getdequelen(d_bam)
     if d_bam.opts['GCcorrect'].get('Enabled', False):
@@ -142,8 +137,6 @@ def calc_gcmodel(d_bam):
         subn = [GccorrectNode(d_bam, rl)
                 for rl in xrange(rlmin, rlmax+resolution, resolution)]
         return CreateGCModelNode(d_bam, subnodes=subn)
-        #return concat_gcsubnodes(CreateGCModelNode, d_bam,
-        #                         xrange(rlmin, rlmax+resolution, resolution))
     return []
 
 

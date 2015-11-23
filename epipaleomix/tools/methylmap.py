@@ -49,15 +49,6 @@ class Methyl_Level(object):
         self.rev_five = self._createargdict(_REV_STRAND_BASES, 1, self.arg.SkipFivePrime, CONV_REV)
         self.rev_three = self._createargdict(_REV_STRAND_BASES, 1, self.arg.SkipThreePrime, CONV_REV)
 
-        # self.forw_five = {'inbases': _FORW_STRAND_BASES, 'basepos': 0,
-        #                   'skip':  self.arg.SkipFivePrime, 'conv': CONV_FORW}
-        # self.forw_three = {'inbases': _FORW_STRAND_BASES, 'basepos': 0,
-        #                    'skip': self.arg.SkipThreePrime, 'conv': CONV_FORW}
-        # self.rev_five = {'inbases': _REV_STRAND_BASES, 'basepos': 1,
-        #                  'skip':  self.arg.SkipFivePrime, 'conv': CONV_REV}
-        # self.rev_three = {'inbases': _REV_STRAND_BASES, 'basepos': 1,
-        #                   'skip': self.arg.SkipThreePrime, 'conv': CONV_REV}
-
         # in a sam/bam file everything is plus strand oriented.even sequences, cigar, EVERYTHING
         # cig_idx -1 returns last cigar of the sequence from a positive strand
         # perspective. so [-1] can be the 5' end of a reverse read.
@@ -111,7 +102,7 @@ class Methyl_Level(object):
                 self._writetofile()
                 del self.rows[:]  # clear all data
         self._updatefunc()
-        self.last_end = self.record.aend+100  # to avoid overlapping sites.
+        self.last_end = self.record.aend+1000  # to avoid overlapping sites.
 
     def _call_ms(self):
         for pos, basescore in sorted(self.dic_pos.iteritems()):
@@ -127,7 +118,6 @@ class Methyl_Level(object):
 
     def _prep(self, curr_pos, skip=0):
         ## skip is only used in right side functions
-        # skip is 1-based always
         fast_string = self._fasta.fetch_string(self.chrom, curr_pos,
                                                self._ReadBases-skip)
         for fast_idx in self._getindexes(fast_string):
@@ -192,6 +182,11 @@ def parse_args(argv):
 
 
 def run(args):
+    assert (args.ReadBases > args.SkipThreePrime and
+            args.ReadBases > args.SkipFivePrime), ("--ReadBases '{}' must be higher"
+    " than both --SkipThreePrime '{}' and SkipFivePrime '{}'".format(args.ReadBases,
+                                                                     args.SkipThreePrime,
+                                                                     args.SkipFivePrime))
     samfile = pysam.Samfile(args.bam, "rb")
     Met_Score = Methyl_Level(args)
     for chrom, start, end, bedcoord in read_bed(args):

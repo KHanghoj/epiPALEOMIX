@@ -1,3 +1,12 @@
+meeting with ludovic 2015-20-11:
+- check methylation levels on chromsome 1 with 15 basepair read - done. chromsome 1 is 0.008 in contrast to 0.005 for occu methyl and 0.010 for unoccu  -  goode.
+- check delta s of mapdamage for CTCF-Unoccy and CTCF-occy. 0.02 for unoccy 0.015 for occy. goode
+ - this is interesting since we see a 2X higher methylation level in unoccy than occy.
+- in pedersen et all they smooth the value per 25 basepairs, sum(deamin [-12:12])/sum(cov [-12:12]) per position. it smoothes everything much more, that is likely why we see the peaks surrounding the drop of the dyad that they didn't find in pedersen fig 4E.
+- make a plot with the CpG % across -+ 100 of all the called nucleosomes. - done. only peak in center -+ 25 bp
+- overlap plot of CpG density across nucleosomes with methylation level. It shows that the peak in methylation at the ends a sequence of a nucleosome is not related to CpG density. Cool.
+- check that the peak surrounding the drop of methylation is not just because of the CpG present in in center of a dyad using GC-correction stuff.
+
 meeting with Ludovic 2015-19-11:
 
 - call Tobias:
@@ -44,7 +53,7 @@ meeting with Ludovic 2015-19-11:
 - setup.py + compiling cython if needed
 - make R-scripts for plotting for the end-user
 - upload example to ftp:
- - /k/ftp-data/OrlandoGroup
+ - /k/ftp-data/OrlandoGroup - done
  - make a folder and add { TEST.bam, reference genome fasta, yamlfile, bedfile} 
 
 - How do we handle samples we reads that a  100  or above???

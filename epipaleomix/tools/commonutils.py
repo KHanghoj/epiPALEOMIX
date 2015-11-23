@@ -81,13 +81,6 @@ def read_mappa(args):
             chrom, start, end, rest = unpack_mappa(*(re.split(r'\s+', line.rstrip())))
             yield str(chrom), int(start), int(end), float(rest[-1])
 
-def _read_mappa(args):
-    with open(args.MappabilityPath, 'r') as mappafile:
-        for line in mappafile:
-            chrom, start, end, score = _unpack_mappa(*(re.split(r'\s+', line.rstrip())))
-            yield chrom, start, end, score
-
-
 class Cache(object):
     ''' class doc '''
 
