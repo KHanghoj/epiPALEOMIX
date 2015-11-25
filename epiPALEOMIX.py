@@ -33,6 +33,38 @@ from epipaleomix.nodes.cleanbedfiles import \
 
 ANALYSES = ['Phasogram', 'WriteDepth', 'NucleoMap', 'MethylMap']
 
+class VersionError(StandardError):
+    pass
+
+def check_python_version():
+    minversion = 34014192  # sys.hexversion of python 2.7.3
+    if sys.hexversion < minversion:
+        raise VersionError("python must be at least version {}. "
+                           "Current version {}\n".format(
+                               (2,7,3),
+                               sys.version_info))
+    if sys.version_info.major == 3:
+        raise VersionError(
+            "epiPALEOMIX only works with python 2.7.3+. Not python3")
+
+
+def check_pysam_module_version():
+    required_version = [0, 8, 0]
+    try:
+        import pysam
+    except ImportError:
+        raise ImportError("It seems 'pysam' is not installed.\n"
+                          "\tpip install pysam\n")
+
+    version = map(int, pysam.__version__.split('.'))
+    if version < required_version:
+        raise VersionError("Pysam version must be at least version ({}). "
+                           "Current version ({})\n"
+                           "\tpip install pysam --upgrade".format(
+                               '.'.join(map(str,required_version)),
+                               pysam.__version__))
+
+
 
 def check_bed_exist(config, infile):
     ''' Check if bedfiles have been split already, then use them
@@ -246,6 +278,8 @@ def _print_usage():
 
 
 def main(argv):
+    check_python_version()
+    check_pysam_module_version()
     try:
         config, args = parse_config(argv)
         if args and args[0].startswith("dry"):
