@@ -17,10 +17,10 @@ def unpack(c, s, e, *rest):
     if rest and re.search('^\S+_\d+_\d+_[-+]$', rest[0]):
         bedcoord = rest[0]  ## it is highly likely to be a bedcoord
     else:
-        curr_strand = re.search(r"([+-])","".join(rest))
+        curr_strand = re.search(r"(\s+|^)(?P<strandtype>[+-])(\s+|$)"," ".join(rest))
         if curr_strand:
             bedcoord = BEDCOORD(c, s, e,
-                                strand=curr_strand.group(0))
+                                strand=curr_strand.group("strandtype"))
         else:
             bedcoord = BEDCOORD(c, s, e, strand='+')
     return str(c), int(s), int(e), bedcoord

@@ -48,8 +48,10 @@ def check_bed_exist(config, infile):
 
 def split_bedfiles(config, d_make):
     uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
-    mappapath = d_make.prefix.get('--MappabilityPath', False)
-    enabl_filter = d_make.bedfiles.get('EnabledFilter', False)
+    mappapath = d_make.prefix.get('--MappabilityPath')
+    enabl_filter = d_make.bedfiles.get('EnabledFilter')
+    if mappapath is None and enabl_filter is True:
+        raise MakefileError("Mappability filtering of bed file is enabled, but no mappability file '--MappabilityPath' seems to be provided")
     filtnode, nodes = [], []
     for bedn, in_bedp in checkbedfiles_ext(d_make.bedfiles):
         if enabl_filter and mappapath:
@@ -158,6 +160,7 @@ def run_analyses(anal, d_bam, d_make, bedinfo, splitbednode, gcnode):
                                         subnodes=gcnode,
                                         dependencies=splitbednode))
     return MergeDataFilesNode(d_bam, anal, bedn, subnodes=nodes)
+    # add a summary node
     # TODO:::: if writedepth and bedoptionmerge == TRUE:
     # TODO::::     apply the merger script that i just already on the mergeNode
     # TODO:::: if methylation cleaning True in bed file. remove all SNPs

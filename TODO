@@ -3,7 +3,7 @@ meeting with TOBIAS 2015-23-11:
 - send him gccorrection
 - might use a binomial distribution to correct background instead of what we use right now
 - try to print the read weight across a nucleosome
-- What is the GC-enrichment difference within a nucleosome. I think it is very similar.
+- What is the GC-enrichment difference within a nucleosome. Tobias and I think it is very similar.
 
 meeting with ludovic 2015-20-11:
 - check methylation levels on chromsome 1 with 15 basepair read - done. chromsome 1 is 0.008 in contrast to 0.005 for occu methyl and 0.010 for unoccu  -  goode.
@@ -15,8 +15,7 @@ meeting with ludovic 2015-20-11:
 - check that the peak surrounding the drop of methylation is not just because of the CpG present in in center of a dyad using GC-correction stuff.
 
 meeting with Ludovic 2015-19-11:
-
-- call Tobias:
+- call Tobias: - Done
  - We are on time pressure
  - you'll (Jakob and Tobias) be included in the paper
  - Still want to finished the model, but we need to submit
@@ -44,7 +43,6 @@ meeting with Ludovic 2015-19-11:
 - ideas to later
  - make a model of CTCF binding sites and predict the 50000 whether occupied or unoccupied
  - this could be something possible only in ancient DNA not in modern stuff
-
 
 
 - get nucleosome calls from Tobias and liftover to hg19 and use these as test. Hope to see something similar - kris

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import re
 import fileinput
@@ -14,10 +15,11 @@ BEDCOORD = '{}_{}_{}_{strand}'.format
 
 
 def unpack(c, s, e, *rest):
-    strand = re.search(r"([+-])","".join(rest))
-    if strand:
+
+    curr_strand = re.search(r"(\s+|^)(?P<strandtype>[+-])(\s+|$)"," ".join(rest))
+    if curr_strand:
         bed = BEDCOORD(*rest[:3],
-                       strand=strand.group(0))
+                       strand=curr_strand.group("strandtype"))
     else:
         bed = BEDCOORD(*rest[:3],
                        strand='+')

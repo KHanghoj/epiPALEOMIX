@@ -104,7 +104,7 @@ def main(argv):
     ''' dfs s'''
     tempbasewin = []
     args = parse_args(argv)
-    samfile = pysam.Samfile(args.bam, "rb")
+    samfile = pysam.AlignmentFile(args.bam, "rb")
 
     begin_nucl = -1
     end_nucl = -1

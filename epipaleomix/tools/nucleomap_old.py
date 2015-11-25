@@ -195,7 +195,7 @@ def parse_args(argv):
 
 
 def run(args):
-    samfile = pysam.Samfile(args.bam, "rb")
+    samfile = pysam.AlignmentFile(args.bam, "rb")
     nucl_pred_cls = Nucleosome_Prediction(args)
     flanks = (nucl_pred_cls._TOTAL_WIN_LENGTH/2)+1
     for chrom, start, end, bedcoord in read_bed(args):

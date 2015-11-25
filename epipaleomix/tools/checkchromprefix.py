@@ -38,7 +38,7 @@ def check_path_exists(args):
     
 def run(args):
     check_path_exists(args)
-    samfile = pysam.Samfile(args.BamPath, 'rb')
+    samfile = pysam.AlignmentFile(args.BamPath, 'rb')
     bamchrom = [dic['SN'] for dic in samfile.header['SQ']]
     with open(args.BedPath, 'r') as fin:
         chromlast = ''

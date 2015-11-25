@@ -16,7 +16,7 @@ class GCcorrect(object):
     def __init__(self, arg):
         self.arg = arg
         self.reads_gc, self.reference_gc = defaultdict(int), defaultdict(int)
-        self.samfile = pysam.Samfile(self.arg.BamPath, "rb")
+        self.samfile = pysam.AlignmentFile(self.arg.BamPath, "rb")
         self.fasta = Cache(self.arg.FastaPath)
         self.rl = self.arg.ReadLength
         self.noregions = self.arg.NoRegions

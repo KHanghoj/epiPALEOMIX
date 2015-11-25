@@ -148,7 +148,7 @@ def parse_args(argv):
 
 
 def run(args):
-    samfile = pysam.Samfile(args.bam, "rb")
+    samfile = pysam.AlignmentFile(args.bam, "rb")
     Corr_Depth = Write_Depth(args)
     # flanks = (Corr_Depth._TOTAL_WIN_LENGTH/2)+1
     flanks = Corr_Depth._TOTAL_WIN_LENGTH

@@ -187,7 +187,7 @@ def run(args):
     " than both --SkipThreePrime '{}' and SkipFivePrime '{}'".format(args.ReadBases,
                                                                      args.SkipThreePrime,
                                                                      args.SkipFivePrime))
-    samfile = pysam.Samfile(args.bam, "rb")
+    samfile = pysam.AlignmentFile(args.bam, "rb")
     Met_Score = Methyl_Level(args)
     for chrom, start, end, bedcoord in read_bed(args):
         Met_Score.reset_dict(chrom, start, end, bedcoord)

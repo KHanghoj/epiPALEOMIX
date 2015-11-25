@@ -91,7 +91,7 @@ def parse_args(argv):
 
 
 def run(args):
-    samfile = pysam.Samfile(args.bam, "rb")
+    samfile = pysam.AlignmentFile(args.bam, "rb")
     Phaso = Phasogram(args)
     for chrom, start, end, bedcoord in read_bed(args):
         Phaso.reset(chrom, start, end)
