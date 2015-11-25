@@ -1,3 +1,4 @@
-epipaleomix/epipaleomix/epicython/*/build
-epipaleomix/epipaleomix/epicython/*/*.c
+epipaleomix/epicython
+*.pyc
+
 
