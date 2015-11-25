@@ -15,18 +15,17 @@ Rscript_VERSION = versions.Requirement(call   = ("Rscript", "--version"),
 GC_NAME = '_GCcorrect'
 ### this is for individual readlength gccorrection
 class GccorrectNode(Node):
-    def __init__(self, d_bam, rl, subnodes=(), dependencies=()):
+    def __init__(self, d_bam, rl, dependencies=()):
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))
-        self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
-        description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
+        self.rl, self.d_bam  = rl, d_bam
+        description = ("<Gccorrect: '%s' window length: '%s' based on chromosome '%s' >" %
                        (self.dest, rl, self.d_bam.opts['GCcorrect']['--ChromUsed']))
 
         Node.__init__(self,
                       description=description,
                       input_files=self.d_bam.baminfo["BamPath"],
                       output_files=self.dest,
-                      subnodes=subnodes,
                       dependencies=dependencies)
         assert len(self.output_files) == 1, self.output_files
 
@@ -51,14 +50,14 @@ class GccorrectNode(Node):
 
 
 class CreateGCModelNode(CommandNode):
-    def __init__(self, d_bam, subnodes=()):
+    def __init__(self, d_bam, dependencies=()):
         # aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
         #                      'model_gc.R')
         aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
                              'model_gc_individualreadlength.R')
         
         call = ['Rscript', aux_r, '%(IN_SOURCE)s', str(d_bam.bam_name+GC_NAME),
-                str(len(subnodes)), '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
+                str(len(dependencies)), '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
         dest = os.path.join(d_bam.bam_output,
                             '%s_GC_Model.txt' % (str(d_bam.bam_name)))
         plot_dest = os.path.splitext(dest)[0]+'.pdf'
@@ -73,8 +72,7 @@ class CreateGCModelNode(CommandNode):
         CommandNode.__init__(self,
                              description=description,
                              command=cmd,
-                             dependencies=(),
-                             subnodes=subnodes)
+                             dependencies=dependencies)
 
 
 class GccorrectMidNode(Node):

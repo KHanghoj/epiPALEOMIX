@@ -71,8 +71,8 @@ def check_bed_exist(config, infile):
         As a changes in no. of threads from run to run is error prone
         in this setup'''
     filena, fileext = os.path.splitext(os.path.basename(infile))
-    reg = r'{}_([0-9]+).bed'.format(filena)
-    bedfiles = ((f, int(re.search(reg, f).groups()[0]))
+    reg = r'{}_0([0-9]+).bed'.format(filena)    
+    bedfiles = ((f, int(re.search(reg, f).group(1)))
                 for f in os.listdir(config.temp_local) if re.search(reg, f))
     return [os.path.join(config.temp_local, path)
             for path, val in sorted(bedfiles, key=operator.itemgetter(1))]
@@ -83,7 +83,9 @@ def split_bedfiles(config, d_make):
     mappapath = d_make.prefix.get('--MappabilityPath')
     enabl_filter = d_make.bedfiles.get('MappabilityFilter')
     if mappapath is None and enabl_filter is True:
-        raise MakefileError("Mappability filtering of bed file is enabled, but no mappability file '--MappabilityPath' seems to be provided")
+        raise MakefileError("Mappability filtering of bed file is enabled, but "
+                            "no mappability file '--MappabilityPath' "
+                            "seems to be provided")
     filtnode, nodes = [], []
     for bedn, in_bedp in checkbedfiles_ext(d_make.bedfiles):
         if enabl_filter and mappapath:
@@ -93,8 +95,8 @@ def split_bedfiles(config, d_make):
         if bedexists:
             d_make.bedfiles[bedn] = bedexists
         else:
-            splnode = SplitBedFileNode(config, d_make, bedn, subnodes=filtnode)
-            nodes.append(splnode)
+            nodes.append(SplitBedFileNode(config, d_make, bedn,
+                                          dependencies=filtnode))
     return nodes
 
 
@@ -150,9 +152,9 @@ def update_excludebed(d_make, d_bam):
 
 
 def getdequelen(d_bam):
-    rlmin, rlmax, gcmax = getminmax.main(d_bam.baminfo)
-    d_bam.opts['WriteDepth']['--DequeLength'] = rlmax
-    d_bam.opts['NucleoMap']['--DequeLength'] = rlmax
+    rlmin, rltopquant, gcmax = getminmax.main(d_bam.baminfo)
+    d_bam.opts['WriteDepth']['--DequeLength'] = rltopquant
+    d_bam.opts['NucleoMap']['--DequeLength'] = rltopquant
     return rlmin, gcmax
 
 
@@ -168,9 +170,9 @@ def calc_gcmodel(d_bam):
                                     d_bam.opts['GCcorrect']['--ChromUsed']])
 
         resolution = 5
-        subn = [GccorrectNode(d_bam, rl)
+        dependencies = [GccorrectNode(d_bam, rl)
                 for rl in xrange(rlmin, rlmax+resolution, resolution)]
-        return CreateGCModelNode(d_bam, subnodes=subn)
+        return [CreateGCModelNode(d_bam, dependencies=dependencies)]
     return []
 
 
@@ -189,9 +191,8 @@ def run_analyses(anal, d_bam, d_make, bedinfo, splitbednode, gcnode):
     for idx, bed_p in enumerate(bed_paths):
         bedn_temp = '{}_0{}'.format(bedn, idx)
         nodes.append(GeneralExecuteNode(anal, d_bam, bedn_temp, bed_p,
-                                        subnodes=gcnode,
-                                        dependencies=splitbednode))
-    return MergeDataFilesNode(d_bam, anal, bedn, subnodes=nodes)
+                                        gcnode, splitbednode))
+    return MergeDataFilesNode(d_bam, anal, bedn, dependencies=nodes)
     # add a summary node
     # TODO:::: if writedepth and bedoptionmerge == TRUE:
     # TODO::::     apply the merger script that i just already on the mergeNode

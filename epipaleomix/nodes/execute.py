@@ -30,12 +30,11 @@ MODULES = {
 class GeneralExecuteNode(Node):
     '''this new node puts the file in temporary
     final file need to be a merge of the other files'''
-    def __init__(self, anal, d_bam, bed_name, bed_path, subnodes=(), dependencies=()):
+    def __init__(self, anal, d_bam, bed_name, bed_path, gcnode, splitnode,  dependencies=()):
         self.analysis = MODULES[anal]
         self.infile, self.d_bam = d_bam.baminfo['BamPath'], d_bam
         self.bed_path, self.anal = bed_path, anal
-        # note anal name checked for GC-correction, and changed if  yes
-        subnodes, analname = self._correct_subnodes(subnodes, anal)
+        dependencies, analname = self._correct_subnodes(gcnode, splitnode, anal)
 
         out_f_name = d_bam.fmt.format(d_bam.bam_name, analname, bed_name)
         self.dest = os.path.join(d_bam.bam_temp_local, out_f_name)
@@ -46,7 +45,6 @@ class GeneralExecuteNode(Node):
                       description=description,
                       input_files=[self.infile, bed_path],
                       output_files=self.dest,
-                      subnodes=subnodes,
                       dependencies=dependencies)
 
     def _run(self, _config, temp):
@@ -57,7 +55,6 @@ class GeneralExecuteNode(Node):
 
     def _teardown(self, _config, temp):
         move_file(reroot_path(temp, self.dest), self.dest)
-
         Node._teardown(self, _config, temp)
 
     def _add_options(self, name):
@@ -71,15 +68,14 @@ class GeneralExecuteNode(Node):
                     argument = str(argument)
                 self.inputs.extend([option, argument])
 
-    def _correct_subnodes(self, subnodes, name):
+    def _correct_subnodes(self, gcnode, splitnode, name):
         ''' As not all analyses requires to wait for gccorrection model.
             We remove it from the tuple of dependencies'''
         opt_arg = self.d_bam.retrievedat(name)
-        ## if opt_arg.get('Apply_GC_Correction', False):            
-        if opt_arg.get('Apply_GC_Correction', False) and subnodes:
-            return subnodes, name+'GCcorr'
+        if opt_arg.get('Apply_GC_Correction', False) and gcnode:
+            return gcnode+splitnode, name+'GCcorr'
         else:
-            return (), name
+            return splitnode, name
 
 
 # class GeneralPlotNode(CommandNode):

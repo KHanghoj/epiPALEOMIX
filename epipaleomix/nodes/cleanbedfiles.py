@@ -26,7 +26,9 @@ class CleanFilesNode(CommandNode):
         basename, extension = os.path.splitext(os.path.basename(inbedfile))
         bname = "{}_MappaOnly{}".format(basename, extension)
         outbedfile = os.path.join(config.temp_local, bname)
+
         d_make.bedfiles[bedn] = outbedfile
+
         call1 = ["python", os.path.join(PREFIX, 'filtermappa.py'),
                  "%(IN_MAPPA)s", str(unique)]
         call2 = ["bedtools", "intersect", "-wb",
@@ -65,7 +67,7 @@ class CleanFilesNode(CommandNode):
 
 
 class SplitBedFileNode(Node):
-    def __init__(self, config, d_make, bedn, subnodes=(), dependencies=()):
+    def __init__(self, config, d_make, bedn, dependencies=()):
         self.temp_local = config.temp_local
         self.inbedfile = d_make.bedfiles[bedn]
         self.no_subbed = config.max_threads
@@ -78,7 +80,6 @@ class SplitBedFileNode(Node):
                       description=description,
                       input_files=self.inbedfile,
                       output_files=self.outputnames,
-                      subnodes=subnodes,
                       dependencies=dependencies)
         assert isinstance(self.outputnames, list), \
             "output has to be a list of strings"
@@ -106,8 +107,8 @@ class SplitBedFileNode(Node):
 
 
 class MergeDataFilesNode(Node):
-    def __init__(self, d_bam, anal, bedn, subnodes=(), dependencies=()):
-        self.infiles = [''.join(n.output_files) for n in subnodes]
+    def __init__(self, d_bam, anal, bedn, dependencies=()):
+        self.infiles = [''.join(n.output_files) for n in dependencies]
         self.anal = anal
         analname = self._check_gccorr_name(anal, self.infiles[0])
         self.dest = os.path.join(d_bam.bam_output,
@@ -127,7 +128,6 @@ class MergeDataFilesNode(Node):
                       description=description,
                       input_files=self.infiles,
                       output_files=self.dest,
-                      subnodes=subnodes,
                       dependencies=dependencies)
 
     def _run(self, _config, temp):
