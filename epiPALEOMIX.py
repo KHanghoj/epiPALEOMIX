@@ -49,7 +49,7 @@ def check_bed_exist(config, infile):
 def split_bedfiles(config, d_make):
     uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
     mappapath = d_make.prefix.get('--MappabilityPath')
-    enabl_filter = d_make.bedfiles.get('EnabledFilter')
+    enabl_filter = d_make.bedfiles.get('MappabilityFilter')
     if mappapath is None and enabl_filter is True:
         raise MakefileError("Mappability filtering of bed file is enabled, but no mappability file '--MappabilityPath' seems to be provided")
     filtnode, nodes = [], []
@@ -100,7 +100,7 @@ def main_anal_to_run(bedinfo, opts):
 
 def update_excludebed(d_make, d_bam):
     fmt = "{}".format
-    if d_make.bedfiles.get('EnabledFilter', False):
+    if d_make.bedfiles.get('MappabilityFilter', False):
         fmt = "{}MappaOnly".format
 
     for anal, opts in d_bam.opts.iteritems():

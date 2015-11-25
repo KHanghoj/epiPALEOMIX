@@ -18,7 +18,7 @@ class MakeCollect(object):
         self.bedfiles = {}
         for bedn, bedopts in self.beddata.iteritems():
             if isinstance(bedopts, str) and bedopts.endswith(".bed"):
-                if self.beddata.get('EnabledFilter', False):  # this is for the outputname
+                if self.beddata.get('MappabilityFilter', False):  # this is for the outputname
                     bedn += 'MappaOnly'
                 self.bedfiles[bedn] = bedopts
             else:  # just options to the specific bedfile

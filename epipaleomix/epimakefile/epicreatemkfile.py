@@ -25,15 +25,15 @@ Prefixes:
     --FastaPath: path/to/referenceFastafile           # REQUIRED
     
     # path to mappability file, leave empty if none
-    --MappabilityPath:                                
+    --MappabilityPath:
 
 # At least one bed file is required
-BedFiles:                                             
+BedFiles:
 
-    # "EnabledFilter" {True, False, default=False}
+    # "MappabilityFilter" {True, False, default=False}
         # If True, only uniquelymappable regions are analyzed. Requires valied MappabilityPath
         # If False, all bedregions will be used
-    EnabledFilter: False                   
+    MappabilityFilter: False
     
     # "UniquenessFilter" {a float between 0-1}
         # The uniqueness filter used.
@@ -161,9 +161,9 @@ _TEMPLATE_EPIPALEOMIX_SIMPLE = \
 # Hash-commented lines are ignored.
 Prefixes:
     --FastaPath: path/to/referenceFastafile           # REQUIRED
-    --MappabilityPath:                                
-BedFiles:                                             
-    EnabledFilter: False                   
+    --MappabilityPath:
+BedFiles:
+    MappabilityFilter: False
     UniquenessFilter: 0.9  # filtering bed regions with low uniqueness
     Nameofbed: path/to/bedfile
     # Nameofbed2: path/to/bedfile
