@@ -1,3 +1,15 @@
+FROM run analyses code part.
+    # add a summary node
+    # TODO:::: if writedepth and bedoptionmerge == TRUE:
+    # TODO::::     apply the merger script that i just already on the mergeNode
+    # TODO:::: if methylation cleaning True in bed file. remove all SNPs
+    # based on databased already created
+    # TODO:::: if nucleomap and Advancednucleomap is TRUE. apply it here.
+    # if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is
+    # false -> no plot
+
+
+
 meeting with TOBIAS 2015-23-11:
 - We decided to published with EM-calling
 - send him gccorrection

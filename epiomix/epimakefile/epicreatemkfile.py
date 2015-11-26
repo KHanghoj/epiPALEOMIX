@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from __future__ import print_function
 import sys
 import datetime
@@ -9,8 +9,8 @@ _TEMPLATE_EPIPALEOMIX = \
 # Please respect indentation (with spaces), and pay attention to colons and hyphens.
 # Hash-commented lines are ignored.
 # epiPALEOMIX requires as a minimum:
-#   A index Reference genome
-#   A index BAM file
+#   An indexed Reference genome
+#   An indexed BAM file
 #   A bedfile with region(s) of interest
 
 
@@ -19,13 +19,14 @@ _TEMPLATE_EPIPALEOMIX = \
 #   Bamnames (i.e. BAMName1)
 
 # incase of several bamfiles:
-    # Add another 'BAMName2' with a meaningful BAM file name.
-    # Duplicate the info of the analyses in BAMName1 and change the required arguments (e.g. path, and options)
+    # Add another 'BAMName2:' with a meaningful BAM file name.
+    # Duplicate the info of the analyses in BAMName1 and change the required arguments (e.g. paths, and options)
+
 Prefixes:
     --FastaPath: path/to/referenceFastafile           # REQUIRED
     
     # path to mappability file, leave empty if none
-    --MappabilityPath:
+    --MappabilityPath:   # pathto/mappabilityfile
 
 # At least one bed file is required
 BedFiles:
@@ -35,9 +36,9 @@ BedFiles:
         # If False, all bedregions will be used
     MappabilityFilter: False
     
-    # "UniquenessFilter" {a float between 0-1}
+    # "MappabilityScore" {a float between 0-1}
         # The uniqueness filter used.
-    UniquenessFilter: 0.9  # filtering bed regions with low uniqueness
+    MappabilityScore: 0.9  # filtering bed regions with low uniqueness
     
     # For Each Bedfile Provided Set A Meaningful Bedname
     Nameofbed: path/to/bedfile
@@ -161,10 +162,10 @@ _TEMPLATE_EPIPALEOMIX_SIMPLE = \
 # Hash-commented lines are ignored.
 Prefixes:
     --FastaPath: path/to/referenceFastafile           # REQUIRED
-    --MappabilityPath:
+    --MappabilityPath: # pathto/mappabilityfile
 BedFiles:
     MappabilityFilter: False
-    UniquenessFilter: 0.9  # filtering bed regions with low uniqueness
+    MappabilityScore: 0.9  # filtering bed regions with low uniqueness
     Nameofbed: path/to/bedfile
     # Nameofbed2: path/to/bedfile
 BamInputs:

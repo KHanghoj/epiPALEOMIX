@@ -51,10 +51,8 @@ class GccorrectNode(Node):
 
 class CreateGCModelNode(CommandNode):
     def __init__(self, d_bam, dependencies=()):
-        # aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
-        #                      'model_gc.R')
         aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
-                             'model_gc_individualreadlength.R')
+                             'model_gc.R')
         
         call = ['Rscript', aux_r, '%(IN_SOURCE)s', str(d_bam.bam_name+GC_NAME),
                 str(len(dependencies)), '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
@@ -73,72 +71,3 @@ class CreateGCModelNode(CommandNode):
                              description=description,
                              command=cmd,
                              dependencies=dependencies)
-
-
-class GccorrectMidNode(Node):
-    def __init__(self, d_bam, subnodes=()):
-        self.dest = os.path.join(d_bam.bam_temp_local,
-                            d_bam.bam_name+'_MID'+GC_NAME+'.txt')
-        description = ("<GccorrectMid: 'infiles' to: '%s'>" %
-                       (dest))
-        self.infiles = [''.join(node.output_files) for node in subnodes]
-
-        Node.__init__(self,
-                      description=description,
-                      input_files=self.infiles,
-                      output_files=self.dest,
-                      subnodes=subnodes,
-                      dependencies=())
-
-    def _run(self, _config, temp):
-        dest = reroot_path(temp, self.dest)
-        gccorrect_mid.main([dest] + self.infiles)
-
-    def _teardown(self, _config, temp):
-        move_file(reroot_path(temp, self.dest), self.dest)
-        Node._teardown(self, _config, temp)
-
-
-
-class _GccorrectNodeOLD(Node):
-    def __init__(self, d_bam, rl, subnodes=(), dependencies=()):
-        self.dest = os.path.join(d_bam.bam_temp_local,
-                                 d_bam.bam_name+GC_NAME+'_'+str(rl))
-        self.rl, self.d_bam, self.subns = rl, d_bam, subnodes
-        if self.subns:  ## finetune step run if subnodes
-            self.dest += '_finescale'
-        description = ("<Gccorrect: '%s' window length: '%s' based on chromosome %s>" %
-                       (self.dest, rl, self.d_bam.opts['GCcorrect']['--ChromUsed']))
-
-        Node.__init__(self,
-                      description=description,
-                      input_files=self.d_bam.baminfo["BamPath"],
-                      output_files=self.dest,
-                      subnodes=subnodes,
-                      dependencies=dependencies)
-        assert len(self.output_files) == 1, self.output_files
-
-
-    def _run(self, _config, temp):
-        dest = reroot_path(temp, self.dest)
-        self.inputs = [self.d_bam.baminfo["BamPath"], dest]
-        if self.subns:  ## finetune step run if subnodes
-            offsetfile = (''.join(node.output_files) for node in self.subns)
-            self.inputs.extend(("--OffSet", str(offsetfile.next())))
-
-        self._add_options('GCcorrect')
-        self.inputs.extend(["--ReadLength", str(self.rl)])
-        gccorrect.main(self.inputs)
-
-    def _teardown(self, _config, temp):
-        move_file(reroot_path(temp, self.dest), self.dest)
-        Node._teardown(self, _config, temp)
-    
-
-    def _add_options(self, name):
-        optargs = self.d_bam.retrievedat(name)
-        for option, argument in optargs.iteritems():
-            if isinstance(option, str) and option.startswith('-'):
-                if not isinstance(argument, str):
-                    argument = str(argument)
-                self.inputs.extend((option, argument))

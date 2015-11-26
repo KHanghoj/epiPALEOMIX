@@ -79,7 +79,7 @@ def check_bed_exist(config, infile):
 
 
 def split_bedfiles(config, d_make):
-    uniqueness = d_make.bedfiles.get('UniquenessFilter', 0)
+    uniqueness = d_make.bedfiles.get('MappabilityScore', 0)
     mappapath = d_make.prefix.get('--MappabilityPath')
     enabl_filter = d_make.bedfiles.get('MappabilityFilter')
     if mappapath is None and enabl_filter is True:
@@ -185,7 +185,7 @@ def check_chrom_prefix(d_make):
                                    bedpath])
 
 
-def run_analyses(anal, d_bam, d_make, bedinfo, splitbednode, gcnode):
+def run_analyses(anal, d_bam, bedinfo, gcnode, splitbednode):
     bedn, bed_paths = bedinfo
     nodes = []
     for idx, bed_p in enumerate(bed_paths):
@@ -193,14 +193,6 @@ def run_analyses(anal, d_bam, d_make, bedinfo, splitbednode, gcnode):
         nodes.append(GeneralExecuteNode(anal, d_bam, bedn_temp, bed_p,
                                         gcnode, splitbednode))
     return MergeDataFilesNode(d_bam, anal, bedn, dependencies=nodes)
-    # add a summary node
-    # TODO:::: if writedepth and bedoptionmerge == TRUE:
-    # TODO::::     apply the merger script that i just already on the mergeNode
-    # TODO:::: if methylation cleaning True in bed file. remove all SNPs
-    # based on databased already created
-    # TODO:::: if nucleomap and Advancednucleomap is TRUE. apply it here.
-    # if not d_make.bed_plot[bedn] or anal == 'WriteDepth': # if bedplot is
-    # false -> no plot
 
 
 def make_outputnames(config, make):
@@ -226,9 +218,9 @@ def create_nodes(config, makefiles):
             update_excludebed(d_make, d_bam)
             for bedinfo in checkbedfiles_ext(d_make.bedfiles):
                 for anal in main_anal_to_run(bedinfo, opts):
-                    topnodes.append(run_analyses(anal, d_bam,
-                                                 d_make, bedinfo,
-                                                 splitbednode, gcnode))
+                    topnodes.append(
+                        run_analyses(anal, d_bam, bedinfo, gcnode, splitbednode)
+                    )
             if not topnodes:
                 topnodes.extend(splitbednode+gcnode)
     return topnodes

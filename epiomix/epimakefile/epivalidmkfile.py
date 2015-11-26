@@ -97,7 +97,7 @@ _VALIDATION = {
     },
     "BedFiles": {
         'MappabilityFilter': IsBoolean(default=False),
-        'UniquenessFilter': IsFloat(default=0.9),
+        'MappabilityScore': IsFloat(default=0.9),
         _VALID_BED_NAME: IsStr
         ## _VALID_BED_NAME: _VALIDATION_BED
     }
