@@ -5,7 +5,7 @@ from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.common.fileutils import move_file, reroot_path
 import pypeline.common.versions as versions
 
-from epipaleomix.tools import gccorrect_mid, gccorrect
+from epiomix.tools import gccorrect_mid, gccorrect
 
 import os
 Rscript_VERSION = versions.Requirement(call   = ("Rscript", "--version"),

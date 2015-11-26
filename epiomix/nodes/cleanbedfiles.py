@@ -7,8 +7,8 @@ from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
 from pypeline.atomiccmd.sets import ParallelCmds
 
-from epipaleomix.tools import splitbedfiles
-from epipaleomix.tools import merge_datafiles
+from epiomix.tools import splitbedfiles, \
+    merge_datafiles
 
 
 BEDTOOLS_VERSION = versions.Requirement(call=("bedtools", "--version"),

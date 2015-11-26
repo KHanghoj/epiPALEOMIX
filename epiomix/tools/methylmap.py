@@ -11,7 +11,7 @@ import gzip
 from os.path import exists, splitext
 from shutil import move
 from collections import defaultdict, namedtuple
-from epipaleomix.tools.commonutils import \
+from epiomix.tools.commonutils import \
     read_bed, \
     Cache
 

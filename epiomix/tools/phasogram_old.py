@@ -9,7 +9,7 @@ import pysam
 import argparse
 import gzip
 from collections import defaultdict, deque
-from epipaleomix.tools.commonutils import read_bed, \
+from epiomix.tools.commonutils import read_bed, \
     GC_correction
 
 
@@ -17,38 +17,40 @@ class Phasogram(GC_correction):
     """docstring for Phasogram"""
     def __init__(self, arg):
         self.arg = arg
+        GC_correction.__init__(self)
         self.outputdic = defaultdict(int)
         self.forward_dic, self.reverse_dic = {}, {}
-        GC_correction.__init__(self)
 
-    def _call_output(self, dic):
-        pos_above_cutoff = [k for k,v in dic.iteritems() if v >= self.arg.SubsetPileup]
-        pos_above_cutoff.sort()
-        sort_keys = deque(pos_above_cutoff)
-        while sort_keys:
-            old_pos = sort_keys.popleft()
-            for curr in sort_keys:
-                length = curr - old_pos
-                if length > self.arg.MaxRange:
-                    break
-                else:
-                    self.outputdic[length] += 1
+    def _call_output(self, dic, max_range=None, max_size=None):
+        if dic:
+            max_range = self.arg.MaxRange if max_range is None else max_range
+            max_size = self.arg.MaxRange if max_size is None else max_range
+            sort_keys = deque(sorted(dic.iterkeys()))
+            max_key = sort_keys[-1]
+            while max_key - sort_keys[0] > max_range:
+                old_pos = sort_keys.popleft()
+                old_count = dic.pop(old_pos, 0)
+                for current in sort_keys:
+                    length = current - old_pos
+                    if length >= max_size:
+                        break  # break the for loop as current pos is too long.
+                    if old_count >= self.arg.SubsetPileup:
+                        self.outputdic[length] += 1
                         
-    def _finddepth(self, pos, dic, corr):
+    def _finddepth(self, pos, dic, gc_pos):
+        corr = self._get_gc_corr_dep(gc_pos)
         try:
             dic[pos] += corr
         except KeyError:
             dic[pos] = corr
+            self._call_output(dic)
 
     def update(self, record):
-        if record.is_reverse:
-            if record.aend <= self.end:
-                corr = self._get_gc_corr_dep(record)
-                self._finddepth(record.aend-1, self.reverse_dic, corr)
-        else:
-            if record.pos >= self.start:
-                corr = self._get_gc_corr_dep(record)
-                self._finddepth(record.pos, self.forward_dic, corr)
+        if record.pos >= self.start:
+            if record.is_reverse:
+                self._finddepth(record.aend, self.reverse_dic, record.aend-self._GC_model_len)
+            else:
+                self._finddepth(record.pos, self.forward_dic, record.pos)
 
     def writetofile(self):
         fmt = '{}\t{}\n'
@@ -61,17 +63,13 @@ class Phasogram(GC_correction):
             pass
 
     def call(self):
-        if self.forward_dic:
-            self._call_output(self.forward_dic)
-        if self.reverse_dic:
-            self._call_output(self.reverse_dic)
+        self._call_output(self.forward_dic, max_range=0, max_size=0)
+        self._call_output(self.reverse_dic, max_range=0, max_size=0)
 
-    def reset(self, chrom, start, end):
+    def reset(self, chrom, start):
         self.chrom = chrom
-        self.forward_dic.clear()
-        self.reverse_dic.clear()
+        self.forward_dic, self.reverse_dic = {}, {}
         self.start = start-1  # 0-based as record.pos is zero based
-        self.end = end
 
 
 def parse_args(argv):
@@ -84,9 +82,8 @@ def parse_args(argv):
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
     parser.add_argument('--MaxRange', help="...", type=int, default=1000)
-    parser.add_argument('--MinMappingQuality', help="...", type=int, default=25)
-    parser.add_argument('--MinAlignmentLength', help="...", type=int, default=25)
-    
+    parser.add_argument('--MinMappingQuality', help="...", type=int,
+                        default=25)
     return parser.parse_known_args(argv)
 
 
@@ -94,9 +91,9 @@ def run(args):
     samfile = pysam.AlignmentFile(args.bam, "rb")
     Phaso = Phasogram(args)
     for chrom, start, end, bedcoord in read_bed(args):
-        Phaso.reset(chrom, start, end)
+        Phaso.reset(chrom, start)
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality or record.is_unmapped or record.alen < args.MinAlignmentLength:
+            if record.mapq < args.MinMappingQuality or record.is_unmapped:
                 continue  # do not analyze low quality records
             Phaso.update(record)
         Phaso.call()

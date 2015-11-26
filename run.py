@@ -12,21 +12,21 @@ from pypeline.pipeline import Pypeline
 from pypeline.common.console import \
     print_err, \
     print_info
-from epipaleomix.tools.commonutils import check_path
-from epipaleomix.config import parse_config, __version__
-from epipaleomix.epimakefile import epicreatemkfile
-from epipaleomix.epimakefile.epivalidmkfile import read_epiomix_makefile
-from epipaleomix.nodes.execute import GeneralExecuteNode
-from epipaleomix.tools import checkchromprefix, \
+from epiomix.tools.commonutils import check_path
+from epiomix.config import parse_config, __version__
+from epiomix.epimakefile import epicreatemkfile
+from epiomix.epimakefile.epivalidmkfile import read_epiomix_makefile
+from epiomix.nodes.execute import GeneralExecuteNode
+from epiomix.tools import checkchromprefix, \
     checkmappabilitychrom, \
     getminmax
-from epipaleomix.tools.bamdatastructure import BamCollect, \
+from epiomix.tools.bamdatastructure import BamCollect, \
     MakeCollect, \
     MakefileError
-from epipaleomix.nodes.gccorrect import \
+from epiomix.nodes.gccorrect import \
     GccorrectNode, \
     CreateGCModelNode
-from epipaleomix.nodes.cleanbedfiles import \
+from epiomix.nodes.cleanbedfiles import \
     CleanFilesNode, \
     SplitBedFileNode, \
     MergeDataFilesNode
@@ -264,8 +264,6 @@ def run(config, makefiles):
 
 def _print_usage():
     basename = os.path.basename(sys.argv[0])
-    if basename == "./epipaleomix.py":
-        basename = "epipaleomix"
     print_info("epiPALEOMIX Pipeline %s\n" % (__version__,))
     print_info("epiPALEOMIX\n")
     print_info("Usage:")

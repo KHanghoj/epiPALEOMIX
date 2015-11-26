@@ -3,7 +3,7 @@ from pypeline.node import Node
 from pypeline.common.fileutils import move_file, reroot_path
 import os
 
-from epipaleomix.tools import \
+from epiomix.tools import \
     pileupdepth, \
     nucleomap, \
     methylmap, \

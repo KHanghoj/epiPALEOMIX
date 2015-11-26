@@ -4,7 +4,7 @@ import sys
 import pysam
 import argparse
 from collections import defaultdict
-from epipaleomix.tools.commonutils import \
+from epiomix.tools.commonutils import \
     Cache, \
     read_mappa
 ## _BUFFER = 2

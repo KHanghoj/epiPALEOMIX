@@ -1,4 +1,4 @@
-from epipaleomix.tools.commonutils import check_path
+from epiomix.tools.commonutils import check_path
 import os
 
 

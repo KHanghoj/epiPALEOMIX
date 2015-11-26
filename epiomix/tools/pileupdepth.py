@@ -7,7 +7,7 @@ import gzip
 from collections import deque, namedtuple
 from os.path import exists, splitext
 from shutil import move
-from epipaleomix.tools.commonutils import read_bed, \
+from epiomix.tools.commonutils import read_bed, \
     GC_correction
 
 
