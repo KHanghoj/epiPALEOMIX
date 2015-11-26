@@ -170,9 +170,9 @@ def calc_gcmodel(d_bam):
                                     d_bam.opts['GCcorrect']['--ChromUsed']])
 
         resolution = 5
-        dependencies = [GccorrectNode(d_bam, rl)
+        gcdependencies = [GccorrectNode(d_bam, rl)
                 for rl in xrange(rlmin, rlmax+resolution, resolution)]
-        return [CreateGCModelNode(d_bam, dependencies=dependencies)]
+        return [CreateGCModelNode(d_bam, dependencies=gcdependencies)]
     return []
 
 

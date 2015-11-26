@@ -2,10 +2,11 @@
 from __future__ import print_function
 from pypeline.node import CommandNode, Node
 from pypeline.atomiccmd.command import AtomicCmd
+from pypeline.atomiccmd.builder import AtomicCmdBuilder
 from pypeline.common.fileutils import move_file, reroot_path
 import pypeline.common.versions as versions
 
-from epiomix.tools import gccorrect_mid, gccorrect
+from epiomix.tools import gccorrect
 
 import os
 Rscript_VERSION = versions.Requirement(call   = ("Rscript", "--version"),
@@ -13,7 +14,8 @@ Rscript_VERSION = versions.Requirement(call   = ("Rscript", "--version"),
                                        checks = versions.GE(2, 15, 3))
 
 GC_NAME = '_GCcorrect'
-### this is for individual readlength gccorrection
+
+
 class GccorrectNode(Node):
     def __init__(self, d_bam, rl, dependencies=()):
         self.dest = os.path.join(d_bam.bam_temp_local,
@@ -50,20 +52,23 @@ class GccorrectNode(Node):
 
 
 class CreateGCModelNode(CommandNode):
-    def __init__(self, d_bam, dependencies=()):
+    def __init__(self, d_bam, dependencies):
         aux_r = os.path.join(os.path.dirname(gccorrect.__file__),
                              'model_gc.R')
-        
-        call = ['Rscript', aux_r, '%(IN_SOURCE)s', str(d_bam.bam_name+GC_NAME),
-                str(len(dependencies)), '%(OUT_FILEPATH)s', '%(OUT_PLOT)s']
         dest = os.path.join(d_bam.bam_output,
                             '%s_GC_Model.txt' % (str(d_bam.bam_name)))
         plot_dest = os.path.splitext(dest)[0]+'.pdf'
-        cmd = AtomicCmd(call,
-                        IN_SOURCE=d_bam.bam_temp_local,
-                        OUT_FILEPATH=dest,
-                        OUT_PLOT=plot_dest,
-                        CHECK_VERSION = Rscript_VERSION)
+        infiles = [''.join(n.output_files) for n in dependencies]
+        builder = AtomicCmdBuilder(("Rscript", "%(AUX_R)s"))
+        builder.add_value('%(OUT_FILEPATH)s')
+        builder.add_value('%(OUT_PLOT)s')
+        builder.add_multiple_values(infiles)
+        builder.set_kwargs(AUX_R=aux_r,
+                           OUT_FILEPATH=dest,
+                           OUT_PLOT=plot_dest,
+                           CHECK_VERSION=Rscript_VERSION)
+        cmd = builder.finalize()
+
         d_bam.opts['BamInfo']['--GCmodel'] = dest
         description = "<CreateGCModel: '%s' -> '%s'" % (d_bam.bam_temp_local,
                                                         dest)
