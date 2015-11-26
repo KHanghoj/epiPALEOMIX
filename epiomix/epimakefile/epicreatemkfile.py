@@ -23,7 +23,7 @@ _TEMPLATE_EPIPALEOMIX = \
     # Duplicate the info of the analyses in BAMName1 and change the required arguments (e.g. paths, and options)
 
 Prefixes:
-    --FastaPath: path/to/referenceFastafile           # REQUIRED
+    --FastaPath: path/to/referenceFastafile       # REQUIRED
     
     # path to mappability file, leave empty if none
     --MappabilityPath:   # pathto/mappabilityfile
@@ -41,7 +41,7 @@ BedFiles:
     MappabilityScore: 0.9  # filtering bed regions with low uniqueness
     
     # For Each Bedfile Provided Set A Meaningful Bedname
-    Nameofbed: path/to/bedfile
+    Nameofbed: path/to/bedfile                    # REQUIRES at least one bedfile
     # Nameofbed2: path/to/bedfile
 
 
@@ -51,7 +51,7 @@ BamInputs:
         # "BamInfo" Contain general options about the Bamfile
         BamInfo:
             # Path to the bamfile
-            BamPath: path/to/bamfile  # REQUIRED
+            BamPath: path/to/bamfile              # REQUIRED
 
             # Minimum Mapping Quality Read
             --MinMappingQuality: 25
@@ -161,30 +161,30 @@ _TEMPLATE_EPIPALEOMIX_SIMPLE = \
 # Please respect indentation (with spaces), and pay attention to colons and hyphens.
 # Hash-commented lines are ignored.
 Prefixes:
-    --FastaPath: path/to/referenceFastafile           # REQUIRED
+    --FastaPath: path/to/referenceFastafile       # REQUIRED
     --MappabilityPath: # pathto/mappabilityfile
 BedFiles:
     MappabilityFilter: False
-    MappabilityScore: 0.9  # filtering bed regions with low uniqueness
-    Nameofbed: path/to/bedfile
+    MappabilityScore: 0.9                         # filtering bed regions with low uniqueness
+    Nameofbed: path/to/bedfile                    # REQUIRED
     # Nameofbed2: path/to/bedfile
 BamInputs:
     BAMName1:
         BamInfo:
-            BamPath: path/to/bamfile  # REQUIRED
+            BamPath: path/to/bamfile              # REQUIRED
         GCcorrect:
             Enabled: False
         NucleoMap:
             Enabled: False
-            Apply_GC_Correction: False  # GCcorrect Must be Enabled: True if applied
+            Apply_GC_Correction: False            # GCcorrect Must be Enabled if applied
         MethylMap:
             Enabled: False
         Phasogram:
             Enabled: False
-            Apply_GC_Correction: False  # GCcorrect Must be Enabled: True if applied
+            Apply_GC_Correction: False            # GCcorrect Must be Enabled if applied
         WriteDepth:
             Enabled: False
-            Apply_GC_Correction: False  # GCcorrect Must be Enabled: True if applied
+            Apply_GC_Correction: False            # GCcorrect Must be Enabled if applied
 """
 
 

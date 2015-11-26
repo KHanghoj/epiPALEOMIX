@@ -14,6 +14,7 @@ from pypeline.common.makefile import \
     ValuesSubsetOf, \
     IsListOf
 
+EXCLUDEBED = Or(IsListOf(IsStr), IsStr, IsNone, default=None)
 
 def _alphanum_check(whitelist):
     description = "characters a-z, A-Z, 0-9%s allowed"
@@ -24,7 +25,7 @@ def _alphanum_check(whitelist):
     return And(IsStr(),
                ValuesSubsetOf(whitelist, description=description))
 
-EXCLUDEBED = Or(IsListOf(IsStr), IsStr, IsNone, default=None)
+
 
 _VALID_BED_NAME = _VALID_TARGET_NAME = \
     And(_alphanum_check(whitelist="._-"),
@@ -36,6 +37,7 @@ _VALIDATION_OPTIONS = {
     "--MinAlignmentLength": IsUnsignedInt(default=25),
     "--NoReadsChecked": IsUnsignedInt(default=10000)
 }
+
 _VALIDATION_GCCORRECT = {
     "Enabled": IsBoolean(default=False),
     "--NoRegions": Or(IsUnsignedInt, IsStr, default=200), ## Add a key to check all 
