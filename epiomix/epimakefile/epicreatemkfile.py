@@ -14,18 +14,19 @@ _TEMPLATE_EPIPALEOMIX = \
 #   A bedfile with region(s) of interest
 
 
-# Only Names To Modify:
+# Only Names To Modify. (Do not use underscores):
 #   Bednames (i.e NameofBed)
 #   Bamnames (i.e. BAMName1)
 
 # incase of several bamfiles:
     # Add another 'BAMName2:' with a meaningful BAM file name.
-    # Duplicate the info of the analyses in BAMName1 and change the required arguments (e.g. paths, and options)
+    # Keep the second bamfile on the same indentation level as BAMName1
 
 Prefixes:
     --FastaPath: path/to/referenceFastafile       # REQUIRED
     
-    # path to mappability file, leave empty if none
+    # path to mappability file, leave empty if none.
+    # GCcorrection cannot be conducted with out a mappability file.
     --MappabilityPath:   # pathto/mappabilityfile
 
 # At least one bed file is required
@@ -37,7 +38,7 @@ BedFiles:
     MappabilityFilter: False
     
     # "MappabilityScore" {a float between 0-1}
-        # The uniqueness filter used.
+        # The uniqueness score used to filter.
     MappabilityScore: 0.9  # filtering bed regions with low uniqueness
     
     # For Each Bedfile Provided Set A Meaningful Bedname
@@ -64,7 +65,8 @@ BamInputs:
 
         # "GCcorrection" contain options regarding the GC-correction model
         GCcorrect:
-            # "Enabled" {True, False, default=False}. Requires a valid mappability file
+            # "Enabled" {True, False, default=False}. 
+            #Requires a valid mappability file '--mappabilityPath' in Prefix
             Enabled: False
 
             # The reference uniqueness minimum. It is not used if no mappability region is passed
@@ -105,7 +107,7 @@ BamInputs:
             # "Enabled" {True, False, default=False}
             Enabled: False
 
-            # In case some of the Bedfiles should not be analyzed be NucleoMap
+            # In case some of the Bedfiles should not be analyzed be MethylMap
             # Either ExcludeBed: bed1 OR ExcludeBed: [bed1, bed2]
             ExcludeBed:  
 
@@ -128,7 +130,7 @@ BamInputs:
             # "Enabled" {True, False, default=False}
             Enabled: False
 
-            # In case some of the Bedfiles should not be analyzed be NucleoMap
+            # In case some of the Bedfiles should not be analyzed be Phasogram
             # Either ExcludeBed: bed1 OR ExcludeBed: [bed1, bed2]
             ExcludeBed:  
 
@@ -147,7 +149,7 @@ BamInputs:
             # "Enabled" {True, False, default=False}
             Enabled: False
 
-            # In case some of the Bedfiles should not be analyzed be NucleoMap
+            # In case some of the Bedfiles should not be analyzed be WriteDepth
             # Either ExcludeBed: bed1 OR ExcludeBed: [bed1, bed2]
             ExcludeBed:  
 
@@ -155,6 +157,8 @@ BamInputs:
             # Whether the GC-correction model should be used when doing the phasogram analysis
             Apply_GC_Correction: False  # GCcorrect Must be "Enabled: True" if this is applied
 """
+
+
 _TEMPLATE_EPIPALEOMIX_SIMPLE = \
 """# -*- mode: Yaml; -*-
 # Timestamp: %s

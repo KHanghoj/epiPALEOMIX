@@ -16,7 +16,7 @@ BEDTOOLS_VERSION = versions.Requirement(call=("bedtools", "--version"),
                                         checks=versions.GE(2, 15, 0))
 PYTHON_VERSION = versions.Requirement(call=("python", "--version"),
                                       search=r"Python (\d+)\.(\d+)\.(\d+)",
-                                      checks=versions.GE(2, 7, 0))
+                                      checks=versions.GE(2, 7, 3))
 PREFIX = os.path.dirname(splitbedfiles.__file__)
 
 
