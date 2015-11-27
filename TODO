@@ -1,3 +1,34 @@
+
+
+Bayes estimator of methylation data
+
+## this works. add to tutorial
+curl -O ftp://OrlandoGroup:NbfnGf-E4QAE@ftp.dna.ku.dk/epiPALEOMIX/tutorial_epipal.tar.gz
+wget ftp://OrlandoGroup:NbfnGf-E4QAE@ftp.dna.ku.dk/epiPALEOMIX/tutorial_epipal.tar.gz
+
+
+SUMMARY NODE:
+- runtime
+- copy makefile more or less
+- 
+
+- for every analyses make a short summery after merge for every bedfile added. remember to add bamname and bedfile to each file.
+ - phaso:
+  - number of reads used
+ - Nucleomap:
+  - number of nucleosomes called
+ - methylation
+  - number of deaminated sites
+  - number of overall sites
+  - add an extra output to methylmap.py that records the number of deaminated sites and coverage per base analyzed
+  - global methylation level
+
+ - make short summary on gccorrection
+
+at the end concatenate all summary files. how to do that in the right order. hmmm
+
+
+
 FROM run analyses code part.
     # add a summary node
     # TODO:::: if writedepth and bedoptionmerge == TRUE:

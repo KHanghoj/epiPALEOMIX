@@ -1,3 +1,4 @@
+from __future__ import print_function
 from epiomix.tools.commonutils import check_path
 import os
 
@@ -8,21 +9,38 @@ class MakefileError(RuntimeError):
 
 class MakeCollect(object):
     def __init__(self, make):
-        self.makefile = make.pop('Makefile', {})
-        self.prefix = self.makefile.pop('Prefixes', {})
-        self.beddata = self.makefile.pop('BedFiles', {})
+        # self.makefile = make.pop('Makefile', {})
+        # self.prefix = self.makefile.pop('Prefixes', {})
+        # self.beddata = self.makefile.pop('BedFiles', {})
+        self.makefile = make.get('Makefile', {})
+        self.prefix = self.makefile.get('Prefixes', {})
+        self.beddata = self.makefile.get('BedFiles', {})
         self._add_bedname_suffix()
 
     def _add_bedname_suffix(self):
         ''' Split bedfiles options between bedname path and plot boolean '''
         self.bedfiles = {}
-        for bedn, bedopts in self.beddata.iteritems():
-            if isinstance(bedopts, str) and bedopts.endswith(".bed"):
-                if self.beddata.get('MappabilityFilter', False):  # this is for the outputname
-                    bedn += 'MappaOnly'
-                self.bedfiles[bedn] = bedopts
-            else:  # just options to the specific bedfile
-                self.bedfiles[bedn] = bedopts
+        for bedn, bedopts in self.beddata.items():
+            if (isinstance(bedopts, str) and bedopts.endswith(".bed") and
+                  self.beddata.get('MappabilityFilter', False)):
+                bedn += 'MappaOnly'
+            self.bedfiles[bedn] = bedopts
+
+                
+    def getfilterinfo(self):
+        enabl_filter = self.bedfiles.get('MappabilityFilter', False)
+        uniqueness = self.bedfiles.get('MappabilityScore')
+        mappapath = self.prefix.get('--MappabilityPath')
+        if enabl_filter is True:
+            try:
+                assert os.path.exists(mappapath), \
+                    ("the --MappabilityPath provided '%s' does not exists"
+                     % mappapath)
+            except TypeError:  # If Mappapath is None 
+                raise MakefileError("No '--MappabilityPath' is provided."
+                                    " Either add a valid path or disable "
+                                    "'MappabilityFilter' and 'GCcorrect'")
+        return (enabl_filter, uniqueness, mappapath)
 
 
 class BamCollect(object):

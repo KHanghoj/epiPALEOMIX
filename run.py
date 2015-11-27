@@ -65,7 +65,6 @@ def check_pysam_module_version():
                                pysam.__version__))
 
 
-
 def check_bed_exist(config, infile):
     ''' Check if bedfiles have been split already, then use them
         As a changes in no. of threads from run to run is error prone
@@ -79,13 +78,11 @@ def check_bed_exist(config, infile):
 
 
 def split_bedfiles(config, d_make):
-    uniqueness = d_make.bedfiles.get('MappabilityScore', 0)
-    mappapath = d_make.prefix.get('--MappabilityPath')
-    enabl_filter = d_make.bedfiles.get('MappabilityFilter')
-    if mappapath is None and enabl_filter is True:
-        raise MakefileError("Mappability filtering of bed file is enabled, but "
-                            "no mappability file '--MappabilityPath' "
-                            "seems to be provided")
+    ''' this name update of bedpaths only works because of
+    .items() in python 2.7 creates a list so d_make.bedfiles
+    is updatable in the for loop'''
+    ## maybe put this part into d_make class as we go. easier    
+    enabl_filter, uniqueness, mappapath = d_make.getfilterinfo()
     filtnode, nodes = [], []
     for bedn, in_bedp in checkbedfiles_ext(d_make.bedfiles):
         if enabl_filter and mappapath:
@@ -116,6 +113,7 @@ def chromused_coerce_to_string(bam):
 
 
 def checkbedfiles_ext(bedfiles):
+
     for bedname, bedpath in bedfiles.items():
         if isinstance(bedpath, str) and bedpath.endswith('.bed'):
             yield bedname, bedpath
@@ -256,6 +254,8 @@ def run(config, makefiles):
 
 def _print_usage():
     basename = os.path.basename(sys.argv[0])
+    if basename == "run.py":
+        basename = "epiPALEOMIX"
     print_info("epiPALEOMIX Pipeline %s\n" % (__version__,))
     print_info("epiPALEOMIX\n")
     print_info("Usage:")

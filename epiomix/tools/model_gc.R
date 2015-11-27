@@ -44,7 +44,7 @@ xranges <- c(0,1)
 
 
 par(mfrow=c(1,2))
-plot(1,xlim=xranges, ylim=yranges, ylab='Density', xlab='% GC content', main=sprintf('Max TV with readlength: %s bp', maxtv))
+plot(1,xlim=xranges, ylim=yranges, ylab='Density', xlab='% GC content', main=sprintf('Density at readlength: %s bp', maxtv))
 with(df, lines(gc_content,readsdensity, col='red'))
 with(df, lines(gc_content,refdensity, col='blue'))
 legend('topright', c('ReadDensity', 'RefDensity') ,
@@ -62,6 +62,7 @@ dat <- data.frame(
     'count'=maxtv,
     'GC_content'=df$gc_content,
     'ratio'=df$ratio)
+
 dat
 }
 
