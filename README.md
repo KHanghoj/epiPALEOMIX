@@ -18,7 +18,7 @@ Hanghøj K., ... , Orlando L. _Title_
 
 ## References
 
-[llamas]: http://dx.doi.org/10.1371/journal.pone.0030226
+[llamas]: http://dx.doi.org/10.1371/journal.pone.0030226 "Llamas, Bastien, Michelle L. Holland, Kefei Chen, Jennifer E. Cropley, Alan Cooper, and Catherine M. Suter. 2012. “High-Resolution Analysis of Cytosine Methylation in Ancient DNA.” PloS One 7 (1): e30226."
 
 
 ***
