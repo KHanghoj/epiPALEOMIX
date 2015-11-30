@@ -9,9 +9,6 @@ class MakefileError(RuntimeError):
 
 class MakeCollect(object):
     def __init__(self, make):
-        # self.makefile = make.pop('Makefile', {})
-        # self.prefix = self.makefile.pop('Prefixes', {})
-        # self.beddata = self.makefile.pop('BedFiles', {})
         self.makefile = make.get('Makefile', {})
         self.prefix = self.makefile.get('Prefixes', {})
         self.beddata = self.makefile.get('BedFiles', {})

@@ -257,7 +257,6 @@ def _print_usage():
     if basename == "run.py":
         basename = "epiPALEOMIX"
     print_info("epiPALEOMIX Pipeline %s\n" % (__version__,))
-    print_info("epiPALEOMIX\n")
     print_info("Usage:")
     print_info("  -- %s help           -- Display this message" % basename)
     print_info("  -- %s dryrun [...]   -- Perform dry run of pipeline on "

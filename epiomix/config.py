@@ -17,18 +17,21 @@ Centre for GeoGenetics
 Natural History Museum of Denmark
 University of Copenhagen.
 
-Aarhus blabla
+Aarhus Credentials
 
 Version: %s
                               -----
 """ %  __version__
 
 __description__ = """%prog Automatic generation of phasogram,
-nucleomsome and methylation maps using shotgun 
-high through-put DNA sequencing underlying ancient samples provided in bam format.""" 
+nucleosome and methylation maps using shotgun 
+high throughput DNA sequence data generated from ancient samples and provided in BAM format.""" 
 
 __epilog__ = """Please report bugs and suggestions for improvements to:
-Kristian Hanghoej (kristianhanghoej@gmail.com)
+Kristian Hanghoej (k.hanghoej@snm.ku.dk)
+Mikkel Schubert ()
+Tobias Madsen
+Jakob 
 Jakob and Tobias
 Ludovic Orlando (lorlando@snm.ku.dk)
 """

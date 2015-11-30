@@ -18,7 +18,7 @@ _TEMPLATE_EPIPALEOMIX = \
 #   Bednames (i.e NameofBed)
 #   Bamnames (i.e. BAMName1)
 
-# incase of several bamfiles:
+# in-case of several bamfiles:
     # Add another 'BAMName2:' with a meaningful BAM file name.
     # Keep the second bamfile on the same indentation level as BAMName1
 
@@ -33,7 +33,7 @@ Prefixes:
 BedFiles:
 
     # "MappabilityFilter" {True, False, default=False}
-        # If True, only uniquelymappable regions are analyzed. Requires valied MappabilityPath
+        # If True, only uniquely-mappable regions are analyzed. Requires valid MappabilityPath
         # If False, all bedregions will be used
     MappabilityFilter: False
     
@@ -77,12 +77,12 @@ BamInputs:
             --ChromUsed: all
 
             # Number of Regions with sufficiently high uniqueness to be investigated. 
-            # Default is 200, that is sufficent for a 10x genome.
-            # In case too few regions are being analysed, epiPALEOMIX will raise an except.
-            # "--NoRegions" takes an integer or "all". Note if "all" can be timeconsuming.
+            # Default is 200, that is sufficent for a 5x genome.
+            # In case too few regions are being analyzed, epiPALEOMIX will raise an exception.
+            # "--NoRegions" takes an integer or "all". Note that using  "all" will be timeconsuming.
             --NoRegions: 200
 
-        # "NucleoMap" contain options regarding the nucleosome calling method
+        # "NucleoMap" contains options for nucleosome calling
         NucleoMap:
             # "Enabled" {True, False, default=False}
             Enabled: False
@@ -91,18 +91,18 @@ BamInputs:
             # Whether the GC-correction model should be used when calling Nucleosomes
             Apply_GC_Correction: False  # GCcorrect Must be Enabled: True if applied
 
-            # In case some of the Bedfiles should not be analyzed be NucleoMap
+            # In case some of the Bedfiles should not be analyzed by NucleoMap
             # Either ExcludeBed: bed1 OR ExcludeBed: [bed1, bed2]
             ExcludeBed:  
             
-            # "--NucleosomeSize" reflects number of nucleotides a nucleosome cover
+            # "--NucleosomeSize" reflects the number of nucleotides a nucleosome cover
             --NucleosomeSize: 147
-            # "--NucleosomeFlanks" reflects number of nucleotides used to calculated the neighbouring coverage
+            # "--NucleosomeFlanks" reflects the number of nucleotides used to calculated the neighbouring coverage
             --NucleosomeFlanks: 25
-            # "--NucleosomeOffset" reflects number of nucleotides between Flanks and Size
+            # "--NucleosomeOffset" reflects the number of nucleotides between Flanks and Size
             --NucleosomeOffset: 12
 
-        # "MethylMap" contain options regarding the methylation mapping tool
+        # "MethylMap" contains options the methylation mapping tool
         MethylMap:
             # "Enabled" {True, False, default=False}
             Enabled: False
@@ -111,9 +111,9 @@ BamInputs:
             # Either ExcludeBed: bed1 OR ExcludeBed: [bed1, bed2]
             ExcludeBed:  
 
-            # "--Primes" regards what prime of the reads should be investigated.
-            # For doublestranded library protocols  'five' (i.e. checking five prime end of reads only) should be used. 
-            # For single stranded library protocols 'both' (i.e. checking both primes of the reads)
+            # "--Primes" indicates which read termini (5-prime and/or 3-prime) should be investigated:
+            # For doublestranded library protocols  'five' (i.e. 5-prime) should be used. 
+            # For single stranded library protocols 'both' i.e. both 5-prime and 3-prime) should be used
             # 'three' (i.e. checking only three prime end of reads) is also available but rarely used.
             --Primes: five
 
@@ -121,16 +121,16 @@ BamInputs:
             --ReadBases: 15
 
             # In cases nucleotides  from the three or five prime should be excluded.
-            # The number of nucleotides removed from the primes are subtracted from --ReadBases.
+            # The number of nucleotides removed from the primes are subtracted from --ReadBases, and can, thus, not be greater than ReadBases.
             --SkipThreePrime: 0
             --SkipFivePrime: 0
 
-        # "Phasogram" contain options regarding the Phasogram tool
+        # "Phasogram" contains options for the Phasogram tool
         Phasogram:
             # "Enabled" {True, False, default=False}
             Enabled: False
 
-            # In case some of the Bedfiles should not be analyzed be Phasogram
+            # In case some of the Bedfiles should not be analyzed by Phasogram
             # Either ExcludeBed: bed1 OR ExcludeBed: [bed1, bed2]
             ExcludeBed:  
 
@@ -138,18 +138,18 @@ BamInputs:
             # Whether the GC-correction model should be used when doing the phasogram analysis
             Apply_GC_Correction: False  # GCcorrect Must be "Enabled: True" if this is applied
 
-            # "--SubsetPileup" reflects the number of reads required to share 5' startposition. 
+            # "--SubsetPileup" reflects the minimal number of reads required to share 5' start positions.
             --SubsetPileup: 3
 
-            # "--MaxRange" reflects the distance in which the phasogram should be calculated
+            # "--MaxRange" reflects the distance (in bp) within which the phasogram should be calculated
             --MaxRange: 1000
 
-        # "WriteDepth" contain options regarding the Pileup depth and running-nucleosome score tool
+        # "WriteDepth" contains options for the Pileup depth and running-nucleosome score tools
         WriteDepth:
             # "Enabled" {True, False, default=False}
             Enabled: False
 
-            # In case some of the Bedfiles should not be analyzed be WriteDepth
+            # In case some of the Bedfiles should not be analyzed by WriteDepth
             # Either ExcludeBed: bed1 OR ExcludeBed: [bed1, bed2]
             ExcludeBed:  
 
