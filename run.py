@@ -150,10 +150,11 @@ def update_excludebed(d_make, d_bam):
 
 
 def getdequelen(d_bam):
+    lowerbound, upperbound, top_ninetyfive = getminmax.main(d_bam.baminfo)
     rlmin, rltopquant, gcmax = getminmax.main(d_bam.baminfo)
-    d_bam.opts['WriteDepth']['--DequeLength'] = rltopquant
-    d_bam.opts['NucleoMap']['--DequeLength'] = rltopquant
-    return rlmin, gcmax
+    d_bam.opts['WriteDepth']['--DequeLength'] = upperbound
+    d_bam.opts['NucleoMap']['--DequeLength'] = upperbound
+    return rlmin, top_ninetyfive
 
 
 def calc_gcmodel(d_bam):
@@ -168,8 +169,11 @@ def calc_gcmodel(d_bam):
                                     d_bam.opts['GCcorrect']['--ChromUsed']])
 
         resolution = 5
+        resolutionhalf = resolution/2
         gcdependencies = [GccorrectNode(d_bam, rl)
-                for rl in xrange(rlmin, rlmax+resolution, resolution)]
+                          for rl in xrange(rlmin+resolutionhalf,
+                                           rlmax,
+                                           resolution)]
         return [CreateGCModelNode(d_bam, dependencies=gcdependencies)]
     return []
 
