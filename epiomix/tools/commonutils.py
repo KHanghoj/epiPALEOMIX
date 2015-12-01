@@ -136,10 +136,9 @@ class _GC_correction(object):
 
 
 class GC_correction(object):
-    ''' This is for individual read length. Just Testing '''
+    ''' This is for individual read length '''
     def __init__(self):
         if self.arg.GCmodel:
-            half_jump = 2  ## value comes from the 'resolution' in run.py # resolution/2
             self._fasta_dat = Cache(self.arg.FastaPath)
             with open(self.arg.GCmodel, 'r') as f:
                 next(f)  # do not need the header
@@ -150,6 +149,7 @@ class GC_correction(object):
                     curr_count, ratio = self._unpackgc(*re.split(r'\s+', line.rstrip()))
 
                     if curr_count != prev_count and lst:
+                        half_jump = abs((int(curr_count)-int(prev_count)))/2
                         for key in range(prev_count-half_jump, prev_count+half_jump+1):
                             self._models_dic[key] = lst
 

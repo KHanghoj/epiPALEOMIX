@@ -21,23 +21,22 @@ class GCcorrect(object):
         self.noregions = self.arg.NoRegions
         self.reads_gc = {gc:0 for gc in xrange(self.rl+1)}
         self.reference_gc = {gc:0 for gc in xrange(self.rl+1)}
+        self.halfresolution = self.arg.HalfResolution
         
     def getreads(self, chrom, start, end):
         region_size = int(end - start)
         regionseq = self.fasta.fetch_string(chrom, start-1, region_size)
         regionlen = len(regionseq)
         cov = 0
-        halfresolution = 2
         start -= 1
         for record in self.samfile.fetch(chrom, start, end):
 
-            if (abs(self.rl - record.alen) > halfresolution or  # only reads near rl
+            if (abs(self.rl - record.alen) > self.halfresolution or  # only reads near rl
                   record.pos < start or   # not before start of region
                   record.aend-1 > end or  # not after end of region
                   record.mapq < self.arg.MinMappingQuality or
                   record.is_unmapped or
                   record.alen < self.arg.MinAlignmentLength):
-
                 continue  # do not analyze low quality records
 
             cov += 1
@@ -49,13 +48,14 @@ class GCcorrect(object):
                            curr_seq.count('G'))] += 1
 
         if cov:  # only allow for regions with reads
-            self.noregions -= 1
             jump = self.rl/2
             for idx in xrange(0, regionlen-self.rl+1, jump):
                 curr_seq = regionseq[idx:(idx+self.rl)]
                 self.reference_gc[(curr_seq.count('C') +
                                       curr_seq.count('G'))] += 1
-    
+        if cov > 100:
+            self.noregions -= 1
+                
     def writetofile(self):
         ''' dfs '''
         gcfmt = '{}\t{}\t{}\t{}\n'.format
@@ -78,16 +78,13 @@ def parse_args(argv):
     parser.add_argument('--MappaUniqueness', help="...", type=float)
     parser.add_argument('--ChromUsed', help="...", type=str)
     parser.add_argument('--NoRegions', help="...", type=int, default=200)    
-    parser.add_argument('--OffSet', type=str,
-                        help='the offsetfile found by the midnode')
+    parser.add_argument('--HalfResolution', help="...", type=int, default=4)    
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
     parser.add_argument('--MinAlignmentLength', help="..", type=int, default=25)    
 
     return parser.parse_known_args(argv)
 
 def run(args):
-    if args.OffSet:
-        args.ReadLength += int(open(args.OffSet, 'r').read().strip())
     GC = GCcorrect(args)
     mappability = args.MappaUniqueness
     last_chrom, last_end = '', -1

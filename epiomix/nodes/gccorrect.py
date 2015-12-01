@@ -17,7 +17,8 @@ GC_NAME = '_GCcorrect'
 
 
 class GccorrectNode(Node):
-    def __init__(self, d_bam, rl, dependencies=()):
+    def __init__(self, d_bam, rl, halfresolution, dependencies=()):
+        self.halfresolution = halfresolution
         self.dest = os.path.join(d_bam.bam_temp_local,
                                  d_bam.bam_name+GC_NAME+'_'+str(rl))
         self.rl, self.d_bam  = rl, d_bam
@@ -36,6 +37,8 @@ class GccorrectNode(Node):
         self.inputs = [self.d_bam.baminfo["BamPath"], dest]
         self._add_options('GCcorrect')
         self.inputs.extend(["--ReadLength", str(self.rl)])
+        self.inputs.extend(["--HalfResolution",
+                            str(self.halfresolution)])
         gccorrect.main(self.inputs)
 
     def _teardown(self, _config, temp):

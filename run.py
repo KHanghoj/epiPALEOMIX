@@ -168,9 +168,10 @@ def calc_gcmodel(d_bam):
         checkmappabilitychrom.main([d_bam.prefix['--MappabilityPath'],
                                     d_bam.opts['GCcorrect']['--ChromUsed']])
 
-        resolution = 5
+        resolution = (rlmax - rlmin)/5
+        resolution = resolution if resolution % 2 == 1 else resolution - 1
         resolutionhalf = resolution/2
-        gcdependencies = [GccorrectNode(d_bam, rl)
+        gcdependencies = [GccorrectNode(d_bam, rl, resolutionhalf)
                           for rl in xrange(rlmin+resolutionhalf,
                                            rlmax,
                                            resolution)]
