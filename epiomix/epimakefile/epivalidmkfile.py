@@ -67,7 +67,7 @@ _VALIDATION_PHASO = {
     "Enabled": IsBoolean(default=False),
     "ExcludeBed": EXCLUDEBED,
     "Apply_GC_Correction": IsBoolean(default=False),
-    "--SubsetPileup": IsUnsignedInt(default=3),
+    "--SubsetPileup": IsUnsignedInt(default=1),
     "--MaxRange": IsUnsignedInt(default=1000)
 }
 _VALIDATION_WRITEDEPTH = {

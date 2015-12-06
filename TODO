@@ -1,17 +1,18 @@
 PAPER TODO:
  - methyl barplot of all samples again. remember to removed snps. this is important.
  - linear model, nothing extra todo, as we will only do it on the user/phusion treated
- - redo read depth plot of nucleosome array for all samples
- - Phasogram of gene bodies
- - TSS
- - CTCF - occu and unoccu
+ - redo read depth plot of nucleosome array for all samples ADDED modern sample
+ - Phasogram of gene bodies - running. ADDED modern sample
+ - TSS - ADDEDMODERN
+ - CTCF - occu and unoccu -- ADDED modern sample
  - general methylation level occu unoccy and genome-wide
  - Methylation across nucleosome
  - downsampling plot of CTCF-bams
  - RISE??
- 
-split TSS by CpG density
-split genes by CpG density
+ - 
+
+split TSS by CpG density - done 
+split genes by CpG density - done
 
 Bayes estimator of methylation data
 

@@ -139,7 +139,7 @@ BamInputs:
             Apply_GC_Correction: False  # GCcorrect Must be "Enabled: True" if this is applied
 
             # "--SubsetPileup" reflects the minimal number of reads required to share 5' start positions.
-            --SubsetPileup: 3
+            --SubsetPileup: 1
 
             # "--MaxRange" reflects the distance (in bp) within which the phasogram should be calculated
             --MaxRange: 1000
