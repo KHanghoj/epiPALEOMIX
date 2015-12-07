@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/usr/bin/env python
 ''' Object: To calculate the phasogram between 5' end
 of mapped reads's start positions aligning in same 
 orientation within a 1000bp window
@@ -22,8 +22,11 @@ class Phasogram(GC_correction):
         GC_correction.__init__(self)
 
     def _call_output(self, dic):
-        pos_above_cutoff = [k for k,v in dic.iteritems() if v >= self.arg.SubsetPileup]
-        pos_above_cutoff.sort()
+        if self.arg.SubsetPileup > 1:
+            pos_above_cutoff = [k for k,v in dic.iteritems() if v >= self.arg.SubsetPileup]
+            pos_above_cutoff.sort()
+        else:
+            pos_above_cutoff = sorted(dic)
         sort_keys = deque(pos_above_cutoff)
         while sort_keys:
             old_pos = sort_keys.popleft()

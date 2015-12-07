@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import pysam, re, sys, os, argparse
 
 def unpack(chrom, *rest):

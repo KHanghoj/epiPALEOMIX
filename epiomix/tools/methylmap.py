@@ -1,4 +1,4 @@
-#!/opt/local/bin/python
+#!/usr/bin/env python
 '''  Object: To find the methylation value from a region. the methylation
 score (Ms)
 '''

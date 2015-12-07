@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import pysam, argparse
 
 def parse_args(argv):
@@ -18,7 +19,6 @@ def converttolist(argv):
     return arg
     
 
-## def main(pathtobam, MinMappingQuality, MinAlignmentLength, readswithinrange):
 def main(argv):    
     args, unknown = parse_args(converttolist(argv))
     init = 1
@@ -51,10 +51,3 @@ def main(argv):
     lst.sort()
     top_ninetyfive = lst[int(0.95*len(lst))]
     return (lowerbound, upperbound, top_ninetyfive)
-
-
-
-
-if __name__ == '__main__':
-    pass
-    ## print main('/Users/krishang/Desktop/example/saqqaq_chrom22.bam', 25, 27, 50000)

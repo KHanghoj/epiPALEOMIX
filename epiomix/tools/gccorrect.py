@@ -1,4 +1,4 @@
-# !/opt/local/bin/python
+#!/usr/bin/env python
 from __future__ import print_function
 import sys
 import pysam
@@ -59,11 +59,15 @@ class GCcorrect(object):
     def writetofile(self):
         ''' dfs '''
         gcfmt = '{}\t{}\t{}\t{}\n'.format
-        assert sum([self.reads_gc[gc] for gc in range(0, self.rl+1)]) > 2000, "Not enough reads to make the model"
-        with open(self.arg.OutputFile, 'w') as f:
-            for gc in range(0, self.rl+1):
-                f.write(gcfmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
-                        str(self.reference_gc[gc])))
+        if sum([self.reads_gc[gc] for gc in range(0, self.rl+1)]) < 2000:
+            with open(self.arg.OutputFile, 'W') as f:
+                for gc in range(0,self.rl+1):
+                    f.write(gcfmt(str(self.rl), str(gc), 1, 1))
+        else:
+            with open(self.arg.OutputFile, 'w') as f:
+                for gc in range(0, self.rl+1):
+                    f.write(gcfmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
+                                  str(self.reference_gc[gc])))
         self.fasta.closefile()
 
 
