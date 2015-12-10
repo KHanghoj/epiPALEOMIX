@@ -36,7 +36,8 @@ class CleanFilesNode(CommandNode):
         # call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
         call3 = ["sort", "-k 4,4", "-k 5,5n", "-k 2,2n"]
         call4 = ["python", os.path.join(PREFIX, "updatebedcoord.py")]
-        call5 = ["sort", "-k 4,4"]
+        call5 = ["sort", "-k 4,4", "-k 2,2n"]
+        ## call5 = ["sort", "-k 4,4"]        
 
         cmd1 = AtomicCmd(call1,
                          IN_MAPPA=mappa,
