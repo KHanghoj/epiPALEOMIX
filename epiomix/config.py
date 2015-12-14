@@ -12,28 +12,29 @@ An automated pipeline for generating epigenomic
 profiles from high-throughput sequencing shotgun
  data of sequencing data underlying Ancient samples
 ===================================================
-Kristian Hanghoej,(Jakob Skou etc.), Ludovic Orlando.
-Centre for GeoGenetics
-Natural History Museum of Denmark
-University of Copenhagen.
-
-Aarhus Credentials
-
 Version: %s
-                              -----
+
+                        -----
 """ %  __version__
 
 __description__ = """%prog Automatic generation of phasogram,
 nucleosome and methylation maps using shotgun 
-high throughput DNA sequence data generated from ancient samples and provided in BAM format.""" 
+high throughput DNA sequence data generated from ancient
+samples and provided in BAM format.""" 
 
-__epilog__ = """Please report bugs and suggestions for improvements to:
+__epilog__ = """
+If you make use of epiPALEOMIX please cite:
+K. Hanghoej et al, 'Fast, accurate and automatic ancient
+nucleosome and methylation maps with epiPALEOMIX'
+Genome Biologi. 2016
+
+Please report bugs and suggestions for improvements to:
+
 Kristian Hanghoej (k.hanghoej@snm.ku.dk)
-Mikkel Schubert ()
-Tobias Madsen
-Jakob 
-Jakob and Tobias
-Ludovic Orlando (lorlando@snm.ku.dk)
+
+Centre for GeoGenetics
+Natural History Museum of Denmark
+University of Copenhagen.
 """
 
 class EpiPaleomixIndentHelper(optparse.IndentedHelpFormatter):
@@ -44,8 +45,8 @@ class EpiPaleomixIndentHelper(optparse.IndentedHelpFormatter):
 
 
 def _run_config_parser(argv):
-    # Helper class for optparse.OptionParser
-    # allows reading from and writing to a config file
+    '''Helper class for optparse.OptionParser
+    allows reading from and writing to a config file '''
     per_host_cfg = PerHostConfig("epiPALEOMIX")
     usage_str = "%prog <command> [options] [makefiles]"
     version_str  = "%%prog %s" % (__version__,)
