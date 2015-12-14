@@ -11,9 +11,6 @@ from epiomix.tools import splitbedfiles, \
     merge_datafiles
 
 
-BEDTOOLS_VERSION = versions.Requirement(call=("bedtools", "--version"),
-                                        search=r"bedtools v?(\d+)\.(\d+)\.(\d+)",
-                                        checks=versions.GE(2, 15, 0))
 PYTHON_VERSION = versions.Requirement(call=("python", "--version"),
                                       search=r"Python (\d+)\.(\d+)\.(\d+)",
                                       checks=versions.GE(2, 7, 3))
@@ -25,45 +22,25 @@ class CleanFilesNode(CommandNode):
         inbedfile = d_make.bedfiles[bedn]
         basename, extension = os.path.splitext(os.path.basename(inbedfile))
         bname = "{}_MappaOnly{}".format(basename, extension)
-        outbedfile = os.path.join(config.temp_local, bname)
+        dest = os.path.join(config.temp_local, bname)
 
-        d_make.bedfiles[bedn] = outbedfile
+        d_make.bedfiles[bedn] = dest
 
-        call1 = ["python", os.path.join(PREFIX, 'filtermappa.py'),
-                 "%(IN_MAPPA)s", str(unique)]
-        call2 = ["bedtools", "intersect", "-wb",
-                 "-a", "stdin", "-b", "%(IN_BED)s"]
-        # call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
-        call3 = ["sort", "-k 4,4", "-k 5,5n", "-k 2,2n"]
-        call4 = ["python", os.path.join(PREFIX, "updatebedcoord.py")]
-        call5 = ["sort", "-k 4,4", "-k 2,2n"]
-        ## call5 = ["sort", "-k 4,4"]        
+        call1 = ["python", os.path.join(PREFIX, "intersectmappabed.py"),
+                 "%(IN_BED)s", "%(IN_MAPPA)s", str(unique), "%(OUT_DEST)s"]
 
-        cmd1 = AtomicCmd(call1,
-                         IN_MAPPA=mappa,
-                         OUT_STDOUT=AtomicCmd.PIPE,
-                         CHECK_VERSION=PYTHON_VERSION)
-        cmd2 = AtomicCmd(call2,
-                         IN_STDIN=cmd1,
-                         IN_BED=inbedfile,
-                         OUT_STDOUT=AtomicCmd.PIPE,
-                         CHECK_VERSION=BEDTOOLS_VERSION)
-        cmd3 = AtomicCmd(call3,
-                         IN_STDIN=cmd2,
-                         OUT_STDOUT=AtomicCmd.PIPE)
-        cmd4 = AtomicCmd(call4,
-                         IN_STDIN=cmd3,
-                         OUT_STDOUT=AtomicCmd.PIPE)
-        cmd5 = AtomicCmd(call5,
-                         IN_STDIN=cmd4,
-                         OUT_STDOUT=outbedfile)
+        
+        cmd = AtomicCmd(call1,
+                        IN_BED=inbedfile,
+                        IN_MAPPA=mappa,
+                        OUT_DEST=dest,
+                        CHECK_VERSION=PYTHON_VERSION)
 
-        paral_cmd = ParallelCmds([cmd1, cmd2, cmd3, cmd4, cmd5])
-        description = "<CLEANBEDFILES: '%s' -> '%s', Uniqueness: '%s'" % \
-                      (inbedfile, outbedfile, unique)
+        description = ("<CLEANBEDFILES: '%s' -> '%s', Uniqueness: '%s'" %
+                       (inbedfile, dest, unique))
         CommandNode.__init__(self,
                              description=description,
-                             command=paral_cmd,
+                             command=cmd,
                              dependencies=dependencies)
 
 
@@ -111,7 +88,7 @@ class MergeDataFilesNode(Node):
     def __init__(self, d_bam, anal, bedn, dependencies=()):
         self.infiles = [''.join(n.output_files) for n in dependencies]
         self.anal = anal
-        analname = self._check_gccorr_name(anal, self.infiles[0])
+        analname = self._check_gccorr_name(self.infiles[0])
         self.dest = os.path.join(d_bam.bam_output,
                                  d_bam.fmt.format(d_bam.bam_name,
                                                   analname,
@@ -143,6 +120,57 @@ class MergeDataFilesNode(Node):
         move_file(reroot_path(temp, self.dest), self.dest)
         Node._teardown(self, _config, temp)
 
-    def _check_gccorr_name(self, anal, infile):
+    def _check_gccorr_name(self, infile):
         c_bamna, c_analname, c_bedna, _ = os.path.basename(infile).split('_')
         return c_analname
+
+
+# BEDTOOLS_VERSION = versions.Requirement(call=("bedtools", "--version"),
+#                                         search=r"bedtools v?(\d+)\.(\d+)\.(\d+)",
+#                                         checks=versions.GE(2, 15, 0))
+
+
+# class _CleanFilesNode(CommandNode):
+#     def __init__(self, config, d_make, bedn, mappa, unique, dependencies=()):
+#         inbedfile = d_make.bedfiles[bedn]
+#         basename, extension = os.path.splitext(os.path.basename(inbedfile))
+#         bname = "{}_MappaOnly{}".format(basename, extension)
+#         outbedfile = os.path.join(config.temp_local, bname)
+
+#         d_make.bedfiles[bedn] = outbedfile
+
+#         call1 = ["python", os.path.join(PREFIX, 'filtermappa.py'),
+#                  "%(IN_MAPPA)s", str(unique)]
+#         call2 = ["bedtools", "intersect", "-wb",
+#                  "-a", "stdin", "-b", "%(IN_BED)s"]
+#         # call3 = ["sort",  "-V", "-k 4,4", "-k 5,5", "-k 2,2"]
+#         call3 = ["sort", "-k 4,4", "-k 5,5n", "-k 2,2n"]
+#         call4 = ["python", os.path.join(PREFIX, "updatebedcoord.py")]
+#         call5 = ["sort", "-k 4,4", "-k 2,2n"]
+
+#         cmd1 = AtomicCmd(call1,
+#                          IN_MAPPA=mappa,
+#                          OUT_STDOUT=AtomicCmd.PIPE,
+#                          CHECK_VERSION=PYTHON_VERSION)
+#         cmd2 = AtomicCmd(call2,
+#                          IN_STDIN=cmd1,
+#                          IN_BED=inbedfile,
+#                          OUT_STDOUT=AtomicCmd.PIPE,
+#                          CHECK_VERSION=BEDTOOLS_VERSION)
+#         cmd3 = AtomicCmd(call3,
+#                          IN_STDIN=cmd2,
+#                          OUT_STDOUT=AtomicCmd.PIPE)
+#         cmd4 = AtomicCmd(call4,
+#                          IN_STDIN=cmd3,
+#                          OUT_STDOUT=AtomicCmd.PIPE)
+#         cmd5 = AtomicCmd(call5,
+#                          IN_STDIN=cmd4,
+#                          OUT_STDOUT=outbedfile)
+
+#         paral_cmd = ParallelCmds([cmd1, cmd2, cmd3, cmd4, cmd5])
+#         description = "<CLEANBEDFILES: '%s' -> '%s', Uniqueness: '%s'" % \
+#                       (inbedfile, outbedfile, unique)
+#         CommandNode.__init__(self,
+#                              description=description,
+#                              command=paral_cmd,
+#                              dependencies=dependencies)

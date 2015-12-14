@@ -14,6 +14,8 @@ def parse_args(argv):
     parser.add_argument('bed', type=str)
     parser.add_argument('MappabilityPath', type=str)
     parser.add_argument('MappaUniqueness', help="default is 0.9", type=float)
+    # parser.add_argument('out', nargs='?', default=sys.stdout)
+    parser.add_argument('out')
     return parser.parse_known_args(argv)
 
 
@@ -86,7 +88,7 @@ def getmappa(infile):
     return d
 
 
-def setupcallregion(chrom, handler=sys.stdout):
+def setupcallregion(chrom, handler):
     def output(regbegin, regend, rest):
         handler.write(FMT(chrom, regbegin, regend, "\t".join(map(str, rest))))
     return output
@@ -102,8 +104,8 @@ def getmappacoord(mappaiter):
         return int(1e10), int(1e11)
 
 
-def getintersect(bed, mappa, chrom):
-    callregion = setupcallregion(chrom)
+def getintersect(fout, bed, mappa, chrom):
+    callregion = setupcallregion(chrom, fout)
     bedtarget = bed[chrom]
 
     mappaiter = iter(mappa[chrom])
@@ -140,8 +142,9 @@ def getoverlaps(args):
     assert all((True if k in mappability_regions else False
                 for k in bed_regions)), ("Not all chromosomes in the bedfile "
                                          "are not present in Mappability file")
-    for chrom in sorted(bed_regions):
-        getintersect(bed_regions, mappability_regions, chrom)
+    with open(args.out, 'w') as fout:
+        for chrom in sorted(bed_regions):
+            getintersect(fout, bed_regions, mappability_regions, chrom)
 
 
 def main(argv):
