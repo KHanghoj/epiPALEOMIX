@@ -113,7 +113,6 @@ def chromused_coerce_to_string(bam):
 
 
 def checkbedfiles_ext(bedfiles):
-
     for bedname, bedpath in bedfiles.items():
         if isinstance(bedpath, str) and bedpath.endswith('.bed'):
             yield bedname, bedpath
@@ -161,6 +160,7 @@ def calc_gcmodel(d_bam):
     rlmin, rlmax = getdequelen(d_bam)
     if d_bam.opts['GCcorrect'].get('Enabled', False):
         chromused_coerce_to_string(d_bam)
+
         assert os.path.exists(d_bam.prefix.get('--MappabilityPath')), \
             ("If GCcorrection is enabled, a valid --MappabilityPath"
              " file must be provided as well")
@@ -173,8 +173,7 @@ def calc_gcmodel(d_bam):
         resolutionhalf = resolution/2
         gcdependencies = [GccorrectNode(d_bam, rl, resolutionhalf)
                           for rl in xrange(rlmin+resolutionhalf,
-                                           rlmax,
-                                           resolution)]
+                                           rlmax, resolution)]
         return [CreateGCModelNode(d_bam, dependencies=gcdependencies)]
     return []
 

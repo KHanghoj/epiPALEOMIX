@@ -35,7 +35,7 @@ class Write_Depth(GC_correction):
         self._TOTAL_WIN_LENGTH = self._SIZE+(2*self._OFFSET)+(2*self._NEIGHBOR)
         self._HALFWINDOW = int((self._TOTAL_WIN_LENGTH-1)/2)  ## +1
         self._CENTERINDEX = (self._SIZE-1)/2
-        self._DEQ_LEN = int(self.arg.DequeLength+50)
+        self._DEQ_LEN = int(self.arg.DequeLength+100)
         self._DEQ_LEN_ZEROS = [0]*self._DEQ_LEN
         self._HALFWINDOW_ZEROS = [0]*self._HALFWINDOW
         self._MAX_JUMP = self._DEQ_LEN*4

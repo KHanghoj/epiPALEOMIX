@@ -3,7 +3,6 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
-import math
 from collections import deque, namedtuple
 from os.path import exists, splitext
 from shutil import move
@@ -20,7 +19,7 @@ class Nucleosome_Prediction(GC_correction):
         GC_correction.__init__(self)
         self._deq_depth = deque(self._DEQ_LEN_ZEROS, maxlen=self._DEQ_LEN)
         self._deq_app = self._deq_depth.append
-        self._deq_popl = self._deq_depth.popleft        
+        self._deq_popl = self._deq_depth.popleft
         self._mainlist = []
         self._mainlapp = self._mainlist.append
         self._last_ini = 0
@@ -37,13 +36,12 @@ class Nucleosome_Prediction(GC_correction):
         self._TOTAL_WIN_LENGTH = self._SIZE+(2*self._OFFSET)+(2*self._NEIGHBOR)
         self._CENTERINDEX = (self._SIZE-1)/2
         self._MIN_DEPTH = int(self.arg.MinDepth)
-        self._DEQ_LEN = int(self.arg.DequeLength+50)
+        self._DEQ_LEN = int(self.arg.DequeLength+100)
         self._DEQ_LEN_ZEROS = [0]*self._DEQ_LEN
         self._NEIGHBOR_ZEROS = [0]*self._NEIGHBOR
         self._MAX_JUMP = self._DEQ_LEN*4
         self._SPACERMEAN = float(self._NEIGHBOR+self._NEIGHBOR)
 
-        
     def update_depth(self, record):
         if not self._last_ini:
             self._last_ini = record.pos+1
@@ -59,7 +57,6 @@ class Nucleosome_Prediction(GC_correction):
             _jump_idx -= 1
 
         self._last_pos = record.pos
-
         corr_depth = self._get_gc_corr_dep(record)
 
         for (cigar, count) in record.cigar:
@@ -74,80 +71,81 @@ class Nucleosome_Prediction(GC_correction):
         self._mainlist.extend(self._deq_depth)
         self._call_window()
 
-    def _check_width(self, start, end, incre):
+    def _check_width(self, window, start, end, incre):
         for idx in xrange(start, end, incre):
-            val = self.window[(self._CENTERINDEX + idx)]
+            val = window[(self._CENTERINDEX + idx)]
             if val != self.maxdepth:
                 break
             self.call.append(self._CENTERINDEX+idx)
 
-    def _depthwindows(self):
-        n = len(self._mainlist)
-        for idx in xrange(0, n-self._TOTAL_WIN_LENGTH+1):
-            yield idx, self._mainlist[idx:(idx+self._TOTAL_WIN_LENGTH)]
-
-    def _call_max(self, window):
-        ''' docstring '''
-        self.window = window
-        self.maxdepth = max(self.window)
-        if self.maxdepth > self._MIN_DEPTH:
-            if self.window[self._CENTERINDEX] == self.maxdepth:
-                self.call = [self._CENTERINDEX]
-                self._check_width(1, self._CENTERINDEX, 1)
-                self._check_width(-1, -self._CENTERINDEX, -1)
-                # not +1 as bed files are half open at the end
-                return (self.maxdepth, self._POSITION_OFFSET+min(self.call),
-                        self._POSITION_OFFSET+max(self.call)+1)
-        return (0, 0, 0)
-        
     def _call_window(self):
         ''' docstring '''
         lasttup = ()
-        for idx, win_depth in self._depthwindows():
+        mainlistlength = len(self._mainlist)
+        for idx in xrange(0, mainlistlength - self._TOTAL_WIN_LENGTH + 1):
+            win_depth = self._mainlist[idx:(idx+self._TOTAL_WIN_LENGTH)]
             if win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._MIN_DEPTH:
                 continue
-            if 0 in win_depth[self._POSITION_OFFSET: self._POSITION_OFFSET + self._SIZE]:
+            if 0 in win_depth[self._POSITION_OFFSET: (self._POSITION_OFFSET +
+                                                      self._SIZE)]:
                 continue
-            center_depth, min_idx, max_idx = self._call_max(win_depth[self._POSITION_OFFSET:
-                                                                      self._POSITION_OFFSET +
-                                                                      self._SIZE])
+            center_depth, min_idx, max_idx = \
+                self._call_max(win_depth[self._POSITION_OFFSET:
+                                         self._POSITION_OFFSET + self._SIZE])
 
             if center_depth:
                 spacerL = sum(win_depth[:self._NEIGHBOR])
                 spacerR = sum(win_depth[-self._NEIGHBOR:])
 
-                if spacerL > self._NEIGHBOR and spacerR > self._NEIGHBOR: ## Minimum coverage of 1 in flanks
+                # Minimum coverage of 1 in flanks
+                if spacerL > self._NEIGHBOR and spacerR > self._NEIGHBOR:
                     sizeofwindow = (max_idx-min_idx)
                     mean_spacer = (spacerL + spacerR)/self._SPACERMEAN
-                    mean_spacer = mean_spacer if mean_spacer > 1 else 1
-                    ## to correct for super high from the gccorrection
-                    ## score = math.log(float(center_depth)/(mean_spacer*sizeofwindow))
+                    # mean_spacer = mean_spacer if mean_spacer > 1 else 1
+                    # to correct for super high from the gccorrection
+                    # score = math.log(float(center_depth)/(mean_spacer*sizeofwindow))
                     score = (float(center_depth)-mean_spacer)/sizeofwindow
                     start_pos = idx+self._last_ini+min_idx
                     end_pos = idx+self._last_ini+max_idx
 
                     if start_pos >= self.start and end_pos <= self.end:
-                        if not lasttup: # initialize
-                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
+                        if not lasttup:  # initialize
+                            lasttup = self._calltuple(start_pos, end_pos,
+                                                      center_depth, score)
                             continue
                         # if start_pos <= lasttup.e: # the nucl dyad/center overlap
-                        if start_pos <= (lasttup.e+self._SIZE-1): # the nucleosomes overlap. # use the one with highest score
+                        if start_pos <= (lasttup.e+self._SIZE-1):  # the nucleosomes overlap. # use the one with highest score
                             if score > lasttup.score:
-                                lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
+                                lasttup = self._calltuple(start_pos, end_pos,
+                                                          center_depth, score)
                         else:  # they do not overlap. send lasttup to outputlist
                             self._outputlist.append(lasttup)
-                            lasttup = self._calltuple(start_pos, end_pos, center_depth, score)
+                            lasttup = self._calltuple(start_pos, end_pos,
+                                                      center_depth, score)
         if lasttup:
             self._outputlist.append(lasttup)
 
+    def _call_max(self, window):
+        ''' docstring '''
+        self.maxdepth = max(window)
+        if self.maxdepth > self._MIN_DEPTH:
+            if window[self._CENTERINDEX] == self.maxdepth:
+                self.call = [self._CENTERINDEX]
+                self._check_width(window, 1, self._CENTERINDEX, 1)
+                self._check_width(window, -1, -self._CENTERINDEX, -1)
+                # not +1 as bed files are half open at the end
+                return (self.maxdepth, self._POSITION_OFFSET+min(self.call),
+                        self._POSITION_OFFSET+max(self.call)+1)
+        return (0, 0, 0)
 
     def writetofile(self):
         ''' dfs '''
         if self._outputlist:
-            for dat in self._outputlist: 
-                self.f_output.write(self._fmt.format(self.chrom,
-                                                     *dat,
-                                                     bedcoord=self.bedcoord))
+            for dat in self._outputlist:
+                self.f_output.write(
+                    self._fmt.format(self.chrom,
+                                     *dat,
+                                     bedcoord=self.bedcoord))
             self._outputlist = []
 
     def _makeoutputfile(self):
@@ -167,20 +165,20 @@ class Nucleosome_Prediction(GC_correction):
     def reset_inregion(self, record):
         self._deq_depth.clear()
         self._deq_depth.extend(self._DEQ_LEN_ZEROS)
-        del self._mainlist [:]
+        del self._mainlist[:]
         self._mainlist.extend(self._NEIGHBOR_ZEROS)
         self._last_ini = record.pos+1-self._NEIGHBOR
 
     def reset_deques(self, chrom, start, end, bedcoord):
         self._deq_depth.clear()
         self._deq_depth.extend(self._DEQ_LEN_ZEROS)
-        del self._mainlist [:] # everytime new bed is called. flanks are made automatically. see run func
+        del self._mainlist[:]  # everytime new bed is called. flanks are made automatically. see run func
         self._last_ini = 0
         self.start, self.end, self.chrom = start, end, chrom
         self.bedcoord = bedcoord
         self._outputlist = []
 
-        
+
 def parse_args(argv):
     ''' docstring '''
     parser = argparse.ArgumentParser()
@@ -192,10 +190,14 @@ def parse_args(argv):
     parser.add_argument('--GCmodel', help='..', type=str, default=None)
     parser.add_argument('--DequeLength', help="..", type=int, default=1000)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
-    parser.add_argument('--MinAlignmentLength', help="..", type=int, default=25)
-    parser.add_argument('--NucleosomeSize', dest='SIZE', help="..", type=int, default=147)
-    parser.add_argument('--NucleosomeFlanks', dest='FLANKS', help="..", type=int, default=25)
-    parser.add_argument('--NucleosomeOffset', dest='OFFSET', help="..", type=int, default=12)
+    parser.add_argument('--MinAlignmentLength', help="..",
+                        type=int, default=25)
+    parser.add_argument('--NucleosomeSize', dest='SIZE', help="..",
+                        type=int, default=147)
+    parser.add_argument('--NucleosomeFlanks', dest='FLANKS', help="..",
+                        type=int, default=25)
+    parser.add_argument('--NucleosomeOffset', dest='OFFSET', help="..",
+                        type=int, default=12)
     return parser.parse_known_args(argv)
 
 
@@ -207,7 +209,9 @@ def run(args):
         nucl_pred_cls.reset_deques(chrom, start, end, bedcoord)
         start = 0 if start-flanks < 0 else start-flanks
         for record in samfile.fetch(chrom, start, end+flanks):
-            if record.mapq < args.MinMappingQuality or record.is_unmapped or record.alen < args.MinAlignmentLength:
+            if (record.mapq < args.MinMappingQuality or
+                    record.is_unmapped or
+                    record.alen < args.MinAlignmentLength):
                 continue  # do not analyze low quality records
             nucl_pred_cls.update_depth(record)
         nucl_pred_cls.call_window()

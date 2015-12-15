@@ -60,8 +60,8 @@ BamInputs:
             # Minimum Aligned Read Length
             --MinAlignmentLength: 25
 
-            # Number of reads checked to identify minimum and maximum readlength. 10000 is enough
-            --NoReadsChecked: 10000
+            # Number of reads checked to identify minimum and maximum readlength, roughly. 5000 is enough
+            --NoReadsChecked: 5000
 
         # "GCcorrection" contain options regarding the GC-correction model
         GCcorrect:
