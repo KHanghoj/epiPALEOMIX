@@ -165,35 +165,15 @@ class Methyl_Level(object):
                                                  self._ReadBases)
             
             for referenceC in reference_cpg_idx:
-                # if self.record.query_name == "_9091351_#GCCAAT" and referenceC == max(reference_cpg_idx):
-                #     print(self.record.query_name, self.record.cigar)
-                #     print(referenceC, alignpos.index(referenceC),  alignpos.index(referenceC+1))
-                #     print(bases[alignpos.index(referenceC):(alignpos.index(referenceC+1)+1)])
-                #     print(self._ReadBases,  self._ReadBases - (alignpos.index(referenceC)+1))
-                #     print(self._ReadBases, (self.record.aend - referenceC) - 1 )
-                #     print(self.record.seq[-8:], alignpos[-8:], reference_cpg_idx)
-
                 try:
                     readhitCidx = alignpos.index(referenceC)
                     readhitGidx = alignpos.index(referenceC+1)
                 except ValueError:
                     continue  # if nucleotides are not aligned take next
-#                    readhitCidx, readhitGidx = -1, -1
-                    # if self.record.seq[-2:] == 'CG':
-                    #     print(self.record.query_name, self.record.cigar)
-                    #     print(self.record.seq[-8:], alignpos[-8:], reference_cpg_idx)
-                    #     print(self.record.seq[-8:], alignpos[-8:], referenceC)
-                    # either genomic positions for C or G is/are not present
- #               if readhitCidx == -1 or readhitGidx == -1:
- #                   continue
 
                 readcpg = bases[readhitCidx:(readhitGidx+1)]
                 if readcpg in inbases:
-                    # if (self.record.aend - referenceC ) -1   == 1 and bases[readhitGidx] == "G":
-                    #     print(self.record.query_name, self.record.cigar, )
-                    # TODO:
-                    # if looking at both ends of reads,
-                    # we need to change the index accordingly.
+
                     if self.record.is_reverse:
                         (self._count_neg_strand[((self.record.aend-referenceC) - 1)]
                          [readcpg]) += 1
