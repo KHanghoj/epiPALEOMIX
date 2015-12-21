@@ -101,6 +101,7 @@ class Methyl_Level(object):
 
     def update(self, record):
         self.record = record
+        # 
         if self.record.alen < self._ReadBases:
             self._tempReadbase = self._ReadBases
             self._ReadBases = self.record.alen
@@ -123,82 +124,139 @@ class Methyl_Level(object):
                 low = top+basescore.get('C', 0)
                 self.rowsapp(self.na_tup(pos, top, low))
 
-    def _generate_cigar_set(self, record):
-        ''' returns a set with the positions in a
-        read that match/mismatch the reference '''
-        readmatch = set()
-        _jump_idx = 0
-        cigar = record.cigar[::-1] if record.is_reverse else record.cigar
-        addon = record.alen - 1 if record.is_reverse else 0
-        for (cigar, count) in cigar:
-            if cigar in (0, 7, 8):
-                for idx in xrange(_jump_idx, _jump_idx + count):
-                    readmatch.add(abs(addon-idx))
-                    if idx > self._ReadBases:
-                        return readmatch
-                _jump_idx += count
-            elif cigar in (2, 3, 6):
-                _jump_idx += count
-        return readmatch
-
     def _prep(self, curr_pos, skip=0):
         # skip is only used in right side functions
         fast_string = self._fasta.fetch_string(self.chrom, curr_pos,
                                                self._ReadBases-skip)
-        return [m.start() for m in self.pat.finditer(fast_string)]
+        return [m.start()+curr_pos for m in self.pat.finditer(fast_string)]
 
-    def _alltheread():
+    def _entireread():
         ''' returns CpG hits across the entire read '''
         pass
 
+    def _get_alignpos(self, record, readbases):
+        ''' I need to make one for forw and reve strand '''
+        alignpos = []
+        _jump_idx = 0
+        dnaseq = record.seq
+        for (cigar, count) in record.cigar:
+            if cigar in (0, 7, 8):
+                for idx in xrange(_jump_idx, _jump_idx+count):
+                    alignpos.append(idx+record.pos)
+                _jump_idx += count
+            elif cigar in (2, 3, 6):
+                _jump_idx += count
+            elif cigar in (1, ):
+                for idx in xrange(_jump_idx, _jump_idx+count):
+                    tempstr = dnaseq[:idx] + dnaseq[idx+1:]
+                    dnaseq = tempstr
+                #alignpos.append(-1)
+                #readbases += 1
+        if record.is_reverse:
+            return alignpos[-readbases:], dnaseq[-readbases:]
+        else:
+            return alignpos[:readbases], dnaseq[:readbases]
+
     def _rightpart(self, inbases, basepos, skip, conv):
         curr_pos = self.record.aend-self._ReadBases
-        cpg_indexes = self._prep(curr_pos, skip)
-        if cpg_indexes:
-            cigarmatch = self._generate_cigar_set(self.record)
-            bases = self.record.seq[-self._ReadBases:]
+        reference_cpg_idx = self._prep(curr_pos, skip)
+        if reference_cpg_idx:
+            alignpos, bases = self._get_alignpos(self.record,
+                                                 self._ReadBases)
+            
+            for referenceC in reference_cpg_idx:
+                # if self.record.query_name == "_9091351_#GCCAAT" and referenceC == max(reference_cpg_idx):
+                #     print(self.record.query_name, self.record.cigar)
+                #     print(referenceC, alignpos.index(referenceC),  alignpos.index(referenceC+1))
+                #     print(bases[alignpos.index(referenceC):(alignpos.index(referenceC+1)+1)])
+                #     print(self._ReadBases,  self._ReadBases - (alignpos.index(referenceC)+1))
+                #     print(self._ReadBases, (self.record.aend - referenceC) - 1 )
+                #     print(self.record.seq[-8:], alignpos[-8:], reference_cpg_idx)
 
-            for fast_idx in cpg_indexes:
-                inverse_idx = self._ReadBases-fast_idx
-                curr_cpgcheck = bases[fast_idx:fast_idx+2]
-                if ((self.record.alen-inverse_idx) in cigarmatch and
-                    (self.record.alen-inverse_idx+1) in cigarmatch and
-                        curr_cpgcheck in inbases):
+                try:
+                    readhitCidx = alignpos.index(referenceC)
+                    readhitGidx = alignpos.index(referenceC+1)
+                except ValueError:
+                    continue  # if nucleotides are not aligned take next
+#                    readhitCidx, readhitGidx = -1, -1
+                    # if self.record.seq[-2:] == 'CG':
+                    #     print(self.record.query_name, self.record.cigar)
+                    #     print(self.record.seq[-8:], alignpos[-8:], reference_cpg_idx)
+                    #     print(self.record.seq[-8:], alignpos[-8:], referenceC)
+                    # either genomic positions for C or G is/are not present
+ #               if readhitCidx == -1 or readhitGidx == -1:
+ #                   continue
+
+                readcpg = bases[readhitCidx:(readhitGidx+1)]
+                if readcpg in inbases:
+                    # if (self.record.aend - referenceC ) -1   == 1 and bases[readhitGidx] == "G":
+                    #     print(self.record.query_name, self.record.cigar, )
                     # TODO:
                     # if looking at both ends of reads,
                     # we need to change the index accordingly.
                     if self.record.is_reverse:
-                        (self._count_neg_strand[inverse_idx-1]
-                         [curr_cpgcheck]) += 1
+                        (self._count_neg_strand[((self.record.aend-referenceC) - 1)]
+                         [readcpg]) += 1
                     else:
-                        (self._count_pos_strand[fast_idx]
-                         [curr_cpgcheck]) += 1
+                        (self._count_pos_strand[readhitCidx]
+                         [readcpg]) += 1
 
-                    (self.dic_pos[curr_pos+fast_idx+1]
-                     [conv[bases[fast_idx+basepos]]]) += 1
+                    (self.dic_pos[curr_pos+readhitCidx+1]
+                     [conv[bases[readhitCidx+basepos]]]) += 1
 
     def _leftpart(self, inbases, basepos, skip, conv):
         curr_pos = self.record.pos
-        cpg_indexes = self._prep(curr_pos)
-        if cpg_indexes:
-            cigarmatch = self._generate_cigar_set(self.record)
-            bases = self.record.seq[:self._ReadBases]
-            for fast_idx in cpg_indexes:
-                inverse_idx = self._ReadBases-fast_idx
-                curr_cpgcheck = bases[fast_idx:fast_idx+2]
-                if (fast_idx >= skip and fast_idx in cigarmatch and
-                    fast_idx+1 in cigarmatch and
-                        curr_cpgcheck in inbases):
+        reference_cpg_idx = self._prep(curr_pos)
+        if reference_cpg_idx:
+            alignpos, bases = self._get_alignpos(self.record,
+                                                 self._ReadBases)
+            for referenceC in reference_cpg_idx:
+                try:
+                    readhitCidx = alignpos.index(referenceC)
+                    readhitGidx = alignpos.index(referenceC+1)
+                except ValueError:
+                    continue  # if nucleotides are not aligned take next
+                if readhitCidx < skip:
+                    continue
 
+                readcpg = bases[readhitCidx:(readhitGidx+1)]
+                if readcpg in inbases:
+                    # if (self.record.aend - referenceC ) -1   == 1 and bases[readhitGidx] == "G":
+                    #     print(self.record.query_name, self.record.cigar, )
+                    # TODO:
+                    # if looking at both ends of reads,
+                    # we need to change the index accordingly.
                     if self.record.is_reverse:
-                        (self._count_neg_strand[inverse_idx-1]
-                         [curr_cpgcheck]) += 1
+                        (self._count_neg_strand[((self.record.aend-referenceC) - 1)]
+                         [readcpg]) += 1
                     else:
-                        (self._count_pos_strand[fast_idx]
-                         [curr_cpgcheck]) += 1
+                        (self._count_pos_strand[readhitCidx]
+                         [readcpg]) += 1
 
-                    (self.dic_pos[curr_pos+fast_idx+1]
-                     [conv[bases[fast_idx+basepos]]]) += 1
+                    (self.dic_pos[curr_pos+readhitCidx+1]
+                     [conv[bases[readhitCidx+basepos]]]) += 1
+
+        # curr_pos = self.record.pos
+        # cpg_indexes = self._prep(curr_pos)
+        # if cpg_indexes:
+        #     cigarmatch = self._generate_cigar_set(self.record)
+        #     bases = self.record.seq[:self._ReadBases]
+        #     for fast_idx in cpg_indexes:
+        #         inverse_idx = self._ReadBases-fast_idx
+        #         curr_cpgcheck = bases[fast_idx:fast_idx+2]
+        #         if (fast_idx >= skip and fast_idx in cigarmatch and
+        #             fast_idx+1 in cigarmatch and
+        #                 curr_cpgcheck in inbases):
+
+        #             if self.record.is_reverse:
+        #                 (self._count_neg_strand[inverse_idx-1]
+        #                  [curr_cpgcheck]) += 1
+        #             else:
+        #                 (self._count_pos_strand[fast_idx]
+        #                  [curr_cpgcheck]) += 1
+
+        #             (self.dic_pos[curr_pos+fast_idx+1]
+        #              [conv[bases[fast_idx+basepos]]]) += 1
 
     def _writetofile(self):
         ''' every row contain chrom, genomicpos, top, lower, bedcoord'''
