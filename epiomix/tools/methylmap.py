@@ -130,7 +130,7 @@ class Methyl_Level(object):
                                                self._ReadBases-skip)
         return [m.start()+curr_pos for m in self.pat.finditer(fast_string)]
 
-    def _entireread():
+    def _entireread(self, inbases, basepos, skipthreeprime, skipfiveprime, conv):
         ''' returns CpG hits across the entire read '''
         pass
 
@@ -147,11 +147,11 @@ class Methyl_Level(object):
             elif cigar in (2, 3, 6):
                 _jump_idx += count
             elif cigar in (1, ):
-                for idx in xrange(_jump_idx, _jump_idx+count):
-                    tempstr = dnaseq[:idx] + dnaseq[idx+1:]
-                    dnaseq = tempstr
-                #alignpos.append(-1)
-                #readbases += 1
+                # remove insertions from DNA seq
+                # todo: do not take CpG into account if insertion between C and G
+                tempstr = dnaseq[:_jump_idx] + dnaseq[(_jump_idx+count):]
+                dnaseq = tempstr
+                
         if record.is_reverse:
             return alignpos[-readbases:], dnaseq[-readbases:]
         else:
@@ -181,9 +181,11 @@ class Methyl_Level(object):
                         (self._count_pos_strand[readhitCidx]
                          [readcpg]) += 1
 
-                    (self.dic_pos[curr_pos+readhitCidx+1]
+                    (self.dic_pos[referenceC+1]
                      [conv[bases[readhitCidx+basepos]]]) += 1
 
+    # _rightpart and _leftpart methods are literally identical now. should be put together into one.
+    
     def _leftpart(self, inbases, basepos, skip, conv):
         curr_pos = self.record.pos
         reference_cpg_idx = self._prep(curr_pos)
@@ -201,11 +203,7 @@ class Methyl_Level(object):
 
                 readcpg = bases[readhitCidx:(readhitGidx+1)]
                 if readcpg in inbases:
-                    # if (self.record.aend - referenceC ) -1   == 1 and bases[readhitGidx] == "G":
-                    #     print(self.record.query_name, self.record.cigar, )
-                    # TODO:
-                    # if looking at both ends of reads,
-                    # we need to change the index accordingly.
+
                     if self.record.is_reverse:
                         (self._count_neg_strand[((self.record.aend-referenceC) - 1)]
                          [readcpg]) += 1
@@ -213,30 +211,10 @@ class Methyl_Level(object):
                         (self._count_pos_strand[readhitCidx]
                          [readcpg]) += 1
 
-                    (self.dic_pos[curr_pos+readhitCidx+1]
+                    # (self.dic_pos[curr_pos+readhitCidx+1]
+                    #  [conv[bases[readhitCidx+basepos]]]) += 1
+                    (self.dic_pos[referenceC+1]
                      [conv[bases[readhitCidx+basepos]]]) += 1
-
-        # curr_pos = self.record.pos
-        # cpg_indexes = self._prep(curr_pos)
-        # if cpg_indexes:
-        #     cigarmatch = self._generate_cigar_set(self.record)
-        #     bases = self.record.seq[:self._ReadBases]
-        #     for fast_idx in cpg_indexes:
-        #         inverse_idx = self._ReadBases-fast_idx
-        #         curr_cpgcheck = bases[fast_idx:fast_idx+2]
-        #         if (fast_idx >= skip and fast_idx in cigarmatch and
-        #             fast_idx+1 in cigarmatch and
-        #                 curr_cpgcheck in inbases):
-
-        #             if self.record.is_reverse:
-        #                 (self._count_neg_strand[inverse_idx-1]
-        #                  [curr_cpgcheck]) += 1
-        #             else:
-        #                 (self._count_pos_strand[fast_idx]
-        #                  [curr_cpgcheck]) += 1
-
-        #             (self.dic_pos[curr_pos+fast_idx+1]
-        #              [conv[bases[fast_idx+basepos]]]) += 1
 
     def _writetofile(self):
         ''' every row contain chrom, genomicpos, top, lower, bedcoord'''
