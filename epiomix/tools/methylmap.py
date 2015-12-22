@@ -258,7 +258,7 @@ class Methyl_Level(object):
         self.last_end = 0
 
     def closefiles(self):
-        self._print_position_counts()
+        #self._print_position_counts()
         self.f_output.close()
         self._fasta.closefile()
 
