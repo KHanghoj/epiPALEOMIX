@@ -108,6 +108,9 @@ class Cache(object):
         self._actual_pos = start-self._last_start
         return self._fasta_str[self._actual_pos:self._actual_pos+nbases]
 
+    def fetch_directly(self, chrom, start, end):
+        return self._fasta.fetch(chrom, start, end)
+    
     def closefile(self):
         ''' docstring '''
         return self._fasta.close()

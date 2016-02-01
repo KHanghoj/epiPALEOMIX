@@ -101,13 +101,19 @@ class Methyl_Level(object):
 
     def update(self, record):
         self.record = record
-
+        # 
         if self.record.alen < self._ReadBases:
             self._tempReadbase = self._ReadBases
             self._ReadBases = self.record.alen
-
+        # if new read is not overlapping previous
+        if self.last_end < self.record.pos:
+            self._call_ms()
+            self.dic_pos.clear()
+            if len(self.rows) > self._row_size:
+                self._writetofile()
+                del self.rows[:]  # clear all data
         self._updatefunc()
-
+        self.last_end = self.record.aend+1000  # to avoid overlapping sites.
         self._ReadBases = self._tempReadbase
 
     def _call_ms(self):
@@ -118,81 +124,98 @@ class Methyl_Level(object):
                 low = top+basescore.get('C', 0)
                 self.rowsapp(self.na_tup(pos, top, low))
 
+    def _prep(self, curr_pos, skip=0):
+        # skip is only used in right side functions
+        fast_string = self._fasta.fetch_string(self.chrom, curr_pos,
+                                               self._ReadBases-skip)
+        return [m.start()+curr_pos for m in self.pat.finditer(fast_string)]
+
     def _entireread(self, inbases, basepos, skipthreeprime, skipfiveprime, conv):
         ''' returns CpG hits across the entire read '''
         pass
 
-    def _get_alignpos(self, record):
+    def _get_alignpos(self, record, readbases):
         ''' I need to make one for forw and reve strand '''
-        match, deletion, insertion = (0, 7, 8), (2, 3, 6), (1, )
-        alignpos = {} # refsef index as key, read index as value
-        _jump_idx, _fastaidx = 0, 0
+        alignpos = []
+        _jump_idx = 0
+        dnaseq = record.seq
         for (cigar, count) in record.cigar:
-            if cigar in match:
+            if cigar in (0, 7, 8):
                 for idx in xrange(_jump_idx, _jump_idx+count):
-                    alignpos[_fastaidx+record.pos] = idx
-                    _fastaidx += 1
+                    alignpos.append(idx+record.pos)
                 _jump_idx += count
-            elif cigar in deletion:
-                _fastaidx += count
-            elif cigar in insertion:
+            elif cigar in (2, 3, 6):
                 _jump_idx += count
-        return alignpos
+            elif cigar in (1, ):
+                # remove insertions from DNA seq
+                # todo: do not take CpG into account if insertion between C and G
+                tempstr = dnaseq[:_jump_idx] + dnaseq[(_jump_idx+count):]
+                dnaseq = tempstr
+                
+        if record.is_reverse:
+            return alignpos[-readbases:], dnaseq[-readbases:]
+        else:
+            return alignpos[:readbases], dnaseq[:readbases]
 
     def _rightpart(self, inbases, basepos, skip, conv):
-        currpos = self.record.aend-self._ReadBases
-        CpGhits = self.CpGBedRegion.intersection(xrange(currpos,
-                                                        (currpos +
-                                                         self._ReadBases)))
-        if CpGhits:
-            ref_to_read_convert = self._get_alignpos(self.record)
-            for CpGpos in sorted(CpGhits):
+        curr_pos = self.record.aend-self._ReadBases
+        reference_cpg_idx = self._prep(curr_pos, skip)
+        if reference_cpg_idx:
+            alignpos, bases = self._get_alignpos(self.record,
+                                                 self._ReadBases)
+            
+            for referenceC in reference_cpg_idx:
                 try:
-                    cidx = ref_to_read_convert[CpGpos]
-                    gidx = ref_to_read_convert[CpGpos+1]
-                except KeyError:
-                    continue
-                if self.record.aend-(CpGpos+1) < skip:
-                    continue
-                readcpg = self.record.seq[cidx:(gidx+1)]
+                    readhitCidx = alignpos.index(referenceC)
+                    readhitGidx = alignpos.index(referenceC+1)
+                except ValueError:
+                    continue  # if nucleotides are not aligned take next
+
+                readcpg = bases[readhitCidx:(readhitGidx+1)]
                 if readcpg in inbases:
+
                     if self.record.is_reverse:
-                        (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
+                        (self._count_neg_strand[((self.record.aend-referenceC) - 1)]
                          [readcpg]) += 1
                     else:
-                        (self._count_pos_strand[cidx]
+                        (self._count_pos_strand[readhitCidx]
                          [readcpg]) += 1
 
-                    (self.dic_pos[CpGpos+1]
-                     [conv[readcpg[basepos]]]) += 1
+                    (self.dic_pos[referenceC+1]
+                     [conv[bases[readhitCidx+basepos]]]) += 1
 
+    # _rightpart and _leftpart methods are literally identical now. should be put together into one.
+    
     def _leftpart(self, inbases, basepos, skip, conv):
-        CpGhits = self.CpGBedRegion.intersection(xrange(self.record.pos,
-                                                        (self.record.pos +
-                                                         (self._ReadBases-1))))
-
-        if CpGhits:
-            ref_to_read_convert = self._get_alignpos(self.record)
-            for CpGpos in sorted(CpGhits):
+        curr_pos = self.record.pos
+        reference_cpg_idx = self._prep(curr_pos)
+        if reference_cpg_idx:
+            alignpos, bases = self._get_alignpos(self.record,
+                                                 self._ReadBases)
+            for referenceC in reference_cpg_idx:
                 try:
-                    cidx = ref_to_read_convert[CpGpos]
-                    gidx = ref_to_read_convert[CpGpos+1]
-                except KeyError:
+                    readhitCidx = alignpos.index(referenceC)
+                    readhitGidx = alignpos.index(referenceC+1)
+                except ValueError:
+                    continue  # if nucleotides are not aligned take next
+                if readhitCidx < skip:
                     continue
-                if cidx < skip or cidx >= (self._ReadBases-1):
-                    continue
-                readcpg = self.record.seq[cidx:(gidx+1)]
+
+                readcpg = bases[readhitCidx:(readhitGidx+1)]
                 if readcpg in inbases:
+
                     if self.record.is_reverse:
-                        (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
+                        (self._count_neg_strand[((self.record.aend-referenceC) - 1)]
                          [readcpg]) += 1
                     else:
-                        (self._count_pos_strand[cidx]
+                        (self._count_pos_strand[readhitCidx]
                          [readcpg]) += 1
 
-                    (self.dic_pos[CpGpos+1]
-                     [conv[readcpg[basepos]]]) += 1
-                
+                    # (self.dic_pos[curr_pos+readhitCidx+1]
+                    #  [conv[bases[readhitCidx+basepos]]]) += 1
+                    (self.dic_pos[referenceC+1]
+                     [conv[bases[readhitCidx+basepos]]]) += 1
+
     def _writetofile(self):
         ''' every row contain chrom, genomicpos, top, lower, bedcoord'''
         for row in self.rows:
@@ -229,13 +252,10 @@ class Methyl_Level(object):
 
     def reset_dict(self, chrom, start, end, bedcoord):
         self.dic_pos = defaultdict(lambda: defaultdict(int))
-        self.chrom, self.start, self.end = chrom, start, end
-        startincluded, endincluded = start-1, end+1
-        self.CpGBedRegion = set(hit.start() + startincluded for hit in
-                                re.finditer(r'CG', self._fasta.fetch_directly(
-                                    chrom, startincluded, endincluded)))
+        self.start, self.end, self.chrom = start, end, chrom
         self.bedcoord = bedcoord
         del self.rows[:]  # clear all data
+        self.last_end = 0
 
     def closefiles(self):
         self._print_position_counts()
@@ -254,7 +274,7 @@ def parse_args(argv):
     parser.add_argument('bed', help="..", type=str)
     parser.add_argument('outputfile', help='..', type=str)
     parser.add_argument('--FastaPath', help="FastaPath: %(default)s", type=str)
-    parser.add_argument('--ReadBases', help="%(default)d", type=int, default=1)
+    parser.add_argument('--ReadBases', help="%(default)d", type=int, default=2)
     parser.add_argument('--MinMappingQuality', help="%(default)d",
                         type=int, default=20)
     parser.add_argument('--MinAlignmentLength', help="%(default)d",
