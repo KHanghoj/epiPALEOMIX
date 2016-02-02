@@ -231,7 +231,8 @@ class Methyl_Level(object):
     def reset_dict(self, chrom, start, end, bedcoord):
         self.dic_pos = defaultdict(lambda: defaultdict(int))
         self.chrom, self.start, self.end = chrom, start, end
-        startincluded, endincluded = start-1, end+1
+        startincluded= start-1 if start-1 >= 0 else 0
+        endincluded = end+1
         self.CpGBedRegion = set(hit.start() + startincluded for hit in
                                 re.finditer(r'CG', self._fasta.fetch_directly(
                                     chrom, startincluded, endincluded)))
@@ -239,7 +240,7 @@ class Methyl_Level(object):
         del self.rows[:]  # clear all data
 
     def closefiles(self):
-        #self._print_position_counts()
+        self._print_position_counts()
         self.f_output.close()
         self._fasta.closefile()
 
