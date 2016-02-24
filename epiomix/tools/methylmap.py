@@ -63,7 +63,8 @@ class Methyl_Level(object):
         self._count_neg_strand = [{x: 0 for x in _REV_STRAND_BASES}
                                   for base in xrange(self._ReadBases)]
         self._tempReadbase = self._ReadBases
-
+        self.match, self.deletion, self.insertion = (0, 7, 8), (2, 3, 6), (1, )
+        self.clipping = (4, 5)
         # in a sam/bam file everything is plus
         # strand oriented.even sequences, cigar, EVERYTHING
         # cig_idx -1 returns last cigar of the sequence from a positive strand
@@ -123,19 +124,19 @@ class Methyl_Level(object):
         pass
 
     def _get_alignpos(self, record):
-        ''' I need to make one for forw and reve strand '''
-        match, deletion, insertion = (0, 7, 8), (2, 3, 6), (1, )
-        alignpos = {} # refsef index as key, read index as value
+        ''' I need to make one for forw and reverse strand
+        match:(0, 7, 8) deletion: (2, 3, 6), insertion: (1, ) '''
+        alignpos = {}  # refsef index as key, read index as value
         _jump_idx, _fastaidx = 0, 0
         for (cigar, count) in record.cigar:
-            if cigar in match:
+            if cigar in self.match:
                 for idx in xrange(_jump_idx, _jump_idx+count):
                     alignpos[_fastaidx+record.pos] = idx
                     _fastaidx += 1
                 _jump_idx += count
-            elif cigar in deletion:
+            elif cigar in self.deletion:
                 _fastaidx += count
-            elif cigar in insertion:
+            elif cigar in self.insertion:
                 _jump_idx += count
         return alignpos
 
@@ -154,7 +155,8 @@ class Methyl_Level(object):
                     continue
                 if self.record.aend-(CpGpos+1) < skip:
                     continue
-                readcpg = self.record.seq[cidx:(gidx+1)]
+                readcpg = self.record.query[cidx:(gidx+1)]
+                # do not use seq as it contain clipping. out of interest here
                 if readcpg in inbases:
                     if self.record.is_reverse:
                         (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
@@ -180,9 +182,8 @@ class Methyl_Level(object):
                 except KeyError:
                     continue
                 if cidx < skip or cidx >= (self._ReadBases-1):
-                # if cidx < skip:
                     continue
-                readcpg = self.record.seq[cidx:(gidx+1)]
+                readcpg = self.record.query[cidx:(gidx+1)]
                 if readcpg in inbases:
                     if self.record.is_reverse:
                         (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
