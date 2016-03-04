@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import pysam, argparse
+import pysam
+import argparse
+
 
 def parse_args(argv):
     ''' docstring '''
@@ -40,7 +42,7 @@ def main(argv):
             lstapp(rec.alen)
     lst.sort()
     top_ninetyfive = lst[int(0.95*len(lst))]
-    return (min(lst),max(lst), top_ninetyfive)
+    return (min(lst), max(lst), top_ninetyfive)
 
 
 if __name__ == "__main__":
