@@ -44,7 +44,8 @@ xranges <- c(0,1)
 
 
 par(mfrow=c(1,2))
-plot(1,xlim=xranges, ylim=yranges, ylab='Density', xlab='% GC content', main=sprintf('Density at readlength: %s bp', maxtv))
+plot(1,xlim=xranges, ylim=yranges, ylab='Density', xlab='% GC content',
+     main=sprintf('Density (reads: %s) \n at readlength: %s bp', sum(df$reads),maxtv))
 with(df, lines(gc_content,readsdensity, col='red'))
 with(df, lines(gc_content,refdensity, col='blue'))
 legend('topright', c('ReadDensity', 'RefDensity') ,
@@ -55,14 +56,13 @@ lower.bound = 1/upper.bound
 df$ratio[df$ratio > upper.bound] = upper.bound
 df$ratio[df$ratio < lower.bound] = lower.bound
 
-with(df, plot(gc_content, ratio, col='black', main='Model', ylab='correction value', xlab='% GC content',ylim=c(0,upper.bound+0.2)))
+with(df, plot(gc_content, ratio, col='black', main='Model\n', ylab='correction factor', xlab='% GC content',ylim=c(0,upper.bound+0.2)))
 abline(1,0)
 
 dat <- data.frame(
     'count'=maxtv,
     'GC_content'=df$gc_content,
     'ratio'=df$ratio)
-
 dat
 }
 
