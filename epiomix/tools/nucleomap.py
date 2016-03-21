@@ -66,6 +66,22 @@ class Nucleosome_Prediction(GC_correction):
                 _jump_idx += count
             elif cigar in (2, 3, 6):
                 _jump_idx += count
+            # elif cigar in (2, 3, 4, 6):
+            #     _jump_idx += count
+            # not sure if we should include this, as we do
+            # not use the sequence it self and record.pos
+            # is the first aligned position not the first
+            # positions in the record.seq
+    # Op BAM Description
+    # M 0 alignment match (can be a sequence match or mismatch)
+    # I 1 insertion to the reference
+    # D 2 deletion from the reference
+    # N 3 skipped region from the reference
+    # S 4 soft clipping (clipped sequences present in SEQ)
+    # H 5 hard clipping (clipped sequences NOT present in SEQ)
+    # P 6 padding (silent deletion from padded reference)
+    # = 7 sequence match
+    # X 8 sequence mismatch
 
     def call_window(self):
         self._mainlist.extend(self._deq_depth)
