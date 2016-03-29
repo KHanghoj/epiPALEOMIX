@@ -3,11 +3,11 @@ from __future__ import print_function
 import sys
 import pysam
 import argparse
-#from collections import defaultdict
+# from collections import defaultdict
 from epiomix.tools.commonutils import \
     Cache, \
     read_mappa
-## _BUFFER = 2
+# _BUFFER = 2
 _BUFFER = 0
 
 
@@ -19,24 +19,25 @@ class GCcorrect(object):
         self.fasta = Cache(self.arg.FastaPath)
         self.rl = self.arg.ReadLength
         self.noregions = self.arg.NoRegions
-        self.reads_gc = {gc:0 for gc in xrange(self.rl+1)}
-        self.reference_gc = {gc:0 for gc in xrange(self.rl+1)}
+        self.reads_gc = {gc: 0 for gc in xrange(self.rl+1)}
+        self.reference_gc = {gc: 0 for gc in xrange(self.rl+1)}
         self.halfresolution = self.arg.HalfResolution
-        
+
     def getreads(self, chrom, start, end):
         region_size = int(end - start)
-        regionseq = self.fasta.fetch_string(chrom, start-1, region_size)
+        # regionseq = self.fasta.fetch_string(chrom, start-1, region_size)
+        regionseq = self.fasta.fetch_string(chrom, start, region_size)
         regionlen = len(regionseq)
         cov = 0
-        start -= 1
+        # start -= 1
         for record in self.samfile.fetch(chrom, start, end):
 
             if (abs(self.rl - record.alen) > self.halfresolution or  # only reads near rl
-                  record.pos < start or   # not before start of region
-                  record.aend-1 > end or  # not after end of region
-                  record.mapq < self.arg.MinMappingQuality or
-                  record.is_unmapped or
-                  record.alen < self.arg.MinAlignmentLength):
+                    record.pos < start or   # not before start of region
+                    record.aend-1 > end or  # not after end of region
+                    record.mapq < self.arg.MinMappingQuality or
+                    record.is_unmapped or
+                    record.alen < self.arg.MinAlignmentLength):
                 continue  # do not analyze low quality records
 
             cov += 1
@@ -52,21 +53,22 @@ class GCcorrect(object):
             for idx in xrange(0, regionlen-self.rl+1, jump):
                 curr_seq = regionseq[idx:(idx+self.rl)]
                 self.reference_gc[(curr_seq.count('C') +
-                                      curr_seq.count('G'))] += 1
+                                   curr_seq.count('G'))] += 1
         if cov > 100:
             self.noregions -= 1
-                
+
     def writetofile(self):
         ''' dfs '''
         gcfmt = '{}\t{}\t{}\t{}\n'.format
         if sum([self.reads_gc[gc] for gc in range(0, self.rl+1)]) < 2000:
             with open(self.arg.OutputFile, 'W') as f:
-                for gc in range(0,self.rl+1):
+                for gc in range(0, self.rl+1):
                     f.write(gcfmt(str(self.rl), str(gc), 1, 1))
         else:
             with open(self.arg.OutputFile, 'w') as f:
                 for gc in range(0, self.rl+1):
-                    f.write(gcfmt(str(self.rl), str(gc), str(self.reads_gc[gc]),
+                    f.write(gcfmt(str(self.rl), str(gc),
+                                  str(self.reads_gc[gc]),
                                   str(self.reference_gc[gc])))
         self.fasta.closefile()
 
@@ -81,12 +83,14 @@ def parse_args(argv):
     parser.add_argument('--ReadLength', help="...", type=int)
     parser.add_argument('--MappaUniqueness', help="...", type=float)
     parser.add_argument('--ChromUsed', help="...", type=str)
-    parser.add_argument('--NoRegions', help="...", type=int, default=200)    
-    parser.add_argument('--HalfResolution', help="...", type=int, default=4)    
+    parser.add_argument('--NoRegions', help="...", type=int, default=200)
+    parser.add_argument('--HalfResolution', help="...", type=int, default=4)
     parser.add_argument('--MinMappingQuality', help="..", type=int, default=25)
-    parser.add_argument('--MinAlignmentLength', help="..", type=int, default=25)    
+    parser.add_argument('--MinAlignmentLength', help="..",
+                        type=int, default=25)
 
     return parser.parse_known_args(argv)
+
 
 def run(args):
     GC = GCcorrect(args)
@@ -97,14 +101,16 @@ def run(args):
         runallmapparegions = True
     for chrom, start, end, score in read_mappa(args):
         if runallmapparegions:
-            ## if "all" then entire genome analyzed or until GC.noregions hits 0
+            # if "all" then entire genome analyzed or until GC.noregions hits 0
             args.ChromUsed = chrom
         if score >= mappability and args.ChromUsed == chrom and GC.noregions:
-            if start-last_end < 0 and last_chrom == chrom:            # because chunks can overlap with 50%
+            # because chunks can overlap with 50%
+            if start-last_end < 0 and last_chrom == chrom:
                 start += (end-start)/2
             last_chrom, last_end = chrom, end
             GC.getreads(chrom, start, end)
     GC.writetofile()
+
 
 def main(argv):
     args, unknown = parse_args(argv)
