@@ -31,19 +31,19 @@ def getbed(args):
     checkfile(args.bed)
     with open(args.bed, 'r') as data:
         d = {}
-        l = []
-        cprev = ''
         for line in data:
             c, s, e, rest = unpack(*(re.split(r'\s+', line.rstrip())))
             bedcoord = (BEDFMT(c, s, e, getstrand(rest)), )
-            if c != cprev and l:
-                d[cprev] = sorted(l)
-                l = []
+            if c in d.keys():
+                d[c].append((int(s), int(e), bedcoord))
+            else:
+                d[c] = [(int(s), int(e), bedcoord)]
 
-            l.append((int(s), int(e), bedcoord))
-            cprev = c
-    if l:
-        d[cprev] = sorted(l)
+    for chrom in d.keys():
+        d[chrom].sort()
+        # tuplesorted = sorted(d[chrom])
+        # d[chrom] = tuplesorted
+
     return d
 
 
@@ -61,12 +61,12 @@ def _read_mappa(args):
                 yield str(chrom), int(start), int(end)
 
 
-def getmappa(infile):
+def getmappa(args):
     d = {}
     l = []
     cprev = ''
     endprev = -1
-    for chrom, start, end in _read_mappa(infile):
+    for chrom, start, end in _read_mappa(args):
 
         if chrom != cprev and l:
             endprev = end

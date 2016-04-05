@@ -28,7 +28,7 @@ def _alphanum_check(whitelist):
 
 
 _VALID_BED_NAME = _VALID_TARGET_NAME = \
-    And(_alphanum_check(whitelist="._-"),
+    And(_alphanum_check(whitelist=".-"),
         ValueGE(2, key=len, description="at least two characters long"))
 
 _VALIDATION_OPTIONS = {

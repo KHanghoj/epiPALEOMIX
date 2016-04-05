@@ -33,7 +33,7 @@ class Write_Depth(GC_correction):
         self._OFFSET, self._NEIGHBOR = self.arg.OFFSET, self.arg.FLANKS
         self._POSITION_OFFSET = self._OFFSET+self._NEIGHBOR
         self._TOTAL_WIN_LENGTH = self._SIZE+(2*self._OFFSET)+(2*self._NEIGHBOR)
-        self._HALFWINDOW = int((self._TOTAL_WIN_LENGTH-1)/2)  ## +1
+        self._HALFWINDOW = int((self._TOTAL_WIN_LENGTH-1)/2)  # +1
         self._CENTERINDEX = (self._SIZE-1)/2
         self._DEQ_LEN = int(self.arg.DequeLength+100)
         self._DEQ_LEN_ZEROS = [0]*self._DEQ_LEN
