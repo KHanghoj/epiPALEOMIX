@@ -41,8 +41,6 @@ def getbed(args):
 
     for chrom in d.keys():
         d[chrom].sort()
-        # tuplesorted = sorted(d[chrom])
-        # d[chrom] = tuplesorted
 
     return d
 
