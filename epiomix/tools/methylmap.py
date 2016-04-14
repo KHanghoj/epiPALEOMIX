@@ -58,10 +58,11 @@ class Methyl_Level(object):
                                              self.arg.SkipThreePrime,
                                              CONV_REV)
         # This is all the addons
-        self._count_pos_strand = [{x: 0 for x in _FORW_STRAND_BASES}
-                                  for base in xrange(self._ReadBases)]
-        self._count_neg_strand = [{x: 0 for x in _REV_STRAND_BASES}
-                                  for base in xrange(self._ReadBases)]
+        # self._count_pos_strand = [{x: 0 for x in _FORW_STRAND_BASES}
+        #                           for base in xrange(self._ReadBases)]
+        # self._count_neg_strand = [{x: 0 for x in _REV_STRAND_BASES}
+        #                           for base in xrange(self._ReadBases)]
+
         self._tempReadbase = self._ReadBases
         self.match, self.deletion, self.insertion = (0, 7, 8), (2, 3, 6), (1, )
         self.clipping = (4, 5)
@@ -158,12 +159,12 @@ class Methyl_Level(object):
                 readcpg = self.record.query[cidx:(gidx+1)]
                 # do not use seq as it contain clipping. out of interest here
                 if readcpg in inbases:
-                    if self.record.is_reverse:
-                        (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
-                         [readcpg]) += 1
-                    else:
-                        (self._count_pos_strand[cidx]
-                         [readcpg]) += 1
+                    # if self.record.is_reverse:
+                    #     (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
+                    #      [readcpg]) += 1
+                    # else:
+                    #     (self._count_pos_strand[cidx]
+                    #      [readcpg]) += 1
 
                     (self.dic_pos[CpGpos+1]
                      [conv[readcpg[basepos]]]) += 1
@@ -185,12 +186,12 @@ class Methyl_Level(object):
                     continue
                 readcpg = self.record.query[cidx:(gidx+1)]
                 if readcpg in inbases:
-                    if self.record.is_reverse:
-                        (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
-                         [readcpg]) += 1
-                    else:
-                        (self._count_pos_strand[cidx]
-                         [readcpg]) += 1
+                    # if self.record.is_reverse:
+                    #     (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
+                    #      [readcpg]) += 1
+                    # else:
+                    #     (self._count_pos_strand[cidx]
+                    #      [readcpg]) += 1
 
                     (self.dic_pos[CpGpos+1]
                      [conv[readcpg[basepos]]]) += 1
@@ -202,19 +203,19 @@ class Methyl_Level(object):
                                          chrom=self.chrom,
                                          bed=self.bedcoord))
 
-    def _print_position_counts(self):
-        ''' return summary for each ReadBase analyzed '''
-        sys.stdout.write("Strand\tPLUS\tPLUS\tNEGA\tNEGA\n")
-        sys.stdout.write("CpGPos\tTG\tCG\tCA\tCG\n")
+    # def _print_position_counts(self):
+    #     ''' return summary for each ReadBase analyzed '''
+    #     sys.stdout.write("Strand\tPLUS\tPLUS\tNEGA\tNEGA\n")
+    #     sys.stdout.write("CpGPos\tTG\tCG\tCA\tCG\n")
 
-        for base in xrange(self._ReadBases):
-            curr_pos = self._count_pos_strand[base]
-            curr_neg = self._count_neg_strand[base]
-            sys.stdout.write('{}\t{}\t{}\t{}\t{}\n'.format(base+1,
-                                                           curr_pos["TG"],
-                                                           curr_pos["CG"],
-                                                           curr_neg["CA"],
-                                                           curr_neg["CG"]))
+    #     for base in xrange(self._ReadBases):
+    #         curr_pos = self._count_pos_strand[base]
+    #         curr_neg = self._count_neg_strand[base]
+    #         sys.stdout.write('{}\t{}\t{}\t{}\t{}\n'.format(base+1,
+    #                                                        curr_pos["TG"],
+    #                                                        curr_pos["CG"],
+    #                                                        curr_neg["CA"],
+    #                                                        curr_neg["CG"]))
 
     def _makeoutputfile(self):
         ''' want to write to file every chrom, to keep scalablility'''
