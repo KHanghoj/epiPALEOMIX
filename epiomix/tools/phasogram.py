@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ''' Object: To calculate the phasogram between 5' end
-of mapped reads's start positions aligning in same 
-orientation within a 1000bp window
+of mapped reads's start positions aligning in same
+orientation
 '''
 from __future__ import print_function
 import sys
@@ -23,7 +23,7 @@ class Phasogram(GC_correction):
 
     def _call_output(self, dic):
         if self.arg.SubsetPileup > 1:
-            pos_above_cutoff = [k for k,v in dic.iteritems() if v >= self.arg.SubsetPileup]
+            pos_above_cutoff = [k for k, v in dic.iteritems() if v >= self.arg.SubsetPileup]
             pos_above_cutoff.sort()
         else:
             pos_above_cutoff = sorted(dic)
@@ -36,7 +36,7 @@ class Phasogram(GC_correction):
                     break
                 else:
                     self.outputdic[length] += 1
-                        
+
     def _finddepth(self, pos, dic, corr):
         try:
             dic[pos] += corr
@@ -86,10 +86,11 @@ def parse_args(argv):
     parser.add_argument('--FastaPath', help="fastafile", type=str)
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
     parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
-    parser.add_argument('--MaxRange', help="...", type=int, default=1000)
-    parser.add_argument('--MinMappingQuality', help="...", type=int, default=25)
-    parser.add_argument('--MinAlignmentLength', help="...", type=int, default=25)
-    
+    parser.add_argument('--MaxRange', help="...", type=int, default=1500)
+    parser.add_argument('--MinMappingQuality', help="...",
+                        type=int, default=25)
+    parser.add_argument('--MinAlignmentLength', help="...",
+                        type=int, default=25)
     return parser.parse_known_args(argv)
 
 
