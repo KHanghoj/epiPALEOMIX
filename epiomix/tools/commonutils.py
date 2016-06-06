@@ -184,3 +184,15 @@ class GC_correction(object):
             return model[gc_idx]
         else:
             return 1.0
+
+
+# class GCWrap(GC_correction):
+#     def __init__(self, args):
+#         self.arg = args
+#         GC_correction.__init__(self)
+
+#     def getcorrdepthwrap(self, chrom, record):
+#         self.chrom = chrom
+#         return self._get_gc_corr_dep(record)
+
+

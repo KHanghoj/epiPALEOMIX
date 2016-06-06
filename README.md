@@ -12,7 +12,7 @@ For questions, bug reports, and/or suggestions contact Kristian Hanghøj at k.ha
 
 ## Citation
 
-Hanghøj K., Schubert M., Madsen H.T., Pedersen J.S., Orlando L. A Fast, Accurate, and Automatic pipeline for generating nucleosome and methylation maps from high throughput sequencing data underlying ancient samples. Genome Biol. (2015)
+Hanghøj K., Schubert M., Madsen H.T., Pedersen J.S., Orlando L. A Fast, Accurate, and Automatic pipeline for generating nucleosome and methylation maps from high throughput sequencing data underlying ancient samples. Genome Biol. (2016)
 
 
 ## References
