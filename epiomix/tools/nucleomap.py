@@ -112,7 +112,6 @@ class Nucleosome_Prediction(GC_correction):
                 spacerL = sum(win_depth[:self._NEIGHBOR])
                 spacerR = sum(win_depth[-self._NEIGHBOR:])
 
-                # Minimum coverage of 1 in flanks
                 # if spacerL > self._NEIGHBOR and spacerR > self._NEIGHBOR:
                 sizeofwindow = (max_idx-min_idx)
                 mean_spacer = (spacerL + spacerR)/self._SPACERMEAN
