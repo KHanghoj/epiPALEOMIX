@@ -9,7 +9,7 @@ from shutil import move
 from epiomix.tools.commonutils import \
     GC_correction, read_bed
 import gzip
-
+import math
 
 class Nucleosome_Prediction(GC_correction):
     """docstring for Nucleosome_Prediction"""
@@ -102,8 +102,7 @@ class Nucleosome_Prediction(GC_correction):
             win_depth = self._mainlist[idx:(idx+self._TOTAL_WIN_LENGTH)]
             if win_depth[self._POSITION_OFFSET+self._CENTERINDEX] < self._MIN_DEPTH:
                 continue
-            if 0 in win_depth[self._POSITION_OFFSET: (self._POSITION_OFFSET +
-                                                      self._SIZE)]:
+            if 0 in win_depth:  # we do not allow for no coverage in the 221 window 
                 continue
             center_depth, min_idx, max_idx = \
                 self._call_max(win_depth[self._POSITION_OFFSET:
@@ -114,27 +113,26 @@ class Nucleosome_Prediction(GC_correction):
                 spacerR = sum(win_depth[-self._NEIGHBOR:])
 
                 # Minimum coverage of 1 in flanks
-                if spacerL > self._NEIGHBOR and spacerR > self._NEIGHBOR:
-                    sizeofwindow = (max_idx-min_idx)
-                    mean_spacer = (spacerL + spacerR)/self._SPACERMEAN
-                    # mean_spacer = mean_spacer if mean_spacer > 1 else 1
-                    # to correct for super high from the gccorrection
-                    # score = math.log(float(center_depth)/(mean_spacer*sizeofwindow))
-                    score = (float(center_depth)-mean_spacer)/sizeofwindow
-                    start_pos = idx+self._last_ini+min_idx
-                    end_pos = idx+self._last_ini+max_idx
-
-                    if start_pos >= self.start and end_pos <= self.end:
-                        if not lasttup:  # initialize
-                            lasttup = self._calltuple(start_pos, end_pos,
-                                                      center_depth, score)
-                            continue
+                # if spacerL > self._NEIGHBOR and spacerR > self._NEIGHBOR:
+                sizeofwindow = (max_idx-min_idx)
+                mean_spacer = (spacerL + spacerR)/self._SPACERMEAN
+                mean_spacer = mean_spacer if mean_spacer > 1 else 1
+                # to correct for super high from the gccorrection
+                score = math.log(float(center_depth)/(mean_spacer*sizeofwindow))
+                # score = (float(center_depth)-mean_spacer)/sizeofwindow
+                start_pos = idx+self._last_ini+min_idx
+                end_pos = idx+self._last_ini+max_idx
+                if start_pos >= self.start and end_pos <= self.end:
+                    if not lasttup:  # initialize
+                        lasttup = self._calltuple(start_pos, end_pos,
+                                                  center_depth, score)
+                        continue
                         # if start_pos <= lasttup.e: # the nucl dyad/center overlap
-                        if start_pos <= (lasttup.e+self._SIZE-1):  # the nucleosomes overlap. # use the one with highest score
-                            if score > lasttup.score:
-                                lasttup = self._calltuple(start_pos, end_pos,
+                    if start_pos <= lasttup.s+self._SIZE:  # the nucleosomes dyad start atleast 147 bp away from dyad start of next nucl, else take the highest score
+                        if score > lasttup.score:
+                            lasttup = self._calltuple(start_pos, end_pos,
                                                           center_depth, score)
-                        else:  # they do not overlap. send lasttup to outputlist
+                    else:  # nucl centers do not overlap. send lasttup to outputlist
                             self._outputlist.append(lasttup)
                             lasttup = self._calltuple(start_pos, end_pos,
                                                       center_depth, score)
