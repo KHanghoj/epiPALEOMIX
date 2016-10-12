@@ -117,8 +117,8 @@ class Nucleosome_Prediction(GC_correction):
                 mean_spacer = (spacerL + spacerR)/self._SPACERMEAN
                 mean_spacer = mean_spacer if mean_spacer > 1 else 1
                 # to correct for super high from the gccorrection
-                score = math.log(float(center_depth)/(mean_spacer*sizeofwindow))
-                # score = (float(center_depth)-mean_spacer)/sizeofwindow
+                # score = math.log(float(center_depth)/(mean_spacer*sizeofwindow))
+                score = (float(center_depth)-mean_spacer)/sizeofwindow
                 start_pos = idx+self._last_ini+min_idx
                 end_pos = idx+self._last_ini+max_idx
                 if start_pos >= self.start and end_pos <= self.end:
