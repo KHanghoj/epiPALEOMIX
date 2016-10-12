@@ -31,7 +31,7 @@ class GeneralExecuteNode(Node):
         out_f_name = d_bam.fmt.format(d_bam.bam_name, analname, bed_name)
         self.dest = os.path.join(d_bam.bam_temp_local, out_f_name)
 
-        description = "<ANALYSIS:'%s', BAM: %s, Bed:'%s'" % \
+        description = "<ANALYSIS:'%s', BAM: %s, Bed:'%s'>" % \
                       (analname, d_bam.bam_name, bed_name)
         Node.__init__(self,
                       description=description,

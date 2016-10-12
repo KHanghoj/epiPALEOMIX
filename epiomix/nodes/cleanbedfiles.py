@@ -36,7 +36,7 @@ class CleanFilesNode(CommandNode):
                         OUT_DEST=dest,
                         CHECK_VERSION=PYTHON_VERSION)
 
-        description = ("<CLEANBEDFILES: '%s' -> '%s', Uniqueness: '%s'" %
+        description = ("<CLEANBEDFILES: '%s' -> '%s', Uniqueness: '%s'>" %
                        (inbedfile, dest, unique))
         CommandNode.__init__(self,
                              description=description,
