@@ -34,6 +34,7 @@ class Methyl_Level(object):
     """docstring for Methyl_Level"""
     def __init__(self, arg):
         self.arg = arg
+        self._MinBaseQ = self.arg.MinBaseQuality
         self._ReadBases = self.arg.ReadBases+1
         self._fasta = Cache(self.arg.FastaPath)
         self.dic_pos = defaultdict(lambda: defaultdict(int))
@@ -156,18 +157,14 @@ class Methyl_Level(object):
                     continue
                 if self.record.aend-(CpGpos+1) < skip:
                     continue
-                readcpg = self.record.query[cidx:(gidx+1)]
                 # do not use seq as it contain clipping. out of interest here
-                if readcpg in inbases:
-                    # if self.record.is_reverse:
-                    #     (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
-                    #      [readcpg]) += 1
-                    # else:
-                    #     (self._count_pos_strand[cidx]
-                    #      [readcpg]) += 1
+                readcpg = self.record.query[cidx:(gidx+1)]
 
-                    (self.dic_pos[CpGpos+1]
-                     [conv[readcpg[basepos]]]) += 1
+                if any([self.record.query_alignment_qualities[x] < self._MinBaseQ for x in (cidx, gidx)]):
+                    continue
+
+                if readcpg in inbases:
+                    self.dic_pos[CpGpos+1][conv[readcpg[basepos]]] += 1
 
     def _leftpart(self, inbases, basepos, skip, conv):
         CpGhits = self.CpGBedRegion.intersection(xrange(self.record.pos,
@@ -185,16 +182,11 @@ class Methyl_Level(object):
                 if cidx < skip or cidx >= (self._ReadBases-1):
                     continue
                 readcpg = self.record.query[cidx:(gidx+1)]
+                if any([self.record.query_alignment_qualities[x] < self._MinBaseQ for x in (cidx, gidx)]):
+                    continue
+                
                 if readcpg in inbases:
-                    # if self.record.is_reverse:
-                    #     (self._count_neg_strand[((self.record.aend-CpGpos) - 2)]
-                    #      [readcpg]) += 1
-                    # else:
-                    #     (self._count_pos_strand[cidx]
-                    #      [readcpg]) += 1
-
-                    (self.dic_pos[CpGpos+1]
-                     [conv[readcpg[basepos]]]) += 1
+                    self.dic_pos[CpGpos+1][conv[readcpg[basepos]]] += 1
                 
     def _writetofile(self):
         ''' every row contain chrom, genomicpos, top, lower, bedcoord'''
@@ -202,20 +194,6 @@ class Methyl_Level(object):
             self.f_output.write(self.fmt(r=row,
                                          chrom=self.chrom,
                                          bed=self.bedcoord))
-
-    # def _print_position_counts(self):
-    #     ''' return summary for each ReadBase analyzed '''
-    #     sys.stdout.write("Strand\tPLUS\tPLUS\tNEGA\tNEGA\n")
-    #     sys.stdout.write("CpGPos\tTG\tCG\tCA\tCG\n")
-
-    #     for base in xrange(self._ReadBases):
-    #         curr_pos = self._count_pos_strand[base]
-    #         curr_neg = self._count_neg_strand[base]
-    #         sys.stdout.write('{}\t{}\t{}\t{}\t{}\n'.format(base+1,
-    #                                                        curr_pos["TG"],
-    #                                                        curr_pos["CG"],
-    #                                                        curr_neg["CA"],
-    #                                                        curr_neg["CG"]))
 
     def _makeoutputfile(self):
         ''' want to write to file every chrom, to keep scalablility'''
@@ -242,7 +220,6 @@ class Methyl_Level(object):
         del self.rows[:]  # clear all data
 
     def closefiles(self):
-        # self._print_position_counts()
         self.f_output.close()
         self._fasta.closefile()
 
@@ -260,6 +237,8 @@ def parse_args(argv):
     parser.add_argument('--FastaPath', help="FastaPath: %(default)s", type=str)
     parser.add_argument('--ReadBases', help="%(default)d", type=int, default=1)
     parser.add_argument('--MinMappingQuality', help="%(default)d",
+                        type=int, default=20)
+    parser.add_argument('--MinBaseQuality', help="%(default)d",
                         type=int, default=20)
     parser.add_argument('--MinAlignmentLength', help="%(default)d",
                         type=int, default=25)

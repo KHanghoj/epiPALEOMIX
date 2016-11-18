@@ -120,6 +120,8 @@ BamInputs:
             # Number of bases being analyzed.
             --ReadBases: 15
 
+            # Minimum base quality
+            --MinBaseQuality: 20
             # In cases nucleotides  from the three or five prime should be excluded.
             # The number of nucleotides removed from the primes are subtracted from --ReadBases, and can, thus, not be greater than ReadBases.
             --SkipThreePrime: 0

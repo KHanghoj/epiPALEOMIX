@@ -59,6 +59,7 @@ _VALIDATION_METHYL = {
     "Enabled": IsBoolean(default=False),
     "ExcludeBed": EXCLUDEBED,
     "--ReadBases": IsUnsignedInt(default=15),
+    "--MinBaseQuality": IsUnsignedInt(default=20),
     "--SkipThreePrime": IsUnsignedInt(default=0),
     "--SkipFivePrime": IsUnsignedInt(default=0),
     "--Primes": StringIn(('five', 'three','both'), default='five')
