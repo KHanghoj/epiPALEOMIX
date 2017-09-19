@@ -266,8 +266,12 @@ def run(args):
         Met_Score.reset_dict(chrom, start, end, bedcoord)
         for record in samfile.fetch(chrom, start, end):
             if (record.mapq < args.MinMappingQuality or
-                record.is_unmapped or
-                    record.alen < args.MinAlignmentLength):
+                record.is_unmapped or 
+                record.is_duplicate or
+                record.is_secondary or      # this is primarily for BWA MEM
+                record.is_supplementary or  # this is primarily for BWA MEM
+                record.is_qcfail or
+                record.alen < args.MinAlignmentLength):
                 continue  # do not analyze low quality records
             Met_Score.update(record)
         Met_Score.call_final_ms()

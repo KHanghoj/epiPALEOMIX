@@ -36,7 +36,11 @@ class GCcorrect(object):
                     record.pos < start or   # not before start of region
                     record.aend-1 > end or  # not after end of region
                     record.mapq < self.arg.MinMappingQuality or
-                    record.is_unmapped or
+                    record.is_unmapped or 
+                    record.is_duplicate or
+                    record.is_secondary or      # this is primarily for BWA MEM
+                    record.is_supplementary or  # this is primarily for BWA MEM
+                    record.is_qcfail or
                     record.alen < self.arg.MinAlignmentLength):
                 continue  # do not analyze low quality records
 

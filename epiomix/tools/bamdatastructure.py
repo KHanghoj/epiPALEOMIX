@@ -70,9 +70,10 @@ class BamCollect(object):
         return dic
 
     def _checkindex(self, path, ext, errormsg):
-        test1 = os.path.exists(path+ext)
-        bname, _ = os.path.splitext(path)
-        test2 = os.path.exists(bname+ext)
-        assert (test1+test2) > 0, errormsg.format(path)
-        # assert os.path.exists(path+ext), \
-        #     errormsg.format(path)
+        assert os.path.exists(path+ext), \
+            errormsg.format(path)
+
+    def _checkindex(self, path, ext, errormsg):
+        basen, oldext = os.path.splitext(path)
+        assert (os.path.exists(basen+ext) or os.path.exists(path+ext)), \
+            errormsg.format(path)

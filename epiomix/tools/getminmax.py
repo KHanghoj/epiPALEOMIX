@@ -35,8 +35,12 @@ def main(argv):
             except StopIteration:
                 break
             if (rec.alen < args.MinAlignmentLength or
-                    rec.mapq < args.MinMappingQuality or
-                    rec.is_unmapped):
+                rec.mapq < args.MinMappingQuality or
+                rec.is_duplicate or
+                rec.is_secondary or      # this is primarily for BWA MEM
+                rec.is_supplementary or  # this is primarily for BWA MEM
+                rec.is_qcfail or
+                rec.is_unmapped):
                 continue
             noreads -= 1
             lstapp(rec.alen)

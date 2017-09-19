@@ -35,7 +35,7 @@ class Write_Depth(GC_correction):
         self._TOTAL_WIN_LENGTH = self._SIZE+(2*self._OFFSET)+(2*self._NEIGHBOR)
         self._HALFWINDOW = int((self._TOTAL_WIN_LENGTH-1)/2)  # +1
         self._CENTERINDEX = (self._SIZE-1)/2
-        self._DEQ_LEN = int(self.arg.DequeLength+100)
+        self._DEQ_LEN = int(self.arg.DequeLength+1000)
         self._DEQ_LEN_ZEROS = [0]*self._DEQ_LEN
         self._HALFWINDOW_ZEROS = [0]*self._HALFWINDOW
         self._MAX_JUMP = self._DEQ_LEN*4
@@ -157,7 +157,13 @@ def run(args):
         start = 0 if start-flanks < 0 else start-flanks
         end += flanks
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality or record.is_unmapped or record.alen < args.MinAlignmentLength:
+            if (record.mapq < args.MinMappingQuality or 
+                record.is_unmapped or 
+                record.is_duplicate or
+                record.is_secondary or      # this is primarily for BWA MEM
+                record.is_supplementary or  # this is primarily for BWA MEM
+                record.is_qcfail or
+                record.alen < args.MinAlignmentLength):
                 continue  # do not analyze low quality records
             Corr_Depth.update_depth(record)
         Corr_Depth.call_depths()

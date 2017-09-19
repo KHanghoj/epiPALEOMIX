@@ -100,7 +100,13 @@ def run(args):
     for chrom, start, end, bedcoord in read_bed(args):
         Phaso.reset(chrom, start, end)
         for record in samfile.fetch(chrom, start, end):
-            if record.mapq < args.MinMappingQuality or record.is_unmapped or record.alen < args.MinAlignmentLength:
+            if (record.mapq < args.MinMappingQuality or 
+                record.is_unmapped or 
+                record.is_duplicate or
+                record.is_secondary or      # this is primarily for BWA MEM
+                record.is_supplementary or  # this is primarily for BWA MEM
+                record.is_qcfail or
+                record.alen < args.MinAlignmentLength):
                 continue  # do not analyze low quality records
             Phaso.update(record)
         Phaso.call()
