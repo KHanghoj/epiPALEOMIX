@@ -85,7 +85,7 @@ def parse_args(argv):
     parser.add_argument('outputfile', help='...', type=str)
     parser.add_argument('--FastaPath', help="fastafile", type=str)
     parser.add_argument('--GCmodel', help='...', type=str, default=None)
-    parser.add_argument('--SubsetPileup', help="...", type=int, default=3)
+    parser.add_argument('--SubsetPileup', help="...", type=int, default=1)
     parser.add_argument('--MaxRange', help="...", type=int, default=1500)
     parser.add_argument('--MinMappingQuality', help="...",
                         type=int, default=25)
