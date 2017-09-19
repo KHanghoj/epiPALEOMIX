@@ -223,8 +223,12 @@ def run(args):
         start = 0 if start-flanks < 0 else start-flanks
         for record in samfile.fetch(chrom, start, end+flanks):
             if (record.mapq < args.MinMappingQuality or
-                    record.is_unmapped or
-                    record.alen < args.MinAlignmentLength):
+                record.is_unmapped or
+                record.is_duplicate or
+                record.is_secondary or      # this is primarily for BWA MEM
+                record.is_supplementary or  # this is primarily for BWA MEM
+                record.is_qcfail or
+                record.alen < args.MinAlignmentLength):
                 continue  # do not analyze low quality records
             nucl_pred_cls.update_depth(record)
         nucl_pred_cls.call_window()
