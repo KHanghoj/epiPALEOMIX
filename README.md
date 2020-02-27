@@ -1,5 +1,7 @@
 # epiPALEOMIX Pipeline
 
+Recently moved from BITBUCKET.
+
 A Fast, Accurate, and Automatic pipeline for generating nucleosome and methylation maps from high throughput sequencing data underlying ancient samples.
 
 
